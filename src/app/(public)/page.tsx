@@ -4,7 +4,7 @@ import Link from 'next/link'
 
 /* ----------------------------- Site Constants ----------------------------- */
 const SITE_NAME = 'GLENO'
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://gleno.io'
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://gleno.de'
 const PRIMARY = '#0F172A'
 const ACCENT = PRIMARY
 

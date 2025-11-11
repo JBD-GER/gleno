@@ -1,0 +1,134 @@
+/* src/app/globals.css */
+
+/* 1) Tailwind-Prefight, Components & Utilities laden */
+@import "tailwindcss";
+
+/* 2) CSS-First Theme-Konfiguration */
+@theme {
+  /* Branding-Farben */
+  --color-primary:        #0F172A;
+  --color-primary-light:  #7180f5;
+  --color-primary-dark:   #4752c4;
+
+  /* Text-Palette */
+  --color-text-900: #1a1a1a;
+  --color-text-700: #4a4a4a;
+  --color-text-500: #7a7a7a;
+  --color-text-300: #b0b0b0;
+
+  /* Backgrounds & Borders */
+  --color-bg-100:     #ffffff;
+  --color-bg-200:     #f7f7f7;
+  --color-bg-300:     #e0e0e0;
+  --color-border-100: #cccccc;
+  --color-border-200: #a8a8a8;
+
+  /* Abstände (Spacing–Skala) */
+  --space-1: 0.25rem;  /* .5 */
+  --space-2: 0.5rem;   /* 1 */
+  --space-3: 0.75rem;  /* 1.5 */
+  --space-4: 1rem;     /* 2 */
+  --space-6: 1.5rem;   /* 3 */
+  --space-8: 2rem;     /* 4 */
+
+  /* Rundungen (Border-Radius) */
+  --radius-sm: 0.25rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 1rem;
+
+  /* Schatten (Box-Shadow) */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+  --shadow-md: 0 4px 6px rgba(0,0,0,0.1);
+  --shadow-lg: 0 10px 15px rgba(0,0,0,0.15);
+
+  /* Schriftfamilie */
+  --font-sans: Inter, system-ui, sans-serif;
+}
+
+/* 3) Base-Styles */
+@layer base {
+  body {
+    margin: 0;
+    width: 100%;
+    overflow-x: hidden;
+    padding: 0;
+    font-family: var(--font-sans);
+    background-color: var(--color-bg-200);
+    color: var(--color-text-700);
+  }
+
+  h1, .heading-1 { /* Headlines */
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-primary);
+  }
+  h2, .heading-2 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    color: var(--color-text-900);
+  }
+
+  a {
+    color: var(--color-primary);
+    text-decoration: none;
+  }
+  a:hover {
+    color: var(--color-primary-dark);
+    text-decoration: underline;
+  }
+
+  /* Formular-Elemente */
+  input, select, textarea {
+    border: 1px solid var(--color-border-100);
+    border-radius: var(--radius-md);
+    padding: var(--space-2);
+    font-family: var(--font-sans);
+  }
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 3px var(--color-primary-light);
+  }
+}
+
+/* 4) Komponenten-Layer */
+@layer components {
+  .btn {
+    @apply inline-block font-medium rounded-md transition;
+    background-color: var(--color-primary);
+    color: white;
+    padding: var(--space-2) var(--space-4);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn:hover {
+    background-color: var(--color-primary-dark);
+    box-shadow: var(--shadow-md);
+  }
+  .btn-secondary {
+    @apply inline-block font-medium rounded-md transition;
+    background-color: var(--color-bg-200);
+    color: var(--color-text-700);
+    padding: var(--space-2) var(--space-4);
+    box-shadow: var(--shadow-sm);
+  }
+  .btn-secondary:hover {
+    box-shadow: var(--shadow-md);
+  }
+
+  .card {
+    @apply bg-bg-100 rounded-lg p-6;
+    box-shadow: var(--shadow-md);
+  }
+  .card:hover {
+    box-shadow: var(--shadow-lg);
+  }
+}
+
+/* 5) Zusätzliche Utilities (wenn gewünscht) */
+@layer utilities {
+  .bg-bg-200 {
+    background-color: var(--color-bg-200) !important;
+  }
+  .text-text-500 {
+    color: var(--color-text-500) !important;
+  }
+}

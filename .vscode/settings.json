@@ -1,0 +1,15 @@
+{
+  // 1) Alle .css-Dateien als Tailwind CSS behandeln
+  "files.associations": {
+    "*.css": "tailwindcss"
+  },
+
+  // 2) Tailwind IntelliSense sagen, dass es CSS-Dateien verarbeiten soll
+  "tailwindCSS.includeLanguages": {
+    "css": "css"
+  },
+
+  // 3) CSS-Linting: Unbekannte @-Regeln ignorieren
+  "css.lint.unknownAtRules": "ignore",
+  "scss.lint.unknownAtRules": "ignore"
+}

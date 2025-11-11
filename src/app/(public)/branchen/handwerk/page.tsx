@@ -392,6 +392,81 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* TESTIMONIALS / BEISPIEL-STIMMEN */}
+      <section
+        id="stimmen"
+        className="bg-slate-950 px-5 py-14 text-slate-50"
+      >
+        <div className="mx-auto max-w-6xl">
+          <div className="flex items-center justify-between gap-4 flex-wrap">
+            <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
+              Wie GLENO wirken soll – starke Stimmen aus der Praxis.
+            </h2>
+            <span className="rounded-full border border-slate-700/80 bg-slate-900/70 px-3 py-1 text-[10px] text-slate-300">
+              Hinweis: Kunden aus der Betaphase.
+            </span>
+          </div>
+
+          <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3 text-[12px]">
+            <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4 shadow-[0_22px_70px_rgba(2,6,23,0.9)] backdrop-blur-xl">
+              <div>
+                <div className="mb-1 text-[11px] text-amber-400">
+                  ★★★★★
+                </div>
+                <p className="text-slate-100">
+                  „Wir haben unsere Angebote vorher in Word und Excel gebaut.
+                  Mit GLENO gehen komplette Angebote in Minuten raus –
+                  professionell und einheitlich.“
+                </p>
+              </div>
+              <div className="mt-3 text-[10px] text-slate-400">
+                <div className="font-semibold text-slate-200">
+                  Beispiel: PV- &amp; Elektro-Betrieb
+                </div>
+                <div>10+ Mitarbeiter · hoher Angebotsdurchsatz</div>
+              </div>
+            </div>
+
+            <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4 shadow-[0_22px_70px_rgba(2,6,23,0.9)] backdrop-blur-xl">
+              <div>
+                <div className="mb-1 text-[11px] text-amber-400">
+                  ★★★★★
+                </div>
+                <p className="text-slate-100">
+                  „Endlich sehe ich auf einen Blick: Welche Angebote offen sind,
+                  welche Rechnungen überfällig sind und wo noch Geld liegt.“
+                </p>
+              </div>
+              <div className="mt-3 text-[10px] text-slate-400">
+                <div className="font-semibold text-slate-200">
+                  Beispiel: SHK &amp; Wartungsbetrieb
+                </div>
+                <div>Service-Verträge · viele laufende Projekte</div>
+              </div>
+            </div>
+
+            <div className="relative flex h-full flex-col justify-between rounded-2xl border border-slate-800/80 bg-slate-900/80 p-4 shadow-[0_22px_70px_rgba(2,6,23,0.9)] backdrop-blur-xl">
+              <div>
+                <div className="mb-1 text-[11px] text-amber-400">
+                  ★★★★★
+                </div>
+                <p className="text-slate-100">
+                  „Wir nutzen GLENO als zentrale Stelle für Kunden, Projekte,
+                  Dokumente und Zeiten. Weniger Nachfragen im Team, mehr Fokus
+                  auf die Baustelle.“
+                </p>
+              </div>
+              <div className="mt-3 text-[10px] text-slate-400">
+                <div className="font-semibold text-slate-200">
+                  Beispiel: Innenausbau &amp; Montage
+                </div>
+                <div>Team mit Monteuren · viele Einsatzorte</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* IMPRESSIONS – mit Preview */}
       <section id="screens" className="px-5 py-14 text-slate-900">
         <div className="mx-auto max-w-6xl">
@@ -444,73 +519,6 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* BEISPIEL-WEBSITE CALL-TO-ACTION */}
-      <section
-        id="beispiel"
-        className="bg-slate-950 px-5 py-12 text-slate-50"
-      >
-        <div className="mx-auto max-w-6xl">
-          <div className="flex flex-col gap-6 rounded-3xl border border-slate-800/80 bg-slate-950/70 p-6 shadow-[0_26px_80px_rgba(2,6,23,0.9)] backdrop-blur-2xl md:flex-row md:items-center">
-            {/* Text links */}
-            <div className="flex-1">
-              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
-                Schau dir eine fertige GLENO-Webseite in Aktion an.
-              </h2>
-              <p className="mt-2 text-sm sm:text-[15px] text-slate-200">
-                Auf unserer Beispielseite siehst du, wie dein Betrieb mit GLENO
-                als Website- &amp; Anfrage-Lösung auftreten kann – modern,
-                klar strukturiert und direkt mit deinem CRM verbunden.
-              </p>
-              <div className="mt-4">
-                <Link
-                  href="https://www.gleno.de/w/beispiel"
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center justify-center rounded-2xl bg-white/95 px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-lg transition hover:bg-white"
-                >
-                  Beispiel-Webseite im neuen Tab öffnen
-                  <span className="ml-1.5 text-xs">↗</span>
-                </Link>
-              </div>
-            </div>
-
-            {/* Preview rechts – etwas schmaler */}
-            <div className="w-full md:flex-1 md:max-w-xs lg:max-w-sm md:ml-4">
-              <div className="relative h-40 w-full overflow-hidden rounded-2xl border border-slate-800/90 bg-slate-900/95">
-                {/* Overlay-Glow */}
-                <div className="pointer-events-none absolute inset-0">
-                  <div className="absolute -left-10 -top-10 h-20 w-20 rounded-full bg-sky-500/35 blur-3xl" />
-                  <div className="absolute right-0 bottom-0 h-20 w-20 rounded-full bg-emerald-400/18 blur-3xl" />
-                </div>
-
-                {/* Label-Zeile */}
-                <div className="relative flex items-center justify-between px-4 pt-3 text-[9px]">
-                  <span className="rounded-full bg-slate-950/95 px-2 py-1 text-[8px] uppercase tracking-[0.18em] text-sky-300">
-                    Live-Demo
-                  </span>
-                  <span className="text-[8px] text-slate-400">
-                    Beispielauftritt mit GLENO
-                  </span>
-                </div>
-
-                {/* Bild */}
-                <div className="relative mx-3 mb-3 mt-1 h-[70%] overflow-hidden rounded-xl bg-slate-950">
-                  <Image
-                    src="/beispiel_website.png"
-                    alt="GLENO Beispiel-Webseite"
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-slate-950/25 via-transparent to-sky-500/8" />
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-
-
       {/* FÜR WELCHE BETRIEBE + SEO-Text */}
       <section className="bg-slate-50 px-5 py-14 text-slate-900">
         <div className="mx-auto max-w-6xl">
@@ -545,7 +553,7 @@ export default function HomePage() {
               </p>
             </div>
 
-            {/* Rechte Spalte – nur Ecken abgerundet */}
+            {/* Rechte Spalte */}
             <div className="mt-6 flex justify-center md:mt-0 md:justify-end">
               <div
                 className="
@@ -570,6 +578,70 @@ export default function HomePage() {
         </div>
       </section>
 
+     {/* BEISPIEL-WEBSITE CALL-TO-ACTION */}
+      <section
+        id="beispiel"
+        className="bg-slate-950 px-5 py-12 text-slate-50"
+      >
+        <div className="mx-auto max-w-6xl">
+          <div className="flex flex-col gap-6 rounded-3xl border border-slate-800/80 bg-slate-950/70 p-6 shadow-[0_26px_80px_rgba(2,6,23,0.9)] backdrop-blur-2xl md:flex-row md:items-center">
+            {/* Text links */}
+            <div className="flex-1">
+              <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight text-white">
+                Schau dir eine fertige GLENO-Webseite in Aktion an.
+              </h2>
+              <p className="mt-2 text-sm sm:text-[15px] text-slate-200">
+                Auf unserer Beispielseite siehst du, wie dein Betrieb mit GLENO
+                als Website- &amp; Anfrage-Lösung auftreten kann – modern,
+                klar strukturiert und direkt mit deinem CRM verbunden.
+              </p>
+              <div className="mt-4">
+                <Link
+                  href="https://www.gleno.de/w/beispiel"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-2xl bg-white/95 px-5 py-2.5 text-sm font-semibold text-slate-900 shadow-lg transition hover:bg-white"
+                >
+                  Beispiel-Webseite im neuen Tab öffnen
+                  <span className="ml-1.5 text-xs">↗</span>
+                </Link>
+              </div>
+              </div>
+
+              {/* Preview rechts */}
+              <div className="w-full md:flex-1 md:max-w-xs lg:max-w-sm md:ml-4">
+                <div className="relative h-40 w-full overflow-hidden rounded-2xl border border-slate-800/90 bg-slate-900/95">
+                  {/* Overlay-Glow */}
+                  <div className="pointer-events-none absolute inset-0">
+                    <div className="absolute -left-10 -top-10 h-20 w-20 rounded-full bg-sky-500/35 blur-3xl" />
+                    <div className="absolute right-0 bottom-0 h-20 w-20 rounded-full bg-emerald-400/18 blur-3xl" />
+                  </div>
+
+                  {/* Label-Zeile */}
+                  <div className="relative flex items-center justify-between px-4 pt-3 text-[9px]">
+                    <span className="rounded-full bg-slate-950/95 px-2 py-1 text-[8px] uppercase tracking-[0.18em] text-sky-300">
+                      Live-Demo
+                    </span>
+                    <span className="text-[8px] text-slate-400">
+                      Beispielauftritt mit GLENO
+                    </span>
+                  </div>
+
+                  {/* Bild */}
+                  <div className="relative mx-3 mb-3 mt-1 h-[70%] overflow-hidden rounded-xl bg-slate-950">
+                    <Image
+                      src="/beispiel_website.png"
+                      alt="GLENO Beispiel-Webseite"
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-slate-950/25 via-transparent to-sky-500/8" />
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
 
       {/* Only for modal behaviour */}
       <style>

@@ -83,20 +83,31 @@ function Shot({ id, src, alt, caption }: ShotProps) {
         </div>
       </a>
 
-      {/* Preview Modal */}
+      {/* Preview Modal via :target */}
       <div
         id={id}
-        className="shot-modal fixed inset-0 z-[90] flex items-center justify-center bg-slate-950/80 backdrop-blur-sm transition-opacity duration-200"
+        className="shot-modal fixed inset-0 z-[90] flex items-center justify-center"
       >
-        <div className="relative mx-3 max-h-[92vh] w-full max-w-5xl rounded-3xl border border-slate-700/80 bg-slate-950/95 p-3 sm:p-4 shadow-2xl">
+        {/* Klick auf Overlay schließt */}
+        <a
+          href="#screens"
+          aria-label="Vorschau schließen"
+          className="absolute inset-0 bg-slate-950/80 backdrop-blur-sm"
+        />
+
+        {/* Modal-Content */}
+        <div className="relative z-[91] mx-3 max-h-[92vh] w-full max-w-5xl rounded-3xl border border-slate-700/80 bg-slate-950/95 p-3 sm:p-4 shadow-2xl">
+          {/* Close-Button oben rechts */}
           <a
             href="#screens"
-            className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/90 text-[14px] text-white hover:bg-slate-800 hover:text-white"
             aria-label="Vorschau schließen"
+            className="absolute right-3 top-3 inline-flex h-7 w-7 items-center justify-center rounded-full bg-slate-900/95 text-[16px] text-white shadow-md hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-400 z-[92]"
           >
             ×
           </a>
-          <div className="relative h-[60vh] w-full overflow-hidden rounded-2xl bg-slate-900">
+
+          {/* Bild */}
+          <div className="relative mt-4 h-[60vh] w-full overflow-hidden rounded-2xl bg-slate-900">
             <Image
               src={src}
               alt={alt}
@@ -104,10 +115,11 @@ function Shot({ id, src, alt, caption }: ShotProps) {
               className="object-contain"
             />
           </div>
+
           <div className="mt-2 flex flex-wrap items-center justify-between gap-2 text-[10px] text-slate-300">
             <span>{caption}</span>
             <span className="text-slate-500">
-              Schließen mit „×“ oder durch Klick auf einen anderen Bereich.
+              Zum Schließen außerhalb klicken oder „×“ nutzen.
             </span>
           </div>
         </div>
@@ -254,7 +266,7 @@ export default function HomePage() {
       </section>
 
       {/* ERKENNUNG */}
-      <section id="warum" className="bg-white px-5 py-14 text-slate-900">
+      <section id="warum" className=" px-5 py-14 text-slate-900">
         <div className="mx-auto max-w-5xl">
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             Wenn du dich hier wiederfindest, ist GLENO für dich gebaut.
@@ -386,7 +398,7 @@ export default function HomePage() {
       </section>
 
       {/* IMPRESSIONS – mit Preview */}
-      <section id="screens" className="bg-white px-5 py-14 text-slate-900">
+      <section id="screens" className=" px-5 py-14 text-slate-900">
         <div className="mx-auto max-w-6xl">
           <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
             Ein Blick in GLENO.
@@ -437,53 +449,65 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* FÜR WELCHE BETRIEBE + SEO-Text */}
-      <section className="bg-slate-50 px-5 py-14 text-slate-900">
-        <div className="mx-auto max-w-6xl">
-          <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
-            Für welche Betriebe GLENO sich besonders lohnt.
-          </h2>
+{/* FÜR WELCHE BETRIEBE + SEO-Text */}
+<section className="bg-slate-50 px-5 py-14 text-slate-900">
+  <div className="mx-auto max-w-6xl">
+    <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">
+      Für welche Betriebe GLENO sich besonders lohnt.
+    </h2>
 
-          <div className="mt-5 grid grid-cols-1 gap-6 md:grid-cols-[1.6fr,1.4fr] text-[13px]">
-            <div>
-              <ul className="space-y-1.5 text-slate-700">
-                <li>✔ Photovoltaik- &amp; Solar-Betriebe</li>
-                <li>✔ Wärmepumpen-, SHK- &amp; Heizungsfachbetriebe</li>
-                <li>✔ Elektro- &amp; Smart-Home-Betriebe</li>
-                <li>✔ Fenster-, Türen- &amp; Fassadenbauer</li>
-                <li>✔ Innenausbau, Trockenbau, Bodenleger</li>
-                <li>✔ Badsanierung &amp; Ausbaugewerke</li>
-                <li>✔ Service-, Wartungs- &amp; Montagebetriebe</li>
-              </ul>
+    <div className="mt-5 grid grid-cols-1 md:grid-cols-2 gap-6 items-start text-[13px]">
+      {/* Linke Spalte: Liste + Text */}
+      <div>
+        <ul className="space-y-1.5 text-slate-700">
+          <li>✔ Photovoltaik- &amp; Solar-Betriebe</li>
+          <li>✔ Wärmepumpen-, SHK- &amp; Heizungsfachbetriebe</li>
+          <li>✔ Elektro- &amp; Smart-Home-Betriebe</li>
+          <li>✔ Fenster-, Türen- &amp; Fassadenbauer</li>
+          <li>✔ Innenausbau, Trockenbau, Bodenleger</li>
+          <li>✔ Badsanierung &amp; Ausbaugewerke</li>
+          <li>✔ Service-, Wartungs- &amp; Montagebetriebe</li>
+        </ul>
 
-              <p className="mt-3 text-slate-600">
-                GLENO ist als spezialisierte{' '}
-                <strong>Rechnungssoftware für Handwerker</strong> und moderne{' '}
-                <strong>Handwerkersoftware für Angebote und Rechnungen</strong>{' '}
-                entwickelt. Besonders in Branchen mit hohem Angebotsvolumen,
-                wiederkehrenden Projekten und klaren Qualitätsansprüchen sorgt
-                GLENO für strukturierte Abläufe, schnellere Angebotserstellung,
-                vollständige Rechnungsstellung und eine zentrale Ablage im{' '}
-                <strong>Handwerker CRM</strong>. Das reduziert Fehler,
-                verhindert Umsatzverluste und stärkt den professionellen Auftritt
-                deines Betriebs im Wettbewerb.
-              </p>
-            </div>
+        <p className="mt-3 text-slate-600">
+          GLENO ist als spezialisierte{' '}
+          <strong>Rechnungssoftware für Handwerker</strong> und moderne{' '}
+          <strong>Handwerkersoftware für Angebote und Rechnungen</strong>{' '}
+          entwickelt. Besonders in Branchen mit hohem Angebotsvolumen,
+          wiederkehrenden Projekten und klaren Qualitätsansprüchen sorgt GLENO
+          für strukturierte Abläufe, schnellere Angebotserstellung,
+          vollständige Rechnungsstellung und eine zentrale Ablage im{' '}
+          <strong>Handwerker CRM</strong>. Das reduziert Fehler, verhindert
+          Umsatzverluste und stärkt den professionellen Auftritt deines Betriebs
+          im Wettbewerb.
+        </p>
+      </div>
 
-            <div className="flex flex-col gap-3">
-              <div className="flex h-40 w-full items-center justify-center rounded-2xl border border-slate-200 bg-white text-[10px] text-slate-500 shadow-sm">
-                {/* IMAGE: handwerker-team-auf-baulstelle.png */}
-                Handwerker-/Baustellenfoto (hier dein eigenes Bild einfügen)
-              </div>
-              <p className="text-[12px] text-slate-600">
-                Zeig echte Menschen &amp; echte Arbeit – das macht sofort klar:
-                GLENO ist für Betriebe gemacht, die anpacken, nicht für
-                PowerPoint-Karrieristen.
-              </p>
-            </div>
-          </div>
+      {/* Rechte Spalte: mobil vollbreit, ab md rechts ausgerichtet */}
+      <div className="mt-6 md:mt-0 flex justify-center md:justify-end">
+        <div
+          className="
+            relative 
+            w-full max-w-md   /* mobil: groß & zentriert */
+            h-64 sm:h-72 
+            md:w-64 md:h-64 md:max-w-none /* ab md: kompakter rechts */
+            lg:w-80 lg:h-80
+            rounded-3xl overflow-hidden
+            border border-slate-200 bg-white shadow-sm
+          "
+        >
+          <Image
+            src="/handwerker_portrait.jpg"
+            alt="Handwerkerbetrieb mit Team – GLENO im Einsatz"
+            fill
+            className="object-cover"
+          />
         </div>
-      </section>
+      </div>
+    </div>
+  </div>
+</section>
+
 
       {/* Only for modal behaviour */}
       <style>

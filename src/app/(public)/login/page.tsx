@@ -24,7 +24,9 @@ function CheckEmailEffect({ onInfo }: { onInfo: (msg: string) => void }) {
   const qp = useSearchParams()
   useEffect(() => {
     if (qp?.get('check_email') === '1') {
-      onInfo('Wir haben dir eine E-Mail geschickt. Bitte bestätige deine Adresse.')
+      onInfo(
+        'Wir haben dir eine E-Mail geschickt. Bitte bestätige deine Adresse, um dich einloggen zu können.'
+      )
     }
   }, [qp, onInfo])
   return null
@@ -43,7 +45,10 @@ export default function LoginPage() {
   const [info, setInfo] = useState<string | null>(null)
   const [canResend, setCanResend] = useState(false)
 
-  const emailValid = useMemo(() => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()), [email])
+  const emailValid = useMemo(
+    () => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim()),
+    [email]
+  )
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -58,18 +63,22 @@ export default function LoginPage() {
 
     setLoading(true)
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email, password })
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      })
       if (signInError) {
         setError(signInError.message)
         return
       }
 
-      // User abrufen und Bestätigung prüfen
+      // User abrufen & Bestätigung prüfen
       const { data, error: userError } = await supabase.auth.getUser()
       if (userError) {
         setError('Fehler beim Abrufen des Benutzers.')
         return
       }
+
       const user = data.user
       if (!user?.email_confirmed_at) {
         await supabase.auth.signOut()
@@ -78,7 +87,7 @@ export default function LoginPage() {
         return
       }
 
-      // Profil sicherstellen + Rolle NUR aus profiles nehmen
+      // Profil sicherstellen & Rolle aus profiles holen
       let profileRole: string | null = null
       try {
         const res = await fetch('/api/profiles/ensure', { method: 'POST' })
@@ -87,9 +96,10 @@ export default function LoginPage() {
           profileRole = j?.role || null
         }
       } catch {
-        // Ignorieren – wir leiten dann auf Dashboard, falls Rolle unbekannt
+        // Ignorieren – Fallback Routing
       }
 
+      // Zentrales Login: Rolle entscheidet Ziel
       if (profileRole === 'konsument') {
         router.push('/konsument')
       } else {
@@ -103,10 +113,12 @@ export default function LoginPage() {
   async function handleResend() {
     setError(null)
     setInfo(null)
+
     if (!emailValid) {
       setError('Bitte zuerst eine gültige E-Mail eintragen.')
       return
     }
+
     setLoading(true)
     try {
       const { error: resendErr } = await supabase.auth.resend({
@@ -126,17 +138,22 @@ export default function LoginPage() {
   async function handleResetPassword() {
     setError(null)
     setInfo(null)
+
     if (!emailValid) {
       setError('Bitte gib deine E-Mail ein, um den Reset-Link zu erhalten.')
       return
     }
+
     setLoading(true)
     try {
-      const { error: resetErr } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${SITE_URL}/neues-passwort`,
-      })
+      const { error: resetErr } =
+        await supabase.auth.resetPasswordForEmail(email, {
+          redirectTo: `${SITE_URL}/neues-passwort`,
+        })
       if (resetErr) throw resetErr
-      setInfo('Falls die E-Mail existiert, wurde ein Reset-Link versendet.')
+      setInfo(
+        'Falls diese E-Mail bei uns hinterlegt ist, haben wir dir einen Link zum Zurücksetzen geschickt.'
+      )
     } catch (err: any) {
       setError(err?.message ?? 'Konnte die Reset-E-Mail nicht senden.')
     } finally {
@@ -150,6 +167,7 @@ export default function LoginPage() {
         <CheckEmailEffect onInfo={setInfo} />
       </Suspense>
 
+      {/* Hintergrund-Glow */}
       <div
         className="pointer-events-none absolute inset-0 -z-20"
         style={{
@@ -161,33 +179,44 @@ export default function LoginPage() {
       />
       <motion.div
         className="absolute -top-32 -left-20 h-[34rem] w-[34rem] rounded-full blur-3xl"
-        style={{ background: 'radial-gradient(closest-side, rgba(88,101,242,.20), rgba(88,101,242,0))' }}
+        style={{
+          background:
+            'radial-gradient(closest-side, rgba(88,101,242,.20), rgba(88,101,242,0))',
+        }}
         initial={{ opacity: 0.5, scale: 0.9 }}
         animate={{ opacity: [0.5, 0.65, 0.5], scale: [0.9, 1, 0.9] }}
         transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
       />
       <motion.div
         className="absolute -bottom-40 -right-20 h-[38rem] w-[38rem] rounded-full blur-3xl"
-        style={{ background: 'radial-gradient(closest-side, rgba(139,92,246,.18), rgba(139,92,246,0))' }}
+        style={{
+          background:
+            'radial-gradient(closest-side, rgba(139,92,246,.18), rgba(139,92,246,0))',
+        }}
         initial={{ opacity: 0.45, scale: 0.95 }}
         animate={{ opacity: [0.45, 0.6, 0.45], scale: [0.95, 1.03, 0.95] }}
         transition={{ duration: 13, repeat: Infinity, ease: 'easeInOut' }}
       />
 
       <div className="relative z-10 mx-auto max-w-6xl px-4 py-10 sm:py-16">
+        {/* Intro / Claim */}
         <div className="mb-8 text-center">
           <span className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/90 ring-1 ring-white/20 backdrop-blur">
             <CheckCircleIcon className="h-4 w-4 text-emerald-300" />
-            Sicher & DSGVO – Server in der EU
+            Ein Login für Betrieb, Team & Marktplatz-Teilnehmer
           </span>
           <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
             Willkommen zurück
           </h1>
           <p className="mx-auto mt-2 max-w-2xl text-sm text-white/70">
-            Melde dich an und arbeite weiter an Angeboten, Material & Terminen.
+            Hier melden sich alle an: Inhaber:innen, Mitarbeitende und
+            Konsumenten aus dem Marktplatz. Nach dem Login leiten wir dich
+            automatisch in das passende Dashboard (Unternehmen oder
+            Konsumentenbereich).
           </p>
         </div>
 
+        {/* Card */}
         <motion.div
           className="mx-auto grid max-w-3xl grid-cols-1 gap-6 rounded-3xl border border-white/20 bg-white/10 p-6 shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-2xl ring-1 ring-white/10 sm:p-8"
           initial={{ opacity: 0, y: 18, scale: 0.98 }}
@@ -206,8 +235,11 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className="space-y-5">
+            {/* E-Mail */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-white/80">E-Mail</label>
+              <label className="mb-1 block text-xs font-medium text-white/80">
+                E-Mail
+              </label>
               <div className="relative">
                 <input
                   type="email"
@@ -227,8 +259,11 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Passwort */}
             <div>
-              <label className="mb-1 block text-xs font-medium text-white/80">Passwort</label>
+              <label className="mb-1 block text-xs font-medium text-white/80">
+                Passwort
+              </label>
               <div className="relative">
                 <input
                   type={showPw ? 'text' : 'password'}
@@ -244,9 +279,15 @@ export default function LoginPage() {
                   type="button"
                   onClick={() => setShowPw((s) => !s)}
                   className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-600 hover:bg-slate-200/70"
-                  aria-label={showPw ? 'Passwort verbergen' : 'Passwort anzeigen'}
+                  aria-label={
+                    showPw ? 'Passwort verbergen' : 'Passwort anzeigen'
+                  }
                 >
-                  {showPw ? <EyeSlashIcon className="h-5 w-5" /> : <EyeIcon className="h-5 w-5" />}
+                  {showPw ? (
+                    <EyeSlashIcon className="h-5 w-5" />
+                  ) : (
+                    <EyeIcon className="h-5 w-5" />
+                  )}
                 </button>
               </div>
 
@@ -261,6 +302,7 @@ export default function LoginPage() {
               </div>
             </div>
 
+            {/* Buttons */}
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
               <motion.button
                 type="submit"
@@ -271,7 +313,9 @@ export default function LoginPage() {
                 whileTap={{ scale: 0.98 }}
               >
                 <span>{loading ? 'Anmeldung…' : 'Einloggen'}</span>
-                {!loading && <ArrowRightIcon className="h-5 w-5 opacity-90" />}
+                {!loading && (
+                  <ArrowRightIcon className="h-5 w-5 opacity-90" />
+                )}
               </motion.button>
 
               {canResend && (
@@ -287,10 +331,19 @@ export default function LoginPage() {
             </div>
           </form>
 
-          <p className="text-center text-sm text-white/80">
+          <p className="mt-2 text-center text-[11px] text-white/55">
+            Mit deinem Zugang kannst du dich sowohl im Unternehmens-Dashboard
+            (Betrieb & Team) als auch im Konsumentenbereich des Marktplatzes
+            anmelden – abhängig von deiner hinterlegten Rolle.
+          </p>
+
+          <p className="mt-4 text-center text-sm text-white/80">
             Noch kein Konto?{' '}
-            <Link href="/registrieren" className="font-semibold text-white underline-offset-2 hover:underline">
-              Registrieren
+            <Link
+              href="/registrieren"
+              className="font-semibold text-white underline-offset-2 hover:underline"
+            >
+              Jetzt registrieren
             </Link>
           </p>
         </motion.div>

@@ -166,17 +166,19 @@ function LeadFlowAnimation() {
     <div className="mt-10">
       <div className="lf-wrapper">
         {/* Quellen */}
-        <div className="lf-node lf-source lf-market">
-          <span className="lf-dot-indicator" />
-          <span>Marktplatz-Leads</span>
-        </div>
-        <div className="lf-node lf-source lf-website">
-          <span className="lf-dot-indicator" />
-          <span>Website-Leads</span>
-        </div>
-        <div className="lf-node lf-source lf-offline">
-          <span className="lf-dot-indicator" />
-          <span>Offline-Leads</span>
+        <div className="lf-sources">
+          <div className="lf-node lf-source lf-market">
+            <span className="lf-dot-indicator" />
+            <span>Marktplatz-Leads</span>
+          </div>
+          <div className="lf-node lf-source lf-website">
+            <span className="lf-dot-indicator" />
+            <span>Website-Leads</span>
+          </div>
+          <div className="lf-node lf-source lf-offline">
+            <span className="lf-dot-indicator" />
+            <span>Offline-Leads</span>
+          </div>
         </div>
 
         {/* Zentrum */}
@@ -186,7 +188,7 @@ function LeadFlowAnimation() {
           <div className="lf-center-sub">gebündelt in GLENO</div>
         </div>
 
-        {/* Animierte Punkte */}
+        {/* Animierte Punkte (nur Desktop sichtbar) */}
         {dots.map((_, i) => (
           <span
             key={`m-${i}`}
@@ -211,31 +213,42 @@ function LeadFlowAnimation() {
       </div>
 
       <style>{`
+        /* Base: Mobile-First (clean, keine Überschneidungen) */
         .lf-wrapper {
           position: relative;
           margin: 0 auto;
           margin-top: 12px;
-          max-width: 820px;
-          height: 340px;
-          padding: 72px 80px 72px; /* deutlich mehr Abstand nach innen */
-          border-radius: 999px;
+          max-width: 420px;
+          padding: 32px 18px 26px;
+          border-radius: 26px;
           background:
-            radial-gradient(circle at top, rgba(56,189,248,0.14), transparent),
-            radial-gradient(circle at bottom, rgba(15,23,42,0.98), rgba(2,6,23,1));
+            radial-gradient(circle at top, rgba(15,23,42,0.96), rgba(2,6,23,1));
           box-shadow:
-            0 35px 110px rgba(15,23,42,0.70),
-            0 0 70px rgba(56,189,248,0.12);
-          border: 1px solid rgba(148,163,253,0.26);
+            0 18px 60px rgba(15,23,42,0.75),
+            0 0 40px rgba(15,23,42,0.7);
+          border: 1px solid rgba(148,163,253,0.22);
           overflow: hidden;
-          backdrop-filter: blur(24px);
+          backdrop-filter: blur(20px);
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          gap: 18px;
+        }
+
+        .lf-sources {
+          display: flex;
+          flex-wrap: wrap;
+          justify-content: center;
+          gap: 8px;
+          width: 100%;
+          z-index: 3;
         }
 
         .lf-node {
-          position: absolute;
           display: inline-flex;
           align-items: center;
           gap: 7px;
-          padding: 9px 16px;
+          padding: 8px 14px;
           border-radius: 999px;
           font-size: 10px;
           font-weight: 500;
@@ -258,36 +271,21 @@ function LeadFlowAnimation() {
           box-shadow: 0 0 14px rgba(56,189,248,0.95);
         }
 
-        .lf-market {
-          top: 40px;
-          left: 80px;
-        }
-        .lf-website {
-          top: 32px;
-          left: 50%;
-          transform: translateX(-50%);
-        }
-        .lf-offline {
-          top: 40px;
-          right: 80px;
-        }
-
         .lf-center {
-          left: 50%;
-          bottom: 70px;
-          transform: translateX(-50%);
+          position: relative;
           flex-direction: column;
           align-items: flex-start;
-          padding: 14px 18px 11px;
-          border-radius: 20px;
+          padding: 12px 16px 10px;
+          border-radius: 18px;
           background:
-            radial-gradient(circle at top, rgba(56,189,248,0.22), transparent),
+            radial-gradient(circle at top, rgba(56,189,248,0.18), transparent),
             rgba(2,6,23,0.98);
           color: #e5e7eb;
-          border: 1px solid rgba(148,163,253,0.42);
+          border: 1px solid rgba(148,163,253,0.36);
           box-shadow:
-            0 22px 52px rgba(15,23,42,0.95),
-            0 0 26px rgba(56,189,248,0.25);
+            0 16px 40px rgba(15,23,42,0.95),
+            0 0 22px rgba(56,189,248,0.25);
+          margin-top: 4px;
         }
 
         .lf-center-top {
@@ -307,101 +305,110 @@ function LeadFlowAnimation() {
         }
 
         .lf-float {
-          position: absolute;
-          width: 5px;
-          height: 5px;
-          border-radius: 999px;
-          background: #38bdf8;
-          box-shadow: 0 0 12px rgba(56,189,248,0.9);
-          opacity: 0;
+          display: none; /* Mobile: keine Animation */
         }
 
-        /* Markt -> Mitte (mit mehr Abstand berechnet) */
-        .lf-from-market {
-          top: 110px;
-          left: 104px;
-          animation: lf-move-market 3.2s infinite ease-in-out;
-        }
-        @keyframes lf-move-market {
-          0%   { opacity: 0; transform: translate(0,0); }
-          12%  { opacity: 1; }
-          68%  { opacity: 1; transform: translate(260px,120px); }
-          100% { opacity: 0; transform: translate(260px,120px); }
-        }
-
-        /* Website -> Mitte */
-        .lf-from-website {
-          top: 100px;
-          left: 50%;
-          transform: translateX(-50%);
-          animation: lf-move-website 3.0s infinite ease-in-out;
-        }
-        @keyframes lf-move-website {
-          0%   { opacity: 0; transform: translate(-50%,0); }
-          14%  { opacity: 1; }
-          70%  { opacity: 1; transform: translate(-50%,110px); }
-          100% { opacity: 0; transform: translate(-50%,110px); }
-        }
-
-        /* Offline -> Mitte */
-        .lf-from-offline {
-          top: 110px;
-          right: 104px;
-          animation: lf-move-offline 3.4s infinite ease-in-out;
-        }
-        @keyframes lf-move-offline {
-          0%   { opacity: 0; transform: translate(0,0); }
-          12%  { opacity: 1; }
-          68%  { opacity: 1; transform: translate(-260px,120px); }
-          100% { opacity: 0; transform: translate(-260px,120px); }
-        }
-
-        @media (max-width: 768px) {
+        /* Desktop-Layout: Pills oben verteilt + Animation */
+        @media (min-width: 768px) {
           .lf-wrapper {
-            max-width: 100%;
-            height: 280px;
-            padding: 56px 24px 52px;
-            border-radius: 36px;
+            max-width: 820px;
+            height: 340px;
+            padding: 72px 80px 72px;
+            border-radius: 999px;
+            background:
+              radial-gradient(circle at top, rgba(56,189,248,0.14), transparent),
+              radial-gradient(circle at bottom, rgba(15,23,42,0.98), rgba(2,6,23,1));
+            box-shadow:
+              0 35px 110px rgba(15,23,42,0.70),
+              0 0 70px rgba(56,189,248,0.12);
+            display: block;
           }
+
+          .lf-sources {
+            position: static;
+            display: block;
+          }
+
+          .lf-source {
+            position: absolute;
+          }
+
           .lf-market {
-            top: 34px;
-            left: 22px;
+            top: 40px;
+            left: 80px;
           }
           .lf-website {
-            top: 26px;
+            top: 32px;
+            left: 50%;
+            transform: translateX(-50%);
           }
           .lf-offline {
-            top: 34px;
-            right: 22px;
+            top: 40px;
+            right: 80px;
           }
+
           .lf-center {
-            bottom: 52px;
+            position: absolute;
+            left: 50%;
+            bottom: 70px;
+            transform: translateX(-50%);
+            margin-top: 0;
+          }
+
+          .lf-float {
+            display: block;
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            border-radius: 999px;
+            background: #38bdf8;
+            box-shadow: 0 0 12px rgba(56,189,248,0.9);
+            opacity: 0;
+          }
+
+          .lf-from-market {
+            top: 110px;
+            left: 104px;
+            animation: lf-move-market 3.2s infinite ease-in-out;
+          }
+          .lf-from-website {
+            top: 100px;
+            left: 50%;
+            transform: translateX(-50%);
+            animation: lf-move-website 3.0s infinite ease-in-out;
+          }
+          .lf-from-offline {
+            top: 110px;
+            right: 104px;
+            animation: lf-move-offline 3.4s infinite ease-in-out;
           }
 
           @keyframes lf-move-market {
             0%   { opacity: 0; transform: translate(0,0); }
             12%  { opacity: 1; }
-            68%  { opacity: 1; transform: translate(140px,92px); }
-            100% { opacity: 0; transform: translate(140px,92px); }
+            68%  { opacity: 1; transform: translate(260px,120px); }
+            100% { opacity: 0; transform: translate(260px,120px); }
           }
+
           @keyframes lf-move-website {
             0%   { opacity: 0; transform: translate(-50%,0); }
             14%  { opacity: 1; }
-            70%  { opacity: 1; transform: translate(-50%,82px); }
-            100% { opacity: 0; transform: translate(-50%,82px); }
+            70%  { opacity: 1; transform: translate(-50%,110px); }
+            100% { opacity: 0; transform: translate(-50%,110px); }
           }
+
           @keyframes lf-move-offline {
             0%   { opacity: 0; transform: translate(0,0); }
             12%  { opacity: 1; }
-            68%  { opacity: 1; transform: translate(-140px,92px); }
-            100% { opacity: 0; transform: translate(-140px,92px); }
+            68%  { opacity: 1; transform: translate(-260px,120px); }
+            100% { opacity: 0; transform: translate(-260px,120px); }
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
           .lf-float {
             animation: none !important;
-            opacity: 0.35;
+            opacity: 0.2;
           }
         }
       `}</style>
@@ -594,10 +601,11 @@ export default function HomePage() {
                 Marktplatz, CRM & Website in einer Plattform
               </span>
               <span className="hidden sm:inline text-slate-500">•</span>
-              <span className="hidden sm:inline">Fokus: Agenturen & Services</span>
+              <span className="hidden sm:inline">
+                Fokus: Agenturen & Services
+              </span>
             </div>
 
-            {/* kleiner, damit in 2 Zeilen bleibt */}
             <h1 className="text-[26px] leading-tight font-semibold tracking-tight sm:text-4xl lg:text-[40px] text-white">
               Marktplatz, CRM und Website –
               <span className="block text-slate-300">
@@ -677,7 +685,8 @@ export default function HomePage() {
                 </li>
                 <li>
                   <span className="font-semibold">Offline-Leads:</span>{' '}
-                  Telefon, Messen, Empfehlungen – sauber erfasst & nachverfolgbar.
+                  Telefon, Messen, Empfehlungen – sauber erfasst &
+                  nachverfolgbar.
                 </li>
               </ul>
               <p className="mt-2 text-[11px] text-slate-500">

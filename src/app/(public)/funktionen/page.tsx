@@ -30,7 +30,7 @@ const PRIMARY = '#111827' // dunkles Anthrazit als CTA-/Brand-Akzent
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Features – GLENO',
+    default: 'GLENO - Funktionen',
     template: '%s | GLENO',
   },
   description:

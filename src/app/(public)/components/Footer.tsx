@@ -120,14 +120,6 @@ export default function Footer() {
           {/* Bottom bar */}
           <div className="mt-6 rounded-2xl border border-white/70 bg-white/80 px-4 py-3.5 text-xs sm:text-sm text-slate-500 backdrop-blur-xl ring-1 ring-white/70 shadow-[0_1px_6px_rgba(2,6,23,0.03)] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
             <p>© {year} GLENO. Alle Rechte vorbehalten.</p>
-            <div className="flex gap-4 text-xs sm:text-sm">
-              <Link href="https://linkedin.com" className="hover:text-slate-700">
-                LinkedIn
-              </Link>
-              <Link href="https://instagram.com" className="hover:text-slate-700">
-                Instagram
-              </Link>
-            </div>
           </div>
         </div>
       </footer>

@@ -12,7 +12,7 @@ const PRIMARY = '#0a1b40'
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Preis – GLENO (ein Preis für alles)',
+    default: 'GLENO - Preis',
     template: '%s | GLENO',
   },
   description:

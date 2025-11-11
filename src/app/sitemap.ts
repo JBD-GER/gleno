@@ -12,6 +12,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { url: '/funktionen',  changefreq: 'monthly' as const,  priority: 0.9 },
     { url: '/preis',       changefreq: 'monthly' as const,  priority: 0.8 },
     { url: '/support',     changefreq: 'monthly' as const,  priority: 0.6 },
+    { url: '/markt',       changefreq: 'monthly' as const,  priority: 0.7 },
+      { url: '/markt/branchen',     changefreq: 'monthly' as const,  priority: 0.5 },
   ]
 
   return routes.map(r => ({

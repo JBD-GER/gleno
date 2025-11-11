@@ -9,8 +9,26 @@ import { supabaseServer } from '@/lib/supabase-server'
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!
 const SERVICE_ROLE = process.env.SUPABASE_SERVICE_ROLE_KEY!
 const ANON_KEY     = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-const SITE_URL     = process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+
 const LEGAL_IP_SALT = process.env.LEGAL_IP_SALT || 'change-me-super-random-salt'
+
+// 🔹 SITE_URL immer auf https://www.gleno.de normalisieren
+const RAW_SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://www.gleno.de'
+const SITE_URL = (() => {
+  try {
+    const url = new URL(RAW_SITE_URL)
+
+    // Wenn jemand "https://gleno.de" (ohne www) gesetzt hat → auf www drehen
+    if (url.hostname === 'gleno.de') {
+      url.hostname = 'www.gleno.de'
+    }
+
+    // Nur Origin zurückgeben (Schema + Host + Port)
+    return url.origin
+  } catch {
+    return 'https://www.gleno.de'
+  }
+})()
 
 // 👉 falls du weitere Buckets nutzt, hier ergänzen:
 const KNOWN_BUCKETS = ['dokumente', 'logo'] as const

@@ -209,7 +209,7 @@ export default function HomePage() {
             <div className="mt-4 flex flex-wrap items-center gap-2 text-[9px] text-slate-400">
               <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/85 px-2.5 py-1 ring-1 ring-slate-700/80">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
-                Für Handwerk, PV, SHK, Elektro, Ausbau &amp; Service
+                Für Handwerk, Photovoltaik, SHK, Elektro &amp; Ausbau
               </span>
               <span>DSGVO-konform &amp; Hosting in der EU</span>
               <span>Keine Einrichtungsgebühr</span>

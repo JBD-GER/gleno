@@ -8,26 +8,29 @@ export const runtime = 'nodejs'
 export async function GET(req: NextRequest) {
   const { supabase, response } = supabaseServerRoute(req)
 
-  const { data: { user }, error: uerr } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: uerr,
+  } = await supabase.auth.getUser()
   if (uerr || !user) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers: response.headers })
   }
 
-  // market_requests statt market_leads
+  // WICHTIG: nur eigene Requests laden
   const { data, error } = await supabase
     .from('market_requests')
     .select('id, summary, request_text, status, created_at, category, city')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false })
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500, headers: response.headers })
   }
 
-  // Dem alten Frontend ein "title" liefern
   const leads = (data ?? []).map((r: any) => ({
     id: r.id,
     title: (r.summary && String(r.summary).trim()) || [r.category, r.city].filter(Boolean).join(' – ') || 'Anfrage',
-    status: String(r.status || 'Anfrage').toLowerCase(), // Anzeige kannst du frei mappen
+    status: String(r.status || 'Anfrage').toLowerCase(),
     created_at: r.created_at,
   }))
 
@@ -36,13 +39,15 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/markt/leads
- * Body: { aiLead: { summary, requestText, fields:{...} } }
- * Speichert die Anfrage des eingeloggten Users.
+ * Body: { aiLead: {...}, externalSearchConsent?: boolean }
  */
 export async function POST(req: NextRequest) {
   const { supabase, response } = supabaseServerRoute(req)
 
-  const { data: { user }, error: uerr } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: uerr,
+  } = await supabase.auth.getUser()
   if (uerr || !user) {
     return NextResponse.json({ error: 'unauthorized' }, { status: 401, headers: response.headers })
   }
@@ -55,11 +60,12 @@ export async function POST(req: NextRequest) {
   }
 
   const aiLead = body?.aiLead
+  const externalSearchConsent = !!body?.externalSearchConsent // 👈 jetzt korrekt gelesen
+
   if (!aiLead || typeof aiLead !== 'object') {
     return NextResponse.json({ error: 'missing_aiLead' }, { status: 400, headers: response.headers })
   }
 
-  // Minimal-Validierung
   const request_text = String(aiLead.requestText || '').trim()
   if (request_text.length < 20) {
     return NextResponse.json({ error: 'request_text_too_short' }, { status: 400, headers: response.headers })
@@ -72,30 +78,31 @@ export async function POST(req: NextRequest) {
     [fields?.category, fields?.city].filter(Boolean).join(' – ') ||
     'Anfrage'
 
-  // defensiv normalisieren
   const executionRaw = String(fields.execution || 'digital')
   const execution = /vorOrt|vorort/i.test(executionRaw) ? 'vorOrt' : 'digital'
 
   const payload = {
     user_id: user.id,
-    status: 'Anfrage', // <- Enum in deiner DB
+    status: 'Anfrage',
     branch: fields.branch ? String(fields.branch) : 'Allgemein',
     category: fields.category ? String(fields.category) : 'Sonstiges',
     city: fields.city ? String(fields.city) : null,
     zip: fields.zip ? String(fields.zip) : null,
     urgency: fields.urgency ? String(fields.urgency) : null,
-    execution, // USER-DEFINED Enum in DB, Werte: vorOrt/digital
+    execution, // enum in DB
     budget_min: typeof fields.budget_min === 'number' ? fields.budget_min : null,
     budget_max: typeof fields.budget_max === 'number' ? fields.budget_max : null,
     extras: (fields.extras && typeof fields.extras === 'object') ? fields.extras : {},
     request_text: request_text.slice(0, 30000),
     summary,
     recommendations: Array.isArray(aiLead.recommendations) ? aiLead.recommendations : null,
-    // "title" gibt es in der DB nicht – nur fürs Frontend gebaut
+    // 👇 neue Felder
+    external_search_consent: externalSearchConsent,
+    external_search_consent_at: externalSearchConsent ? new Date().toISOString() : null,
   }
 
   const { data, error } = await supabase
-    .from('market_requests') // <- richtige Tabelle
+    .from('market_requests')
     .insert(payload)
     .select('id')
     .single()

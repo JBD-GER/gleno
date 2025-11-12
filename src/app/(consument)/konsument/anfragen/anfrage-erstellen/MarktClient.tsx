@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useMemo, useState, useEffect } from 'react'
+import React, { useMemo, useState, useEffect, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 
 /* -------------------------------- Theme -------------------------------- */
@@ -52,7 +52,10 @@ type AiLead = {
 
 /* ------------------------------- UI helpers ------------------------------ */
 const inputCls =
-  'W-full rounded-2xl border border-white/60 bg-white/80 backdrop-blur-xl px-4 py-3 text-[15px] text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400/40'.replace('W-','w-')
+  'W-full rounded-2xl border border-white/60 bg-white/80 backdrop-blur-xl px-4 py-3 text-[15px] text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400/40'.replace(
+    'W-',
+    'w-'
+  )
 const textareaCls = `${inputCls} min-h-[140px]`
 const actionBtn =
   'inline-flex items-center gap-2 rounded-2xl border border-white/60 bg-white/80 backdrop-blur-xl px-4 py-2.5 text-slate-900 shadow-sm hover:shadow transition focus:outline-none focus:ring-2 focus:ring-sky-400/40'
@@ -272,12 +275,18 @@ export default function MarktPage() {
 @keyframes slidein{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 `
 
+  const router = useRouter()
+
+  /* --- abort controllers to avoid race/auto-effects --- */
+  const aiAbortRef = useRef<AbortController | null>(null)
+  const saveAbortRef = useRef<AbortController | null>(null)
+
   /* form state */
   const [form, setForm] = useState<FormState>({ freeText: '', city: '', zip: '', urgency: 'normal' })
   const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false) // <— NEU: Speichern-Loader
+  const [saving, setSaving] = useState(false)
   const [result, setResult] = useState<AiLead | null>(null)
-  const router = useRouter()
+  const [externalSearchConsent, setExternalSearchConsent] = useState(false)
 
   // Editiermodus Anfrage-Text
   const [isEditing, setIsEditing] = useState(false)
@@ -306,7 +315,10 @@ export default function MarktPage() {
     setLiveBadge(variants[Math.floor(Math.random() * variants.length)])
   }, [liveLine])
 
-  // clientseitiger Fallback-Formatter (falls API mal nicht antwortet)
+  // Prevent double posts
+  const isPostingRef = useRef(false)
+
+  // clientseitiger Fallback-Formatter
   function buildClientRequestText(parts: { intro: string; bullets: string[] }) {
     const b = Array.isArray(parts.bullets) ? parts.bullets : []
     const bullets = b.length >= 3 ? b.slice(0, 3) : [...b, ...Array(3 - b.length).fill('')].slice(0, 3)
@@ -318,6 +330,11 @@ Leistungsumfang – Stichpunkte
   }
 
   async function onGenerate() {
+    if (loading) return
+    // cancel previous AI call if any
+    aiAbortRef.current?.abort()
+    aiAbortRef.current = new AbortController()
+
     setLoading(true)
     setResult(null)
     setIsEditing(false)
@@ -332,6 +349,7 @@ Leistungsumfang – Stichpunkte
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(form),
+        signal: aiAbortRef.current.signal,
       })
       if (!res.ok) throw new Error('endpoint not ready')
       const data = (await res.json()) as AiLead
@@ -355,8 +373,9 @@ Leistungsumfang – Stichpunkte
         setResult({ ...data, requestText: safeRequestText })
         setDraftText(safeRequestText)
         setLoading(false)
-      }, 520 + Math.random() * 260)
-    } catch {
+      }, 420 + Math.random() * 220)
+    } catch (err: any) {
+      if (err?.name === 'AbortError') return
       const parts = {
         intro:
           'Ich übermittle eine strukturierte Anfrage mit klarer Zielsetzung, gewünschter Ausführung und erwarteten Ergebnissen. Bitte prüfen Sie den Leistungsumfang und geben Sie eine belastbare Einschätzung.',
@@ -399,7 +418,7 @@ Leistungsumfang – Stichpunkte
         setResult(fallback)
         setDraftText(reqText)
         setLoading(false)
-      }, 600 + Math.random() * 300)
+      }, 480 + Math.random() * 220)
     }
   }
 
@@ -424,25 +443,35 @@ Leistungsumfang – Stichpunkte
   }, [!!budgetRec])
 
   function copy(text: string) {
-    navigator.clipboard.writeText(text).then(() => {
-      setToast('Text kopiert ✅')
-      setTimeout(() => setToast(''), 1800)
-    }).catch(() => {})
+    navigator.clipboard
+      .writeText(text)
+      .then(() => {
+        setToast('Text kopiert ✅')
+        setTimeout(() => setToast(''), 1800)
+      })
+      .catch(() => {})
   }
   function saveEditedText() {
     setResult((prev) => (prev ? { ...prev, requestText: draftText, parts: undefined } : prev))
     setIsEditing(false)
   }
 
-  // POST: Anfrage speichern (ersetzt früheres Signup-Modal)
+  // POST: Anfrage speichern (nur auf expliziten Klick)
   async function postLead() {
-    if (!result) return
+    if (!result || saving || isPostingRef.current) return
+    isPostingRef.current = true
     setSaving(true)
+
+    // cancel previous save if any
+    saveAbortRef.current?.abort()
+    saveAbortRef.current = new AbortController()
+
     try {
       const res = await fetch('/api/markt/leads', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ aiLead: result }),
+        body: JSON.stringify({ aiLead: result, externalSearchConsent }),
+        signal: saveAbortRef.current.signal,
       })
       const j = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(j?.error || 'Speichern fehlgeschlagen')
@@ -451,9 +480,11 @@ Leistungsumfang – Stichpunkte
       setTimeout(() => setToast(''), 1500)
       router.push('/konsument/anfragen')
     } catch (e: any) {
+      if (e?.name === 'AbortError') return
       setToast(e?.message || 'Fehler beim Speichern')
       setTimeout(() => setToast(''), 2600)
       setSaving(false)
+      isPostingRef.current = false
     }
   }
 
@@ -489,7 +520,9 @@ Leistungsumfang – Stichpunkte
         <div className="relative mx-auto max-w-6xl px-6 pt-10 pb-10 sm:pt-14 sm:pb-14">
           <div className="rounded-3xl border border-white/60 bg-white/70 p-6 text-center shadow-[0_20px_50px_rgba(2,6,23,0.06),0_2px_10px_rgba(2,6,23,0.04)] backdrop-blur-xl ring-1 ring-white/60 sm:p-10">
             <div className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1 text-[11px] font-semibold text-slate-900 ring-1 ring-white/60 backdrop-blur">
-              <span className="rounded-full px-2 py-0.5 text-white" style={{ backgroundColor: PRIMARY }}>Kostenlose Anfrage</span>
+              <span className="rounded-full px-2 py-0.5 text-white" style={{ backgroundColor: PRIMARY }}>
+                Kostenlose Anfrage
+              </span>
               <span>Versicherung inklusive</span>
             </div>
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">In 2 Minuten zur passenden Anfrage – kostenlos & versichert</h1>
@@ -542,9 +575,52 @@ Leistungsumfang – Stichpunkte
             </div>
           </div>
 
+         {/* Externe Partnersuche (Consent) – hübscher Toggle */}
+<div className="mt-4 rounded-2xl border border-white/60 bg-white/70 p-4 backdrop-blur-xl ring-1 ring-white/60">
+  <div className="flex items-start gap-3">
+    {/* Toggle */}
+    <button
+      type="button"
+      role="switch"
+      aria-checked={externalSearchConsent}
+      onClick={() => setExternalSearchConsent((v) => !v)}
+      className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full transition
+        ${externalSearchConsent ? 'bg-slate-900' : 'bg-slate-300/70'}
+        focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-300`}
+    >
+      <span
+        aria-hidden="true"
+        className={`pointer-events-none inline-block h-5 w-5 translate-y-[2px] rounded-full bg-white shadow transition
+          ${externalSearchConsent ? 'translate-x-[22px]' : 'translate-x-[2px]'}`}
+      />
+    </button>
+
+    {/* Text */}
+    <div className="text-sm">
+      <div className="font-medium text-slate-900">
+        Darf GLENO zusätzlich <span className="font-semibold">außerhalb der Plattform</span> anonym nach passenden Partnern suchen?
+      </div>
+      <div className="mt-1 text-[13px] leading-relaxed text-slate-600">
+        Wir geben <strong>keine personenbezogenen Daten</strong> weiter – nur den anonymisierten Anfrage-Text.
+        Details in unserer{' '}
+        <a href="/datenschutz" className="underline hover:no-underline">
+          Datenschutzerklärung
+        </a>.
+      </div>
+    </div>
+  </div>
+</div>
+
+
           {/* KI-Aktion */}
           <div className="mt-5 flex items-center gap-3">
-            <button disabled={disabled || loading} onClick={onGenerate} className={`${actionBtn} ${disabled || loading ? 'opacity-60 cursor-not-allowed' : ''}`} title="KI erzeugt eine vollständige, strukturierte Anfrage">
+            <button
+              type="button"
+              disabled={disabled || loading}
+              onClick={onGenerate}
+              className={`${actionBtn} ${disabled || loading ? 'opacity-60 cursor-not-allowed' : ''}`}
+              title="KI erzeugt eine vollständige, strukturierte Anfrage"
+            >
               <Icon.Robot /> KI Anfrage erzeugen
             </button>
             <span className="text-xs text-slate-500">Kostenlos • Versicherung inklusive</span>
@@ -569,7 +645,9 @@ Leistungsumfang – Stichpunkte
                     <div key={si} className="mt-2">
                       <div className="text-xs font-semibold text-indigo-900/90">{sec.heading || 'Aspekte'}</div>
                       <ul className="mt-1 list-disc pl-5 text-sm space-y-1">
-                        {(sec.items || []).slice(0, 6).map((it, ii) => (<li key={ii}>{it}</li>))}
+                        {(sec.items || []).slice(0, 6).map((it, ii) => (
+                          <li key={ii}>{it}</li>
+                        ))}
                       </ul>
                     </div>
                   ))}
@@ -585,7 +663,8 @@ Leistungsumfang – Stichpunkte
 
           {!loading && !result && (
             <div className="text-slate-500 text-sm">
-              Fülle links dein Anliegen aus und klicke <span className="font-medium">„KI Anfrage erzeugen“</span>. Danach siehst du den formatierten Anfrage-Text, ggf. medizinische Einschätzung, Budget oder einen passenden Hinweis (Disclaimer).
+              Fülle links dein Anliegen aus und klicke <span className="font-medium">„KI Anfrage erzeugen“</span>. Danach siehst du den formatierten Anfrage-Text, ggf. medizinische Einschätzung, Budget oder
+              einen passenden Hinweis (Disclaimer).
             </div>
           )}
 
@@ -594,10 +673,18 @@ Leistungsumfang – Stichpunkte
               <div className="rounded-2xl border border-white/60 bg-white/70 p-4">
                 <div className="flex items-center gap-3">
                   <div className="h-5 w-5 rounded-full border-2 border-slate-300 border-t-transparent animate-spin" />
-                  <div className="text-slate-800">{aiPhase < 1 ? 'Analysiere Eingaben' : aiPhase < 2 ? 'Normalisiere Felder' : 'Formuliere Nachricht'}<span className="ai-dots" /></div>
+                  <div className="text-slate-800">
+                    {aiPhase < 1 ? 'Analysiere Eingaben' : aiPhase < 2 ? 'Normalisiere Felder' : 'Formuliere Nachricht'}
+                    <span className="ai-dots" />
+                  </div>
                 </div>
-                <div className="mt-3 h-2 rounded-full bg-slate-200/70 overflow-hidden"><div className="h-full w-0 animate-[grow_1s_linear_forwards] bg-slate-900/80" /></div>
-                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2"><div className="h-12 rounded-xl bg-white/70 shimmer" /><div className="h-12 rounded-xl bg-white/70 shimmer" /></div>
+                <div className="mt-3 h-2 rounded-full bg-slate-200/70 overflow-hidden">
+                  <div className="h-full w-0 animate-[grow_1s_linear_forwards] bg-slate-900/80" />
+                </div>
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <div className="h-12 rounded-xl bg-white/70 shimmer" />
+                  <div className="h-12 rounded-xl bg-white/70 shimmer" />
+                </div>
               </div>
               <div className="h-24 rounded-2xl bg-white/70 shimmer" />
             </div>
@@ -613,28 +700,31 @@ Leistungsumfang – Stichpunkte
                   </div>
                   <div className="flex items-center gap-4">
                     <button
+                      type="button"
                       className="text-xs inline-flex items-center gap-1 underline hover:no-underline hover:opacity-90 cursor-pointer"
                       title="Text in die Zwischenablage kopieren"
-                      onClick={() => copy(isEditing ? draftText : (result?.requestText ?? ''))}
-                      type="button"
+                      onClick={() => copy(isEditing ? draftText : result?.requestText ?? '')}
                     >
                       <Icon.Copy /> Kopieren
                     </button>
                     {!isEditing ? (
                       <button
+                        type="button"
                         className="text-xs inline-flex items-center gap-1 underline hover:no-underline hover:opacity-90 cursor-pointer"
                         title="Text bearbeiten"
-                        onClick={() => { setDraftText(result?.requestText ?? ''); setIsEditing(true) }}
-                        type="button"
+                        onClick={() => {
+                          setDraftText(result?.requestText ?? '')
+                          setIsEditing(true)
+                        }}
                       >
                         <Icon.Edit /> Bearbeiten
                       </button>
                     ) : (
                       <button
+                        type="button"
                         className="text-xs inline-flex items-center gap-1 underline hover:no-underline hover:opacity-90 cursor-pointer"
                         title="Bearbeitung speichern"
                         onClick={saveEditedText}
-                        type="button"
                       >
                         <Icon.Save /> Speichern
                       </button>
@@ -652,11 +742,7 @@ Leistungsumfang – Stichpunkte
               </div>
 
               {/* Toast */}
-              {toast && (
-                <div className="absolute right-3 -top-3 translate-y-[-100%] rounded-xl bg-emerald-600 text-white text-xs px-3 py-2 shadow">
-                  {toast}
-                </div>
-              )}
+              {toast && <div className="absolute right-3 -top-3 translate-y-[-100%] rounded-xl bg-emerald-600 text-white text-xs px-3 py-2 shadow">{toast}</div>}
 
               {/* GELBE MEDIZIN-BOX */}
               {medicalRec && (
@@ -664,20 +750,25 @@ Leistungsumfang – Stichpunkte
                   <div className="text-sm font-semibold text-amber-900 flex items-center gap-2">
                     <Icon.Alert /> {medicalRec.title || 'Vorläufige Einschätzung'}
                   </div>
-                  {medicalRec.specialty && (
-                    <p className="mt-1 text-xs text-amber-900/90"><strong>Empfohlene Fachrichtung:</strong> {medicalRec.specialty}</p>
-                  )}
+                  {medicalRec.specialty && <p className="mt-1 text-xs text-amber-900/90"><strong>Empfohlene Fachrichtung:</strong> {medicalRec.specialty}</p>}
                   {medicalRec.urgency && (
-                    <p className="text-xs text-amber-900/90"><strong>Dringlichkeit:</strong> {medicalRec.urgency === 'sofort' ? 'sofortige Abklärung' : medicalRec.urgency === 'zeitnah' ? 'zeitnah (in den nächsten Tagen)' : 'Termin vereinbaren'}</p>
+                    <p className="text-xs text-amber-900/90">
+                      <strong>Dringlichkeit:</strong>{' '}
+                      {medicalRec.urgency === 'sofort' ? 'sofortige Abklärung' : medicalRec.urgency === 'zeitnah' ? 'zeitnah (in den nächsten Tagen)' : 'Termin vereinbaren'}
+                    </p>
                   )}
                   <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
-                    {medicalRec.bullets.map((b, idx) => (<li key={idx}>{b}</li>))}
+                    {medicalRec.bullets.map((b, idx) => (
+                      <li key={idx}>{b}</li>
+                    ))}
                   </ul>
                   {medicalRec.red_flags && medicalRec.red_flags.length > 0 && (
                     <div className="mt-2 rounded-md bg-white/80 border border-amber-400/50 p-2">
                       <div className="text-xs font-semibold text-amber-900">Warnzeichen</div>
                       <ul className="mt-1 list-disc pl-5 text-xs space-y-0.5">
-                        {medicalRec.red_flags.map((r, i) => <li key={i}>{r}</li>)}
+                        {medicalRec.red_flags.map((r, i) => (
+                          <li key={i}>{r}</li>
+                        ))}
                       </ul>
                     </div>
                   )}
@@ -689,21 +780,27 @@ Leistungsumfang – Stichpunkte
 
               {/* Nächste Schritte */}
               <div className="rounded-2xl border border-sky-500/30 bg-sky-50/80 p-4 ring-1 ring-sky-500/20">
-                <div className="text-sm font-semibold text-sky-900 flex items-center gap-2"><Icon.Handshake /> Nächste Schritte</div>
+                <div className="text-sm font-semibold text-sky-900 flex items-center gap-2">
+                  <Icon.Handshake /> Nächste Schritte
+                </div>
                 <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
                   <li>Anonym Partner aus der Kategorie auswählen &amp; kontaktieren (via Chat).</li>
                   <li>Optional Termin vereinbaren (vor Ort, Telefon oder Videochat).</li>
                   <li>Vereinbarung treffen &amp; digital unterzeichnen.</li>
                 </ul>
                 <div className="mt-3 text-xs text-sky-900/80 flex items-start gap-2">
-                  <span className="mt-[2px]"><Icon.Shield /></span>
-                  <span><strong>Versichert:</strong> Alle Aufträge über unsere Plattform sind abgesichert. Bei Streitfällen unterstützen wir neutral.</span>
+                  <span className="mt-[2px]">
+                    <Icon.Shield />
+                  </span>
+                  <span>
+                    <strong>Versichert:</strong> Alle Aufträge über unsere Plattform sind abgesichert. Bei Streitfällen unterstützen wir neutral.
+                  </span>
                 </div>
               </div>
 
               {/* GRÜNE BOX: Budget ODER Disclaimer */}
-              {showGreenBox && (
-                showDisclaimer ? (
+              {showGreenBox &&
+                (showDisclaimer ? (
                   <div className="rounded-2xl border border-emerald-500/30 bg-emerald-50/70 p-4 ring-1 ring-emerald-500/20">
                     <div className="text-sm font-semibold text-emerald-900">Hinweis zur Vergütung ({category || 'Kategorie'})</div>
                     <p className="mt-2 text-sm">{disclaimerText}</p>
@@ -718,58 +815,87 @@ Leistungsumfang – Stichpunkte
                     </div>
                     {(budgetRec?.assumptions?.length ?? 0) > 0 && (
                       <ul className="mt-2 list-disc pl-5 text-sm">
-                        {budgetRec!.assumptions!.map((a, idx) => (<li key={idx}>{a}</li>))}
+                        {budgetRec!.assumptions!.map((a, idx) => (
+                          <li key={idx}>{a}</li>
+                        ))}
                       </ul>
                     )}
                     <div className="mt-3 flex gap-2">
-                      <button type="button" onClick={() => {
-                        if (!budgetRec) return
-                        setBudgetMode('empfehlung')
-                        setResult((prev) => (prev ? { ...prev, fields: { ...prev.fields, budget_min: budgetRec.budget_min ?? null, budget_max: budgetRec.budget_max ?? null } } : prev))
-                      }} className="inline-flex items-center gap-2 rounded-xl border border-emerald-600/40 bg-white/80 px-3 py-1.5 text-sm font-medium text-emerald-900 hover:shadow">Übernehmen</button>
-                      <button type="button" onClick={() => {
-                        setBudgetMode('custom')
-                        setCustomMin('')
-                        setCustomMax('')
-                        setResult((prev) => (prev ? { ...prev, fields: { ...prev.fields, budget_min: null, budget_max: null } } : prev))
-                      }} className="inline-flex items-center gap-2 rounded-xl border border-emerald-600/40 bg-white/80 px-3 py-1.5 text-sm font-medium text-emerald-900 hover:shadow">Nicht übernehmen</button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (!budgetRec) return
+                          setBudgetMode('empfehlung')
+                          setResult((prev) =>
+                            prev ? { ...prev, fields: { ...prev.fields, budget_min: budgetRec.budget_min ?? null, budget_max: budgetRec.budget_max ?? null } } : prev
+                          )
+                        }}
+                        className="inline-flex items-center gap-2 rounded-xl border border-emerald-600/40 bg-white/80 px-3 py-1.5 text-sm font-medium text-emerald-900 hover:shadow"
+                      >
+                        Übernehmen
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setBudgetMode('custom')
+                          setCustomMin('')
+                          setCustomMax('')
+                          setResult((prev) => (prev ? { ...prev, fields: { ...prev.fields, budget_min: null, budget_max: null } } : prev))
+                        }}
+                        className="inline-flex items-center gap-2 rounded-xl border border-emerald-600/40 bg-white/80 px-3 py-1.5 text-sm font-medium text-emerald-900 hover:shadow"
+                      >
+                        Nicht übernehmen
+                      </button>
                     </div>
                     {budgetMode === 'custom' && (
                       <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
                         <div>
                           <label className="block text-xs text-slate-600 mb-1">Eigenes Budget (min)</label>
-                          <input className={inputCls} placeholder="z. B. 1.200" value={customMin} onChange={(e) => setCustomMin(e.target.value)} onBlur={() => {
-                            const min = parseEuroInput(customMin)
-                            const max = parseEuroInput(customMax)
-                            let cmin: number | null = typeof min === 'number' ? min : null
-                            let cmax: number | null = typeof max === 'number' ? max : null
-                            if (cmin && cmax && cmin > cmax) [cmin, cmax] = [cmax, cmin]
-                            setResult((prev) => (prev ? { ...prev, fields: { ...prev.fields, budget_min: cmin, budget_max: cmax } } : prev))
-                          }} />
+                          <input
+                            className={inputCls}
+                            placeholder="z. B. 1.200"
+                            value={customMin}
+                            onChange={(e) => setCustomMin(e.target.value)}
+                            onBlur={() => {
+                              const min = parseEuroInput(customMin)
+                              const max = parseEuroInput(customMax)
+                              let cmin: number | null = typeof min === 'number' ? min : null
+                              let cmax: number | null = typeof max === 'number' ? max : null
+                              if (cmin && cmax && cmin > cmax) [cmin, cmax] = [cmax, cmin]
+                              setResult((prev) => (prev ? { ...prev, fields: { ...prev.fields, budget_min: cmin, budget_max: cmax } } : prev))
+                            }}
+                          />
                         </div>
                         <div>
                           <label className="block text-xs text-slate-600 mb-1">Eigenes Budget (max)</label>
-                          <input className={inputCls} placeholder="z. B. 3.000" value={customMax} onChange={(e) => setCustomMax(e.target.value)} onBlur={() => {
-                            const min = parseEuroInput(customMin)
-                            const max = parseEuroInput(customMax)
-                            let cmin: number | null = typeof min === 'number' ? min : null
-                            let cmax: number | null = typeof max === 'number' ? max : null
-                            if (cmin && cmax && cmin > cmax) [cmin, cmax] = [cmax, cmin]
-                            setResult((prev) => (prev ? { ...prev, fields: { ...prev.fields, budget_min: cmin, budget_max: cmax } } : prev))
-                          }} />
+                          <input
+                            className={inputCls}
+                            placeholder="z. B. 3.000"
+                            value={customMax}
+                            onChange={(e) => setCustomMax(e.target.value)}
+                            onBlur={() => {
+                              const min = parseEuroInput(customMin)
+                              const max = parseEuroInput(customMax)
+                              let cmin: number | null = typeof min === 'number' ? min : null
+                              let cmax: number | null = typeof max === 'number' ? max : null
+                              if (cmin && cmax && cmin > cmax) [cmin, cmax] = [cmax, cmin]
+                              setResult((prev) => (prev ? { ...prev, fields: { ...prev.fields, budget_min: cmin, budget_max: cmax } } : prev))
+                            }}
+                          />
                         </div>
                       </div>
                     )}
                   </div>
-                )
-              )}
+                ))}
 
               {/* Bedarf-Box */}
               {bedarfRec && (
                 <div className="rounded-2xl border border-teal-500/30 bg-teal-50/80 p-4 ring-1 ring-teal-500/20">
                   <div className="text-sm font-semibold text-teal-900">{bedarfRec.title || 'Bedarf – Einordnung'}</div>
                   <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
-                    {bedarfRec.bullets.map((b, idx) => (<li key={idx}>{b}</li>))}
+                    {bedarfRec.bullets.map((b, idx) => (
+                      <li key={idx}>{b}</li>
+                    ))}
                   </ul>
                 </div>
               )}
@@ -779,7 +905,9 @@ Leistungsumfang – Stichpunkte
                 <div key={`advice-${i}`} className="rounded-2xl border border-sky-500/30 bg-sky-50/80 p-4 ring-1 ring-sky-500/20">
                   <div className="text-sm font-semibold text-sky-900">{rec.title}</div>
                   <ul className="mt-2 list-disc pl-5 text-sm space-y-1">
-                    {rec.bullets.map((b, idx) => (<li key={idx}>{b}</li>))}
+                    {rec.bullets.map((b, idx) => (
+                      <li key={idx}>{b}</li>
+                    ))}
                   </ul>
                 </div>
               ))}
@@ -811,21 +939,11 @@ Leistungsumfang – Stichpunkte
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <div>
                         <label className="block text-xs text-slate-600 mb-1">Budget min</label>
-                        <input
-                          className={inputCls}
-                          placeholder="z. B. 1.200"
-                          value={editBudgetMin}
-                          onChange={(e) => setEditBudgetMin(e.target.value)}
-                        />
+                        <input className={inputCls} placeholder="z. B. 1.200" value={editBudgetMin} onChange={(e) => setEditBudgetMin(e.target.value)} />
                       </div>
                       <div>
                         <label className="block text-xs text-slate-600 mb-1">Budget max</label>
-                        <input
-                          className={inputCls}
-                          placeholder="z. B. 3.000"
-                          value={editBudgetMax}
-                          onChange={(e) => setEditBudgetMax(e.target.value)}
-                        />
+                        <input className={inputCls} placeholder="z. B. 3.000" value={editBudgetMax} onChange={(e) => setEditBudgetMax(e.target.value)} />
                       </div>
                     </div>
                     <div className="mt-2 flex gap-2">
@@ -877,7 +995,9 @@ Leistungsumfang – Stichpunkte
                     type="button"
                     onClick={postLead}
                     disabled={saving}
-                    className={`inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 text-sm shadow hover:opacity-90 ${saving ? 'opacity-60 cursor-not-allowed' : ''}`}
+                    className={`inline-flex items-center gap-2 rounded-xl bg-slate-900 text-white px-4 py-2 text-sm shadow hover:opacity-90 ${
+                      saving ? 'opacity-60 cursor-not-allowed' : ''
+                    }`}
                     title="Anfrage anonym posten und speichern"
                   >
                     {saving ? (

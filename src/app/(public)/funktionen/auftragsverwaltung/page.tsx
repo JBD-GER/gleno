@@ -212,9 +212,6 @@ export default function AuftragsverwaltungPage() {
         id="effizienz"
         className="relative overflow-hidden px-5 py-16 text-slate-900 bg-gradient-to-b from-slate-50 via-white to-slate-50"
       >
-        {/* Deko-Glows */}
-        <span className="pointer-events-none absolute -top-24 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-sky-200/25 blur-3xl" />
-        <span className="pointer-events-none absolute -bottom-24 right-0 h-72 w-72 rounded-full bg-emerald-200/25 blur-3xl" />
 
         <div className="mx-auto max-w-6xl">
           <header className="mx-auto mb-8 max-w-3xl text-center">
@@ -291,7 +288,7 @@ export default function AuftragsverwaltungPage() {
                 key={kpi.label}
                 className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/80 p-6 backdrop-blur-xl ring-1 ring-white/60 shadow-lg shadow-slate-200/40"
               >
-                <span className="pointer-events-none absolute -top-8 -right-6 h-24 w-24 rounded-full bg-sky-300/20 blur-2xl" />
+                <span className="pointer-events-none absolute -top-8 -right-6 h-24 w-24 rounded-full bg-slate-950/20 blur-2xl" />
                 <div className="text-[11px] tracking-wide text-slate-500">{kpi.label}</div>
                 <div className="mt-1 text-2xl font-semibold text-slate-900">{kpi.value}</div>
                 <div className="text-[12px] text-slate-600">{kpi.sub}</div>

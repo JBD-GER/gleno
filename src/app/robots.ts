@@ -1,26 +1,30 @@
 // src/app/robots.ts
 import type { MetadataRoute } from 'next'
 
-export default function robots(): MetadataRoute.Robots {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://gleno.de'
+const BASE_URL =
+  (process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')) || 'https://www.gleno.de'
 
+export default function robots(): MetadataRoute.Robots {
   return {
     rules: [
       {
         userAgent: '*',
-        allow: '/',
-        // Private Bereiche zusätzlich sperren
+        allow: ['/'], // grundsätzlich alles erlaubt
+        // Private/technische Bereiche sperren
         disallow: [
-          '/dashboard',
-          '/dashboard/*',
-          '/api',
-          '/api/*',
-          '/_next',
-          '/static',
+          '/dashboard',        // deckt auch /dashboard/... ab
+          '/api',              // deckt auch /api/... ab
+          '/login',
+          '/registrieren',
+          '/neues-passwort',
+          '/konsument',
+          '/preview',
+          '/draft',
+          // KEIN '/_next' und '/static' hier – CSS/JS sollen crawlbar bleiben
         ],
       },
     ],
-    sitemap: `${base}/sitemap.xml`,
-    host: base,
+    sitemap: `${BASE_URL}/sitemap.xml`,
+    host: BASE_URL, // von Google ignoriert, aber ok
   }
 }

@@ -46,7 +46,7 @@ export default function ResponsiveShell({
           <Link href="/" className="min-w-0 flex items-center gap-2">
             <Image
               src="/favi.png"
-              alt="Software Fliesenleger"
+              alt="GLENO"
               width={320}
               height={74}
               priority

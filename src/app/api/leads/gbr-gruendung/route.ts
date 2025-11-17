@@ -32,18 +32,18 @@ export async function POST(req: NextRequest) {
 
     const files: FileDef[] = [
       {
-        filename: 'GbR-grunden-2025-Der-komplette-Leitfaden.pdf',
+        filename: 'GbR-gruenden-2025-Der-komplette-Leitfaden.pdf',
         filepath: path.join(
           baseDir,
-          'GbR-grunden-2025-Der-komplette-Leitfaden.pdf'
+          'GbR-gruenden-2025-Der-komplette-Leitfaden.pdf'
         ),
         contentType: 'application/pdf',
       },
       {
-        filename: 'Einfache-Checkliste-Grundung-einer-GbR.pdf',
+        filename: 'Einfache-Checkliste-Gruendung-einer-GbR.pdf',
         filepath: path.join(
           baseDir,
-          'Einfache-Checkliste-Grundung-einer-GbR.pdf'
+          'Einfache-Checkliste-Gruendung-einer-GbR.pdf'
         ),
         contentType: 'application/pdf',
       },
@@ -60,34 +60,34 @@ export async function POST(req: NextRequest) {
           'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       },
       {
-        filename: 'Woche-1-Grundlagen-and-Formalitäten.pdf',
+        filename: 'Woche-1-Grundlagen.pdf',
         filepath: path.join(
           baseDir,
-          'Woche-1-Grundlagen-and-Formalitäten.pdf'
+          'Woche-1-Grundlagen.pdf'
         ),
         contentType: 'application/pdf',
       },
       {
-        filename: 'Woche-2-Finanzen-Konto-and-Basis-Infrastruktur.pdf',
+        filename: 'Woche-2-Finanzen.pdf',
         filepath: path.join(
           baseDir,
-          'Woche-2-Finanzen-Konto-and-Basis-Infrastruktur.pdf'
+          'Woche-2-Finanzen.pdf'
         ),
         contentType: 'application/pdf',
       },
       {
-        filename: 'Woche-3-Professioneller-Auftritt-and-Angebotsprozess.pdf',
+        filename: 'Woche-3-Professioneller-Auftritt.pdf',
         filepath: path.join(
           baseDir,
-          'Woche-3-Professioneller-Auftritt-and-Angebotsprozess.pdf'
+          'Woche-3-Professioneller-Auftritt.pdf'
         ),
         contentType: 'application/pdf',
       },
       {
-        filename: 'Woche-4-Erste-Kunden-and-operative-Routine.pdf',
+        filename: 'Woche-4-Erste-Kunden.pdf',
         filepath: path.join(
           baseDir,
-          'Woche-4-Erste-Kunden-and-operative-Routine.pdf'
+          'Woche-4-Erste-Kunden.pdf'
         ),
         contentType: 'application/pdf',
       },

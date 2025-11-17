@@ -51,7 +51,7 @@ export const metadata: Metadata = {
   ],
   openGraph: {
     type: 'website',
-    url: `${SITE_URL}/gbr-gruendung`,
+    url: `${SITE_URL}/blog/gbr-gruendung`,
     siteName: SITE_NAME,
     title:
       'GbR gründen 2025 – Kosten, Checkliste & Mustervertrag (kostenloses Starterpaket)',

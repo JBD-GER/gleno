@@ -3,7 +3,8 @@ import type { MetadataRoute } from 'next'
 
 // immer ohne Slash am Ende
 const BASE_URL =
-  (process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')) || 'https://www.gleno.de'
+  (process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '')) ||
+  'https://www.gleno.de'
 
 export default function sitemap(): MetadataRoute.Sitemap {
   const now = new Date()
@@ -19,7 +20,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     { path: '/preis',                               changefreq: 'monthly', priority: 0.8 },
     { path: '/markt',                               changefreq: 'weekly',  priority: 0.8 },
     { path: '/markt/branchen/handwerk',             changefreq: 'monthly', priority: 0.6 },
-    { path: '/markt/branchen/handwerk/gebaeudereinigung',             changefreq: 'monthly', priority: 0.6 },
+    { path: '/markt/branchen/handwerk/gebaeudereinigung', changefreq: 'monthly', priority: 0.6 },
     { path: '/support',                             changefreq: 'monthly', priority: 0.5 },
     { path: '/impressum',                           changefreq: 'yearly',  priority: 0.3 },
     { path: '/datenschutz',                         changefreq: 'yearly',  priority: 0.3 },
@@ -28,7 +29,10 @@ export default function sitemap(): MetadataRoute.Sitemap {
 
     // Branchen – Handwerk
     { path: '/branchen/handwerk/gebaeudereinigung', changefreq: 'monthly', priority: 0.6 },
-    // 👉 weitere Branchenseiten hier einfach ergänzen
+
+    // Blog – neue Beiträge
+    { path: '/blog/gbr-gruendung',                  changefreq: 'monthly', priority: 0.7 },
+    { path: '/blog/kmu-software',                   changefreq: 'monthly', priority: 0.7 },
   ]
 
   return pages.map(({ path, changefreq, priority }) => ({

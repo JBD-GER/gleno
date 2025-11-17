@@ -84,9 +84,6 @@ export function GbrHeroSection() {
               Kosten, Vertrag &amp; Ablauf verstehen
             </span>
             <span className="hidden text-slate-500 md:inline">•</span>
-            <span className="hidden md:inline">
-              Starterpaket aus der Praxis – 100 % kostenlos
-            </span>
           </div>
 
           {/* Beratungsservice – nur zwischen 09:00 und 17:00 Uhr sichtbar */}

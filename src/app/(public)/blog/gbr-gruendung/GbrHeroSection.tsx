@@ -1,7 +1,7 @@
 // src/app/(public)/gbr-gruendung/GbrHeroSection.tsx
 'use client'
 
-import { FormEvent, useState } from 'react'
+import { FormEvent, useEffect, useState } from 'react'
 
 const PRIMARY = '#0F172A'
 
@@ -9,6 +9,18 @@ export function GbrHeroSection() {
   const [isLoading, setIsLoading] = useState(false)
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle')
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
+  const [isConsultTime, setIsConsultTime] = useState(false)
+
+  // Nur zwischen 09:00 und 17:00 Uhr anzeigen
+  useEffect(() => {
+    const now = new Date()
+    const hours = now.getHours() // lokale Browserzeit
+    if (hours >= 9 && hours < 17) {
+      setIsConsultTime(true)
+    } else {
+      setIsConsultTime(false)
+    }
+  }, [])
 
   async function handleSubmit(e: FormEvent<HTMLFormElement>) {
     e.preventDefault()
@@ -76,6 +88,22 @@ export function GbrHeroSection() {
               Starterpaket aus der Praxis – 100 % kostenlos
             </span>
           </div>
+
+          {/* Beratungsservice – nur zwischen 09:00 und 17:00 Uhr sichtbar */}
+          {isConsultTime && (
+            <div className="mt-3 inline-flex flex-wrap items-center gap-2 rounded-2xl border border-emerald-400/40 bg-emerald-500/10 px-3 py-2 text-[11px] text-emerald-50 shadow-sm backdrop-blur">
+              <a
+                href="tel:+4950353169991"
+                className="inline-flex items-center rounded-2xl bg-emerald-500/90 px-3 py-1 text-[11px] font-semibold text-white shadow-sm transition hover:bg-emerald-400"
+              >
+                Kostenloser Beratungsservice · +49 5035 3169991
+              </a>
+              <span className="text-[10px] text-emerald-100/90">
+                Wir beantworten jede Frage persönlich – inklusive optionalem{' '}
+                <strong>30-Minuten Online-Meeting</strong>, falls nötig.
+              </span>
+            </div>
+          )}
 
           <h1 className="mt-4 text-[26px] font-semibold leading-tight tracking-tight text-white sm:text-4xl lg:text-[40px]">
             GbR gründen ohne Anwaltspanik
@@ -228,7 +256,7 @@ export function GbrHeroSection() {
                 {isLoading && (
                   <p className="mt-2 text-[10px] text-sky-300 animate-pulse">
                     Ihre Unterlagen werden vorbereitet, die Anhänge werden erzeugt
-                    und gleich gemeinsam in einer E-Mail versendet, dies kann 10-20 Sekunden dauern …
+                    und gleich gemeinsam in einer E-Mail versendet …
                   </p>
                 )}
 

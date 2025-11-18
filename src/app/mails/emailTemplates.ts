@@ -241,6 +241,97 @@ export function renderGbrLeadInternal(opts: {
   return baseWrap(pre, title, content)
 }
 
+/* -------------------------------------------------------------------------- */
+/* NEU: Feedback-Mail aus dem Dashboard                                       */
+/* -------------------------------------------------------------------------- */
+
+export function renderFeedbackMail(opts: { message: string; userEmail?: string }) {
+  const pre = 'Neues Feedback aus dem GLENO-Dashboard.'
+  const title = 'Neues GLENO-Feedback'
+
+  const content = `
+  <tr>
+    <td align="center" style="padding:8px 28px 0 28px;">
+      <h1 style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:22px;line-height:1.35;color:#0b1220;font-weight:800;">
+        Neues Feedback aus GLENO
+      </h1>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:12px 28px 4px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        Es wurde direkt aus dem Dashboard Feedback gesendet.
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:8px 28px 20px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        <b>Nachricht:</b><br/>
+        ${escapeHtml(opts.message).replace(/\n/g, '<br/>')}
+      </p>
+    </td>
+  </tr>`
+
+  return baseWrap(pre, title, content)
+}
+
+// src/app/mails/emailTemplates.ts
+
+export function renderWebsiteDomainRequestInternalMail(opts: {
+  userEmail: string
+  websiteTitle: string
+  websiteSlug?: string | null
+}) {
+  const pre = 'Neue Anfrage für eine professionelle Website inkl. eigener Domain.'
+  const title = 'Neue Anfrage: Website + eigene Domain'
+
+  const slugLine = opts.websiteSlug
+    ? `/w/${escapeHtml(opts.websiteSlug)}`
+    : '–'
+
+  const content = `
+  <tr>
+    <td align="center" style="padding:8px 28px 0 28px;">
+      <h1 style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:22px;line-height:1.35;color:#0b1220;font-weight:800;">
+        Neue Anfrage: Website inkl. eigener Domain
+      </h1>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:12px 28px 8px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        Es wurde über das GLENO-Dashboard eine Anfrage für eine professionelle Website inkl. eigener Domain gestellt.
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:8px 28px 16px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        <b>Nutzer-E-Mail:</b> ${escapeHtml(opts.userEmail)}<br/>
+        <b>Website-Titel:</b> ${escapeHtml(opts.websiteTitle)}<br/>
+        <b>Slug / URL:</b> ${slugLine}
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:8px 28px 24px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:13px;line-height:1.6;color:#64748b;">
+        Bitte den Nutzer zeitnah kontaktieren, die Anforderungen aufnehmen und ein Angebot für Design, Umsetzung und Domainregistrierung erstellen.
+      </p>
+    </td>
+  </tr>`
+
+  return baseWrap(pre, title, content)
+}
+
+/* -------------------------------------------------------------------------- */
+
 function escapeHtml(s: string) {
   return s.replace(/[&<>"]/g, (c) =>
     (

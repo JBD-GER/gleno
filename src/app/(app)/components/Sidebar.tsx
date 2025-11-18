@@ -77,6 +77,13 @@ export default function Sidebar({ userEmail }: SidebarProps) {
   const [partnersLoading, setPartnersLoading] = useState(true)
   const [myPartners, setMyPartners] = useState<MyPartner[]>([])
 
+  // Feedback-Modal State
+  const [showFeedback, setShowFeedback] = useState(false)
+  const [feedbackText, setFeedbackText] = useState('')
+  const [feedbackSending, setFeedbackSending] = useState(false)
+  const [feedbackSuccess, setFeedbackSuccess] = useState<string | null>(null)
+  const [feedbackError, setFeedbackError] = useState<string | null>(null)
+
   /* Rolle laden */
   useEffect(() => {
     let mounted = true
@@ -151,7 +158,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
   const NAV_MANAGEMENT_ADMIN: NavItem[] = [
     { href: '/dashboard', label: 'Übersicht', icon: HomeIcon },
     { href: '/dashboard/kunde', label: 'Kunden', icon: UsersIcon },
-    { href: '/dashboard/mitarbeiter', label: 'Mitarbeiter', icon: UsersIcon },
+    { href: '/dashboard/mitarbeiter', label: 'Mitarbeiter', icon: UserCircleIcon },
     {
       href: '/dashboard/logistik',
       label: 'Logistik',
@@ -190,6 +197,11 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         { href: '/dashboard/buchhaltung/rechnung', label: 'Rechnung', icon: DocumentCurrencyEuroIcon },
         { href: '/dashboard/buchhaltung/katalog', label: 'Katalog', icon: BookOpenIcon },
       ],
+    },
+    {
+      href: '/dashboard/cloud',
+      label: 'Dokumenten-Cloud',
+      icon: ClipboardDocumentListIcon,
     },
     {
       href: '/dashboard/einstellung',
@@ -316,194 +328,303 @@ export default function Sidebar({ userEmail }: SidebarProps) {
     }
   }
 
+  const handleSendFeedback = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!feedbackText.trim()) return
+
+    setFeedbackSending(true)
+    setFeedbackError(null)
+    setFeedbackSuccess(null)
+
+    try {
+      const res = await fetch('/api/feedback', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: feedbackText,
+          fromEmail: userEmail || undefined,
+        }),
+      })
+
+      if (!res.ok) {
+        throw new Error('failed')
+      }
+
+      setFeedbackSuccess('Danke für dein Feedback – es hat unser Team erreicht.')
+      setFeedbackText('')
+    } catch (err) {
+      setFeedbackError('Leider ist ein Fehler aufgetreten. Bitte versuche es später erneut.')
+    } finally {
+      setFeedbackSending(false)
+    }
+  }
+
   return (
-    <div
-      className="flex h-full flex-col bg-gradient-to-b from-slate-50/90 via-white/90 to-slate-50/80"
-      style={{
-        backgroundImage:
-          'radial-gradient(900px 600px at -20% -10%, rgba(15,23,42,0.06), transparent), radial-gradient(800px 500px at 120% -40%, rgba(88,101,242,0.07), transparent)',
-      }}
-    >
-      {/* Brand + Tabs */}
-      <div className="mb-3 px-4 pt-4">
-        <div className="flex items-center justify-between gap-3">
-          {/* Logo */}
-          <div className="flex items-center gap-2">
-            <div className="relative rounded-2xl bg-white/70 px-2 py-1 shadow-sm ring-1 ring-white/60 backdrop-blur-xl">
-              <Image
-                src="/favi.png"
-                alt="GLENO"
-                width={26}
-                height={26}
-                className="h-6 w-6 object-contain"
-                priority
-              />
+    <>
+      <div
+        className="flex h-full flex-col bg-gradient-to-b from-slate-50/90 via-white/90 to-slate-50/80"
+        style={{
+          backgroundImage:
+            'radial-gradient(900px 600px at -20% -10%, rgba(15,23,42,0.06), transparent), radial-gradient(800px 500px at 120% -40%, rgba(88,101,242,0.07), transparent)',
+        }}
+      >
+        {/* Brand + Tabs */}
+        <div className="mb-3 px-4 pt-4">
+          <div className="flex items-center justify-between gap-3">
+            {/* Logo */}
+            <div className="flex items-center gap-2">
+              <div className="relative rounded-2xl bg-white/70 px-2 py-1 shadow-sm ring-1 ring-white/60 backdrop-blur-xl">
+                <Image
+                  src="/favi.png"
+                  alt="GLENO"
+                  width={26}
+                  height={26}
+                  className="h-6 w-6 object-contain"
+                  priority
+                />
+              </div>
             </div>
+
+            {/* Tabs nur anzeigen, wenn NICHT Mitarbeiter */}
+            {role !== 'mitarbeiter' && (
+              <div className="inline-flex rounded-2xl bg-white/10 p-1 backdrop-blur-xl ring-1 ring-white/40 shadow-[0_10px_30px_rgba(15,23,42,0.14)]">
+                <button
+                  type="button"
+                  onClick={() => switchTo('management')}
+                  className={cls(
+                    'px-3 py-1.5 text-[10px] sm:text-xs font-medium rounded-2xl transition-all',
+                    space === 'management'
+                      ? 'bg-white/90 text-slate-900 shadow-sm ring-1 ring-slate-200'
+                      : 'text-slate-500 hover:text-slate-800'
+                  )}
+                >
+                  Management
+                </button>
+                <button
+                  type="button"
+                  onClick={() => switchTo('markt')}
+                  className={cls(
+                    'px-3 py-1.5 text-[10px] sm:text-xs font-medium rounded-2xl transition-all',
+                    space === 'markt'
+                      ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-900/70'
+                      : 'text-slate-500 hover:text-slate-900'
+                  )}
+                >
+                  Markt
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Tabs nur anzeigen, wenn NICHT Mitarbeiter */}
-          {role !== 'mitarbeiter' && (
-            <div className="inline-flex rounded-2xl bg-white/10 p-1 backdrop-blur-xl ring-1 ring-white/40 shadow-[0_10px_30px_rgba(15,23,42,0.14)]">
-              <button
-                type="button"
-                onClick={() => switchTo('management')}
-                className={cls(
-                  'px-3 py-1.5 text-[10px] sm:text-xs font-medium rounded-2xl transition-all',
-                  space === 'management'
-                    ? 'bg-white/90 text-slate-900 shadow-sm ring-1 ring-slate-200'
-                    : 'text-slate-500 hover:text-slate-800'
-                )}
-              >
-                Management
-              </button>
-              <button
-                type="button"
-                onClick={() => switchTo('markt')}
-                className={cls(
-                  'px-3 py-1.5 text-[10px] sm:text-xs font-medium rounded-2xl transition-all',
-                  space === 'markt'
-                    ? 'bg-slate-900 text-white shadow-sm ring-1 ring-slate-900/70'
-                    : 'text-slate-500 hover:text-slate-900'
-                )}
-              >
-                Markt
-              </button>
-            </div>
-          )}
+          <p className="mt-1 max-w-[220px] truncate text-[10px] text-slate-500">{userEmail}</p>
         </div>
 
-        <p className="mt-1 max-w-[220px] truncate text-[10px] text-slate-500">{userEmail}</p>
-      </div>
+        {/* Navigation */}
+        <nav className="flex-1 overflow-y-auto px-2 pb-4">
+          <ul className="space-y-1">
+            {NAV.map((item) => {
+              const hasChildren = !!item.children?.length
 
-      {/* Navigation */}
-      <nav className="flex-1 overflow-y-auto px-2 pb-4">
-        <ul className="space-y-1">
-          {NAV.map((item) => {
-            const hasChildren = !!item.children?.length
+              if (!hasChildren) {
+                const activeExact = isExact(item.href)
+                const Icon = item.icon
+                return (
+                  <li key={item.href}>
+                    <Link
+                      href={item.href}
+                      className={cls(
+                        'group flex items-center gap-3 rounded-2xl px-3 py-2 text-sm transition-all border border-transparent',
+                        activeExact
+                          ? 'bg-white/90 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.10)] ring-1 ring-slate-200'
+                          : 'bg-white/0 text-slate-700 hover:bg-white/70 hover:shadow-[0_8px_26px_rgba(15,23,42,0.06)] hover:border-white/60'
+                      )}
+                    >
+                      <Icon
+                        className={cls(
+                          'h-5 w-5 flex-shrink-0 transition-colors',
+                          activeExact ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
+                        )}
+                      />
+                      <span className="truncate">{item.label}</span>
+                      {item.badge && <BadgePill {...item.badge} />}
+                    </Link>
+                  </li>
+                )
+              }
 
-            if (!hasChildren) {
-              const activeExact = isExact(item.href)
-              const Icon = item.icon
+              const groupIsOpen = openGroup === item.href
+              const groupActive =
+                isExact(item.href) ||
+                isDescendant(item.href) ||
+                item.children!.some((c) => isExact(c.href) || isDescendant(c.href))
+              const GroupIcon = item.icon
+
               return (
                 <li key={item.href}>
-                  <Link
-                    href={item.href}
+                  <button
+                    type="button"
+                    onClick={() => setOpenGroup(groupIsOpen ? null : item.href)}
                     className={cls(
-                      'group flex items-center gap-3 rounded-2xl px-3 py-2 text-sm transition-all border border-transparent',
-                      activeExact
+                      'w-full flex items-center justify-between rounded-2xl px-3 py-2 text-left text-sm transition-all border border-transparent',
+                      groupActive
                         ? 'bg-white/90 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.10)] ring-1 ring-slate-200'
                         : 'bg-white/0 text-slate-700 hover:bg-white/70 hover:shadow-[0_8px_26px_rgba(15,23,42,0.06)] hover:border-white/60'
                     )}
                   >
-                    <Icon
+                    <span className="inline-flex items-center gap-3">
+                      <GroupIcon
+                        className={cls(
+                          'h-5 w-5 flex-shrink-0 transition-colors',
+                          groupActive ? 'text-slate-900' : 'text-slate-400'
+                        )}
+                      />
+                      <span>{item.label}</span>
+                      {item.badge && <BadgePill {...item.badge} />}
+                    </span>
+                    <svg
                       className={cls(
-                        'h-5 w-5 flex-shrink-0 transition-colors',
-                        activeExact ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
+                        'h-4 w-4 flex-shrink-0 transition-transform',
+                        groupIsOpen ? 'rotate-90 text-slate-900' : 'text-slate-400'
                       )}
-                    />
-                    <span className="truncate">{item.label}</span>
-                    {item.badge && <BadgePill {...item.badge} />}
-                  </Link>
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                      strokeWidth={2}
+                      aria-hidden="true"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                  </button>
+
+                  <div
+                    className={cls(
+                      'overflow-hidden pl-3',
+                      groupIsOpen ? 'max-h-[900px] py-1' : 'max-h-0',
+                      'transition-[max-height,padding] duration-300 ease-in-out'
+                    )}
+                  >
+                    {item.children!.map((child) => {
+                      const childExact = isExact(child.href)
+                      const ChildIcon = child.icon
+                      return (
+                        <Link
+                          key={child.href}
+                          href={child.href}
+                          className={cls(
+                            'group mt-1 mr-2 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm border border-transparent',
+                            childExact
+                              ? 'bg-white/95 text-slate-900 shadow-[0_8px_24px_rgba(15,23,42,0.10)] ring-1 ring-slate-200'
+                              : 'text-slate-700 hover:bg-white/80 hover:shadow-[0_6px_20px_rgba(15,23,42,0.06)] hover:border-white/70'
+                          )}
+                        >
+                          <ChildIcon
+                            className={cls(
+                              'h-4 w-4 flex-shrink-0',
+                              childExact ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
+                            )}
+                          />
+                          <span className="truncate">{child.label}</span>
+                          {child.badge && <BadgePill {...child.badge} />}
+                        </Link>
+                      )
+                    })}
+                  </div>
                 </li>
               )
-            }
+            })}
+          </ul>
+        </nav>
 
-            const groupIsOpen = openGroup === item.href
-            const groupActive =
-              isExact(item.href) ||
-              isDescendant(item.href) ||
-              item.children!.some((c) => isExact(c.href) || isDescendant(c.href))
-            const GroupIcon = item.icon
+        {/* Footer / Feedback + Logout */}
+        <div className="border-t border-white/70 bg-white/60 backdrop-blur-xl p-3 shadow-[0_-6px_18px_rgba(15,23,42,0.06)] space-y-2">
+          <button
+            type="button"
+            onClick={() => {
+              setShowFeedback(true)
+              setFeedbackError(null)
+              setFeedbackSuccess(null)
+            }}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-900 shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:bg-white hover:border-slate-300"
+          >
+            <ChatBubbleLeftRightIcon className="h-5 w-5" />
+            Feedback geben
+          </button>
 
-            return (
-              <li key={item.href}>
+          <button
+            onClick={async () => {
+              await supabase.auth.signOut()
+              router.push('/login')
+            }}
+            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)] transition hover:bg-black focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-white"
+          >
+            <ArrowRightOnRectangleIcon className="h-5 w-5" />
+            Abmelden
+          </button>
+        </div>
+      </div>
+
+      {/* Feedback-Modal */}
+      {showFeedback && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-slate-900/40 backdrop-blur-sm">
+          <div className="w-full max-w-md rounded-3xl border border-white/70 bg-white/95 p-5 shadow-[0_20px_60px_rgba(15,23,42,0.35)]">
+            <div className="mb-3 flex items-center justify-between gap-3">
+              <div>
+                <h2 className="text-sm font-medium text-slate-900">Feedback zu GLENO</h2>
+                <p className="text-xs text-slate-500">
+                  Teile uns kurz mit, was dir gefällt, was fehlt oder was wir verbessern können.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowFeedback(false)}
+                className="rounded-full p-1 text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+              >
+                <span className="sr-only">Schließen</span>
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSendFeedback} className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700">
+                  Deine Nachricht
+                </label>
+                <textarea
+                  value={feedbackText}
+                  onChange={(e) => setFeedbackText(e.target.value)}
+                  rows={5}
+                  className="w-full rounded-2xl border border-slate-200 bg-slate-50/70 px-3 py-2 text-sm text-slate-900 shadow-inner shadow-slate-200 focus:border-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-300"
+                  placeholder="Schreibe uns kurz, was dir auffällt oder was wir verbessern können …"
+                />
+              </div>
+
+              {feedbackError && (
+                <p className="text-xs text-rose-600">{feedbackError}</p>
+              )}
+              {feedbackSuccess && (
+                <p className="text-xs text-emerald-600">{feedbackSuccess}</p>
+              )}
+
+              <div className="flex items-center justify-end gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => setOpenGroup(groupIsOpen ? null : item.href)}
-                  className={cls(
-                    'w-full flex items-center justify-between rounded-2xl px-3 py-2 text-left text-sm transition-all border border-transparent',
-                    groupActive
-                      ? 'bg-white/90 text-slate-900 shadow-[0_10px_30px_rgba(15,23,42,0.10)] ring-1 ring-slate-200'
-                      : 'bg-white/0 text-slate-700 hover:bg-white/70 hover:shadow-[0_8px_26px_rgba(15,23,42,0.06)] hover:border-white/60'
-                  )}
+                  onClick={() => setShowFeedback(false)}
+                  className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50"
                 >
-                  <span className="inline-flex items-center gap-3">
-                    <GroupIcon
-                      className={cls(
-                        'h-5 w-5 flex-shrink-0 transition-colors',
-                        groupActive ? 'text-slate-900' : 'text-slate-400'
-                      )}
-                    />
-                    <span>{item.label}</span>
-                    {item.badge && <BadgePill {...item.badge} />}
-                  </span>
-                  <svg
-                    className={cls(
-                      'h-4 w-4 flex-shrink-0 transition-transform',
-                      groupIsOpen ? 'rotate-90 text-slate-900' : 'text-slate-400'
-                    )}
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                    strokeWidth={2}
-                    aria-hidden="true"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-                  </svg>
+                  Abbrechen
                 </button>
-
-                <div
-                  className={cls(
-                    'overflow-hidden pl-3',
-                    groupIsOpen ? 'max-h-[900px] py-1' : 'max-h-0',
-                    'transition-[max-height,padding] duration-300 ease-in-out'
-                  )}
+                <button
+                  type="submit"
+                  disabled={feedbackSending || !feedbackText.trim()}
+                  className="inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-4 py-1.5 text-xs font-medium text-white shadow-[0_8px_24px_rgba(15,23,42,0.35)] disabled:cursor-not-allowed disabled:bg-slate-700"
                 >
-                  {item.children!.map((child) => {
-                    const childExact = isExact(child.href)
-                    const ChildIcon = child.icon
-                    return (
-                      <Link
-                        key={child.href}
-                        href={child.href}
-                        className={cls(
-                          'group mt-1 mr-2 flex items-center gap-3 rounded-2xl px-3 py-2 text-sm border border-transparent',
-                          childExact
-                            ? 'bg-white/95 text-slate-900 shadow-[0_8px_24px_rgba(15,23,42,0.10)] ring-1 ring-slate-200'
-                            : 'text-slate-700 hover:bg-white/80 hover:shadow-[0_6px_20px_rgba(15,23,42,0.06)] hover:border-white/70'
-                        )}
-                      >
-                        <ChildIcon
-                          className={cls(
-                            'h-4 w-4 flex-shrink-0',
-                            childExact ? 'text-slate-900' : 'text-slate-400 group-hover:text-slate-700'
-                          )}
-                        />
-                        <span className="truncate">{child.label}</span>
-                        {child.badge && <BadgePill {...child.badge} />}
-                      </Link>
-                    )
-                  })}
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </nav>
-
-      {/* Footer / Logout */}
-      <div className="border-t border-white/70 bg-white/60 backdrop-blur-xl p-3 shadow-[0_-6px_18px_rgba(15,23,42,0.06)]">
-        <button
-          onClick={async () => {
-            await supabase.auth.signOut()
-            router.push('/login')
-          }}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)] transition hover:bg-black focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-white"
-        >
-          <ArrowRightOnRectangleIcon className="h-5 w-5" />
-          Abmelden
-        </button>
-      </div>
-    </div>
+                  {feedbackSending ? 'Wird gesendet…' : 'Feedback senden'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </>
   )
 }

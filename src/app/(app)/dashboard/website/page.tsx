@@ -25,6 +25,7 @@ type WebsiteRow = {
   privacy_html: string | null
   status: 'draft' | 'published' | 'disabled'
   published_at?: string | null
+  domain_requested?: boolean | null 
 }
 
 /* ---- Defaults ---- */
@@ -613,6 +614,10 @@ export default function WebsitePage() {
 
   const [origin, setOrigin] = useState('')
 
+   // NEU: CTA-State
+  const [domainRequestLoading, setDomainRequestLoading] = useState(false)
+  const [domainRequestError, setDomainRequestError] = useState<string | null>(null)
+
   // KI/Generator Felder
   const [imprint, setImprint] = useState<ImprintFields | null>(null)
   const [privacy, setPrivacy] = useState<PrivacyFields | null>(null)
@@ -679,7 +684,7 @@ export default function WebsitePage() {
     dpoPhone: '',
   }), [row, content, origin])
 
-  /* ------ Website Laden ------ */
+   /* ------ Website Laden ------ */
   const fetchWebsite = useCallback(async () => {
     const { data: auth } = await supabase.auth.getUser()
     if (!auth?.user) {
@@ -690,7 +695,7 @@ export default function WebsitePage() {
     const { data, error } = await supabase
       .from('websites')
       .select(
-        'id, slug, title, description, primary_color, secondary_color, logo_url, favicon_url, content, imprint_html, privacy_html, status, published_at'
+        'id, slug, title, description, primary_color, secondary_color, logo_url, favicon_url, content, imprint_html, privacy_html, status, published_at, domain_requested'
       )
       .eq('user_id', auth.user.id)
       .limit(1)
@@ -703,10 +708,9 @@ export default function WebsitePage() {
     if (data) {
       const withContent: WebsiteRow = {
         ...(data as any),
-        content:
-          (data.content as any) ||
-          defaultContent,
+        content: (data.content as any) || defaultContent,
       }
+
       setRow(withContent)
 
       // Onboarding Prefill
@@ -729,43 +733,26 @@ export default function WebsitePage() {
       const addr = c.contact?.address || ''
       const addressLines = addr ? addr.split('\n') : []
       const streetFromContent = addressLines[0] || ''
-      const zipCityFromContent = (
-        addressLines.slice(1).join(' ') || ''
-      ).trim()
+      const zipCityFromContent = (addressLines.slice(1).join(' ') || '').trim()
 
       const company =
-        profile?.company_name ||
-        withContent.title ||
-        'Ihr Unternehmen'
-      const streetFull = [
-        profile?.street,
-        profile?.house_number,
-      ]
+        profile?.company_name || withContent.title || 'Ihr Unternehmen'
+      const streetFull = [profile?.street, profile?.house_number]
         .filter(Boolean)
         .join(' ')
         .trim()
-      const zipCity = [
-        profile?.postal_code,
-        profile?.city,
-      ]
+      const zipCity = [profile?.postal_code, profile?.city]
         .filter(Boolean)
         .join(' ')
         .trim()
-      const country =
-        profile?.country || 'Deutschland'
+      const country = profile?.country || 'Deutschland'
       const emailPublic =
-        billing?.billing_email ||
-        profile?.email ||
-        c.contact?.email ||
-        ''
+        billing?.billing_email || profile?.email || c.contact?.email || ''
       const phonePublic =
-        billing?.billing_phone ||
-        c.contact?.phone ||
-        ''
+        billing?.billing_phone || c.contact?.phone || ''
+
       const websiteFull =
-        origin && withContent.slug
-          ? `${origin}/w/${withContent.slug}`
-          : ''
+        origin && withContent.slug ? `${origin}/w/${withContent.slug}` : ''
 
       setImprint((prev) => ({
         companyName: company,
@@ -774,89 +761,45 @@ export default function WebsitePage() {
         zipCity: zipCity || zipCityFromContent,
         country,
         managingDirector:
-          [profile?.first_name,
-            profile?.last_name]
-            .filter(Boolean)
-            .join(' ') ||
+          [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
           prev?.managingDirector ||
           '',
-        registerCourt:
-          prev?.registerCourt || '',
-        registerNumber:
-          prev?.registerNumber || '',
+        registerCourt: prev?.registerCourt || '',
+        registerNumber: prev?.registerNumber || '',
         vatId: prev?.vatId || '',
         phone: phonePublic,
         email: emailPublic,
-        website:
-          websiteFull ||
-          prev?.website ||
-          '',
-        supervisoryAuthority:
-          prev?.supervisoryAuthority ||
-          '',
+        website: websiteFull || prev?.website || '',
+        supervisoryAuthority: prev?.supervisoryAuthority || '',
         chamber: prev?.chamber || '',
-        smallBusiness:
-          prev?.smallBusiness ??
-          true,
-        heroAttribution_desc:
-          prev?.heroAttribution_desc ||
-          '',
-        heroAttribution_url:
-          prev?.heroAttribution_url ||
-          '',
-        heroAttribution_license:
-          prev?.heroAttribution_license ||
-          '',
+        smallBusiness: prev?.smallBusiness ?? true,
+        heroAttribution_desc: prev?.heroAttribution_desc || '',
+        heroAttribution_url: prev?.heroAttribution_url || '',
+        heroAttribution_license: prev?.heroAttribution_license || '',
       }))
 
       setPrivacy((prev) => ({
         controllerName: company,
-        controllerAddress: [
-          streetFull || streetFromContent,
-          zipCity || zipCityFromContent,
-          country,
-        ]
-          .filter(Boolean)
-          .join('\n'),
+        controllerAddress:
+          [streetFull || streetFromContent, zipCity || zipCityFromContent, country]
+            .filter(Boolean)
+            .join('\n'),
         controllerEmail: emailPublic,
         controllerPhone: phonePublic,
-        website:
-          websiteFull ||
-          prev?.website ||
-          '',
-        newsletter:
-          prev?.newsletter ?? false,
-        contactForm:
-          prev?.contactForm ?? true,
+        website: websiteFull || prev?.website || '',
+        newsletter: prev?.newsletter ?? false,
+        contactForm: prev?.contactForm ?? true,
         retentionNote:
           'Daten werden dauerhaft gespeichert und nur auf Anfrage über einen verifizierten Partner gelöscht.',
         partnerContactName:
-          [
-            profile?.first_name,
-            profile?.last_name,
-          ]
-            .filter(Boolean)
-            .join(' ') || '',
-        partnerContactEmail:
-          emailPublic || '',
-        partnerContactPhone:
-          phonePublic || '',
-        dpoFirstName:
-          profile?.dpo_first_name ||
-          prev?.dpoFirstName ||
+          [profile?.first_name, profile?.last_name].filter(Boolean).join(' ') ||
           '',
-        dpoLastName:
-          profile?.dpo_last_name ||
-          prev?.dpoLastName ||
-          '',
-        dpoEmail:
-          profile?.dpo_email ||
-          prev?.dpoEmail ||
-          '',
-        dpoPhone:
-          profile?.dpo_phone ||
-          prev?.dpoPhone ||
-          '',
+        partnerContactEmail: emailPublic || '',
+        partnerContactPhone: phonePublic || '',
+        dpoFirstName: profile?.dpo_first_name || prev?.dpoFirstName || '',
+        dpoLastName: profile?.dpo_last_name || prev?.dpoLastName || '',
+        dpoEmail: profile?.dpo_email || prev?.dpoEmail || '',
+        dpoPhone: profile?.dpo_phone || prev?.dpoPhone || '',
       }))
     } else {
       setRow(null)
@@ -864,6 +807,7 @@ export default function WebsitePage() {
 
     setLoading(false)
   }, [supabase, origin])
+
 
   /* ------ Init + Realtime + Polling ------ */
   useEffect(() => {
@@ -1034,6 +978,35 @@ export default function WebsitePage() {
     [row, supabase]
   )
 
+    const handleDomainRequest = useCallback(async () => {
+    setDomainRequestError(null)
+    setDomainRequestLoading(true)
+    try {
+      const res = await fetch('/api/website/domain-request', {
+        method: 'POST',
+      })
+
+      const data = await res.json().catch(() => ({}))
+
+      if (!res.ok || !data.ok) {
+        throw new Error(data?.error || 'Fehler bei der Anfrage.')
+      }
+
+      // Flag lokal setzen → CTA verschwindet sofort
+      setRow((prev) =>
+        prev ? { ...prev, domain_requested: true } : prev
+      )
+    } catch (err) {
+      console.error(err)
+      setDomainRequestError(
+        'Leider ist ein Fehler aufgetreten. Bitte versuche es später erneut.'
+      )
+    } finally {
+      setDomainRequestLoading(false)
+    }
+  }, [])
+
+
   /* UI Classes */
   const inputCls =
     'w-full rounded-2xl border border-slate-200/70 bg-white/80 backdrop-blur-sm px-4 py-3 text-[15px] text-slate-900 placeholder:text-slate-400 shadow-sm focus:outline-none focus:ring-2 focus:ring-sky-400/40'
@@ -1192,6 +1165,37 @@ export default function WebsitePage() {
 
       {/* Body */}
       <div className="w-full p-6 space-y-6">
+                {/* CTA: Professionelle Website inkl. Domain */}
+        {!row.domain_requested && (
+          <div className="rounded-3xl border border-dashed border-sky-200 bg-sky-50/80 px-5 py-4 shadow-sm flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex-1">
+              <div className="text-sm font-medium text-slate-900">
+                Professionelle Website inklusive eigener Domain gewünscht?
+              </div>
+              <p className="mt-1 text-xs sm:text-sm text-slate-600">
+                Wenn du statt der Standard-URL eine eigene .de- oder .com-Domain und ein
+                komplett für dich eingerichtetes Layout möchtest, kannst du hier eine Anfrage
+                an das GLENO-Team senden. Wir melden uns dann persönlich bei dir.
+              </p>
+              {domainRequestError && (
+                <p className="mt-2 text-xs text-rose-600">
+                  {domainRequestError}
+                </p>
+              )}
+            </div>
+            <div className="flex-shrink-0">
+              <button
+                type="button"
+                onClick={handleDomainRequest}
+                disabled={domainRequestLoading}
+                className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-2.5 text-sm font-medium text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)] hover:bg-black disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {domainRequestLoading ? 'Wird gesendet…' : 'Anfrage senden'}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* Meta / Branding */}
         <div className={sectionCard}>
           <div className="space-y-5">

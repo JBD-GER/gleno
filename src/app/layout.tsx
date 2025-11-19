@@ -107,18 +107,20 @@ export default function RootLayout({ children }: RootLayoutProps) {
           </Script>
         )}
 
-        {/* Digistore24 Promocode – externer Script-Loader */}
+        {/* Digistore24 Promocode – externer Script-Loader (1:1 wie <script src="...">) */}
         <Script
           id="digistore-base"
           src="https://www.digistore24-scripts.com/service/digistore.js"
-          strategy="afterInteractive"
+          strategy="beforeInteractive"
         />
 
-        {/* Digistore24 Promocode – Initialisierung */}
-        <Script id="digistore-promocode-init" strategy="afterInteractive">
+        {/* Digistore24 Promocode – Initialisierung (entspricht zweitem <script>-Tag) */}
+        <Script id="digistore-promocode-init" strategy="beforeInteractive">
           {`
-            if (typeof digistorePromocode === 'function') {
-              digistorePromocode({ "product_id": 649531, "adjust_domain": true });
+            // entspricht:
+            // digistorePromocode({ "product_id": 649531, "adjust_domain": true });
+            if (typeof window !== 'undefined' && typeof window.digistorePromocode === 'function') {
+              window.digistorePromocode({ product_id: 649531, adjust_domain: true });
             }
           `}
         </Script>

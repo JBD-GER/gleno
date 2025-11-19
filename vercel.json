@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/rechnung/automation-runner?token=93847293847592834759",
+      "schedule": "0 4 * * *"
+    }
+  ]
+}

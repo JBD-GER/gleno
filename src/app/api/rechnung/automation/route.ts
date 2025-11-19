@@ -1,4 +1,3 @@
-// src/app/api/rechnung/automation/route.ts
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 import { supabaseServer } from '@/lib/supabase-server'
@@ -12,6 +11,7 @@ function toDbDate(input?: string | null): string | null {
   const v = (input ?? '').trim()
   if (!v) return null
   if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
+
   const m = v.match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/)
   if (m) {
     const dd = m[1].padStart(2, '0')
@@ -19,6 +19,7 @@ function toDbDate(input?: string | null): string | null {
     const yyyy = m[3]
     return `${yyyy}-${mm}-${dd}`
   }
+
   const d = new Date(v)
   if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10)
   return null
@@ -61,7 +62,9 @@ export async function GET(req: NextRequest) {
     // Rechnung des Users holen
     const { data: invoice, error: invErr } = await supabaseAdmin
       .from('invoices')
-      .select('id, invoice_number, date, title, gross_total, customer_id')
+      .select(
+        'id, user_id, invoice_number, date, title, gross_total, customer_id'
+      )
       .eq('user_id', user.id)
       .eq('invoice_number', invoiceNumber)
       .maybeSingle()
@@ -93,7 +96,17 @@ export async function GET(req: NextRequest) {
 
 /**
  * POST /api/rechnung/automation
- * Body: { invoiceNumber, startDate, endDate, interval, unlimited }
+ * Body: {
+ *   invoiceNumber,
+ *   startDate,
+ *   endDate,
+ *   interval,
+ *   unlimited,
+ *   label,
+ *   autoSendInvoices,
+ *   notifyEmail,
+ *   notifyEnabled
+ * }
  */
 export async function POST(req: NextRequest) {
   try {
@@ -114,6 +127,9 @@ export async function POST(req: NextRequest) {
       interval,
       unlimited,
       label,
+      autoSendInvoices,
+      notifyEmail,
+      notifyEnabled,
     } = body as {
       invoiceNumber?: string
       startDate?: string
@@ -121,6 +137,9 @@ export async function POST(req: NextRequest) {
       interval?: string
       unlimited?: boolean
       label?: string
+      autoSendInvoices?: boolean
+      notifyEmail?: string | null
+      notifyEnabled?: boolean
     }
 
     if (!invoiceNumber) {
@@ -135,10 +154,10 @@ export async function POST(req: NextRequest) {
       intervalKey = 'monthly'
     }
 
-    // Rechnung holen
+    // Rechnung holen (inkl. customer_id!)
     const { data: invoice, error: invErr } = await supabaseAdmin
       .from('invoices')
-      .select('id, invoice_number, date')
+      .select('id, user_id, invoice_number, date, customer_id')
       .eq('user_id', user.id)
       .eq('invoice_number', invoiceNumber)
       .maybeSingle()
@@ -169,6 +188,41 @@ export async function POST(req: NextRequest) {
       )
     }
 
+    // auto_send_invoices & ggf. E-Mail auf dem Kunden speichern
+    if (invoice.customer_id) {
+      const desiredAuto =
+        typeof autoSendInvoices === 'boolean'
+          ? autoSendInvoices
+          : typeof notifyEnabled === 'boolean'
+          ? notifyEnabled
+          : undefined
+
+      if (typeof desiredAuto === 'boolean') {
+        const update: Record<string, any> = {
+          auto_send_invoices: desiredAuto,
+        }
+
+        // Wenn im Modal eine E-Mail eingetragen ist und Auto-Versand aktiv ist → in Kundenprofil übernehmen
+        if (notifyEmail && desiredAuto) {
+          update.email = notifyEmail
+        }
+
+        const { error: custUpdErr } = await supabaseAdmin
+          .from('customers')
+          .update(update)
+          .eq('id', invoice.customer_id)
+          .eq('user_id', user.id)
+
+        if (custUpdErr) {
+          console.error(
+            '[automation] Fehler beim Aktualisieren von auto_send_invoices / email',
+            custUpdErr
+          )
+          // kein Hard-Error, Automation kann trotzdem angelegt werden
+        }
+      }
+    }
+
     // Prüfen, ob schon eine Automation existiert
     const { data: existing } = await supabaseAdmin
       .from('invoice_automations')
@@ -187,7 +241,7 @@ export async function POST(req: NextRequest) {
           end_date: endDb,
           interval: intervalKey,
           active: true,
-          next_run_date: startDb, // einfach: immer ab Startdatum neu planen
+          next_run_date: startDb,
           label: label ?? existing.label ?? null,
           updated_at: now,
         })
@@ -290,7 +344,9 @@ export async function DELETE(req: NextRequest) {
   } catch (err: any) {
     console.error(err)
     return NextResponse.json(
-      { message: err?.message || 'Fehler beim Deaktivieren der Automatisierung' },
+      {
+        message: err?.message || 'Fehler beim Deaktivieren der Automatisierung',
+      },
       { status: 500 }
     )
   }

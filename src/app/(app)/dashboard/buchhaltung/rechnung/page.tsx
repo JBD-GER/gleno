@@ -1,3 +1,4 @@
+// src/app/(app)/dashboard/buchhaltung/rechnung/page.tsx
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseServer } from '@/lib/supabase-server'
@@ -5,6 +6,7 @@ import { BanknotesIcon } from '@heroicons/react/24/outline'
 import StatusBadge from '../angebot/StatusBadget'
 import InvoiceActionsMenu from './InvoiceActionMenu'
 import FilterBarInvoices from './FilterBarInvoices'
+import AutomationOverview from './AutomationOverview'
 
 type Pos = {
   type: 'item' | 'heading' | 'description' | 'subtotal' | 'separator'
@@ -94,7 +96,8 @@ function computeNetTotalInvoice(inv: InvoiceRow): number {
   if (typeof netAfterDb === 'number' && isFinite(netAfterDb)) return netAfterDb
 
   const net = (inv.positions ?? []).reduce(
-    (s, p) => s + (p.type === 'item' ? (p.quantity ?? 0) * (p.unitPrice ?? 0) : 0),
+    (s, p) =>
+      s + (p.type === 'item' ? (p.quantity ?? 0) * (p.unitPrice ?? 0) : 0),
     0
   )
   const d = inv.discount || undefined
@@ -104,13 +107,15 @@ function computeNetTotalInvoice(inv: InvoiceRow): number {
   const taxFactor = 1 + taxRate / 100
 
   if (d.base === 'net') {
-    const discountAmount = d.type === 'percent' ? (net * d.value) / 100 : d.value
+    const discountAmount =
+      d.type === 'percent' ? (net * d.value) / 100 : d.value
     const capped = Math.min(Math.max(0, discountAmount), net)
     return clamp(net - capped)
   } else {
     // Rabatt auf Brutto ➜ erst Brutto berechnen, Rabatt abziehen, dann wieder auf Netto zurückrechnen
     const grossBefore = net * taxFactor
-    const discountAmount = d.type === 'percent' ? (grossBefore * d.value) / 100 : d.value
+    const discountAmount =
+      d.type === 'percent' ? (grossBefore * d.value) / 100 : d.value
     const capped = Math.min(Math.max(0, discountAmount), grossBefore)
     const grossAfter = clamp(grossBefore - capped)
     return grossAfter / taxFactor
@@ -125,7 +130,10 @@ export default async function RechnungPage({
   const sp = await searchParams
 
   const supabase = await supabaseServer()
-  const { data: { user }, error: authErr } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error: authErr,
+  } = await supabase.auth.getUser()
   if (authErr || !user) redirect('/login')
 
   const qRaw = (sp?.q ?? '').trim()
@@ -137,27 +145,32 @@ export default async function RechnungPage({
   // --- Query (inkl. Summen & Rabatt) -------------------------------
   let query = supabase
     .from('invoices')
-    .select(`
+    .select(
+      `
       id, invoice_number, date, valid_until, title, intro, tax_rate, positions, pdf_path,
       created_at, updated_at, status, status_changed_at, due_date,
       discount, net_subtotal, discount_amount, net_after_discount, tax_amount, gross_total,
       customers ( id, first_name, last_name, street, house_number, postal_code, city )
-    `, { count: 'exact' })
+    `,
+      { count: 'exact' }
+    )
     .eq('user_id', user.id)
 
   if (qRaw) {
     const like = `%${qRaw}%`
-    query = query.or([
-      `invoice_number.ilike.${like}`,
-      `title.ilike.${like}`,
-      `intro.ilike.${like}`,
-      `date.ilike.${like}`,
-      `customers.first_name.ilike.${like}`,
-      `customers.last_name.ilike.${like}`,
-    ].join(','))
+    // Date rausgenommen, weil DATE-Typ nicht mit ILIKE funktioniert
+    query = query.or(
+      [
+        `invoice_number.ilike.${like}`,
+        `title.ilike.${like}`,
+        `intro.ilike.${like}`,
+      ].join(',')
+    )
   }
 
-  query = query.order('created_at', { ascending: sort === 'asc' }).range(from, to)
+  query = query
+    .order('created_at', { ascending: sort === 'asc' })
+    .range(from, to)
 
   const { data, count, error } = await query
   if (error) console.error('Fehler beim Laden der Rechnungen:', error)
@@ -166,14 +179,19 @@ export default async function RechnungPage({
   const rowsDb = (data ?? []) as InvoiceRowFromDb[]
   const rows: InvoiceRow[] = rowsDb.map((r) => ({
     ...r,
-    customers: Array.isArray(r.customers) ? r.customers[0] ?? null : r.customers ?? null,
+    customers: Array.isArray(r.customers)
+      ? r.customers[0] ?? null
+      : r.customers ?? null,
   }))
 
   const total = count ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
   const safePage = Math.min(page, totalPages)
 
-  const EUR = new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
+  const EUR = new Intl.NumberFormat('de-DE', {
+    style: 'currency',
+    currency: 'EUR',
+  })
 
   const hrefForPage = (p: number) => {
     const params = new URLSearchParams()
@@ -212,8 +230,12 @@ export default async function RechnungPage({
               <BanknotesIcon className="h-7 w-7 text-slate-900" />
             </div>
             <div>
-              <h1 className="text-2xl font-medium tracking-tight text-slate-900">Rechnungen</h1>
-              <p className="text-sm text-slate-600">Übersicht, Suche & Weiterverarbeitung.</p>
+              <h1 className="text-2xl font-medium tracking-tight text-slate-900">
+                Rechnungen
+              </h1>
+              <p className="text-sm text-slate-600">
+                Übersicht, Suche & Weiterverarbeitung.
+              </p>
             </div>
           </div>
           <div className="relative z-[1]">
@@ -222,7 +244,9 @@ export default async function RechnungPage({
               className="inline-flex items-center gap-2 rounded-lg border border-white/60 bg-white/90 px-3 py-1.5 text-sm font-medium text-slate-900 shadow hover:bg-white"
             >
               Neue Rechnung
-              <span className="rounded-md bg-slate-900/90 px-2 py-0.5 text-[11px] font-medium text-white">⌘N</span>
+              <span className="rounded-md bg-slate-900/90 px-2 py-0.5 text-[11px] font-medium text-white">
+                ⌘N
+              </span>
             </Link>
           </div>
         </div>
@@ -246,22 +270,31 @@ export default async function RechnungPage({
                     <th className="px-6 py-3 font-semibold">Datum</th>
                     <th className="px-6 py-3 font-semibold">Status</th>
                     <th className="px-6 py-3 font-semibold">Netto</th>
-                    <th className="px-6 py-3 font-semibold text-right">Aktionen</th>
+                    <th className="px-6 py-3 font-semibold text-right">
+                      Aktionen
+                    </th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/70">
                   {rows.map((inv) => {
                     const c = inv.customers
-                    // ⬇️ Finale NETTO-Summe (nach Rabatt)
                     const netFinal = computeNetTotalInvoice(inv)
 
                     const rawStatus = inv.status ?? 'Erstellt'
                     const due = inv.due_date ?? inv.valid_until
-                    const showStatus = rawStatus !== 'Bezahlt' && isPast(due) ? 'Überfällig' : rawStatus
+                    const showStatus =
+                      rawStatus !== 'Bezahlt' && isPast(due)
+                        ? 'Überfällig'
+                        : rawStatus
 
                     return (
-                      <tr key={inv.id} className="transition-colors hover:bg-white/80">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">{inv.invoice_number}</td>
+                      <tr
+                        key={inv.id}
+                        className="transition-colors hover:bg-white/80"
+                      >
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                          {inv.invoice_number}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
                           {c ? `${c.first_name} ${c.last_name}` : '—'}
                           {c?.postal_code && c?.city && (
@@ -270,7 +303,9 @@ export default async function RechnungPage({
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">{inv.date}</td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                          {inv.date}
+                        </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm">
                           <StatusBadge status={showStatus} />
                         </td>
@@ -281,9 +316,15 @@ export default async function RechnungPage({
                           <InvoiceActionsMenu
                             invoiceNumber={inv.invoice_number}
                             currentStatus={rawStatus}
-                            downloadHref={`/api/rechnung/download-invoice/${encodeURIComponent(inv.invoice_number)}`}
-                            editHref={`/dashboard/buchhaltung/rechnung/rechnung-bearbeiten/${encodeURIComponent(inv.invoice_number)}`}
-                            inlineHref={`/api/rechnung/download-invoice/${encodeURIComponent(inv.invoice_number)}?disposition=inline`}
+                            downloadHref={`/api/rechnung/download-invoice/${encodeURIComponent(
+                              inv.invoice_number
+                            )}`}
+                            editHref={`/dashboard/buchhaltung/rechnung/rechnung-bearbeiten/${encodeURIComponent(
+                              inv.invoice_number
+                            )}`}
+                            inlineHref={`/api/rechnung/download-invoice/${encodeURIComponent(
+                              inv.invoice_number
+                            )}?disposition=inline`}
                           />
                         </td>
                       </tr>
@@ -292,7 +333,10 @@ export default async function RechnungPage({
 
                   {rows.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="py-12 text-center italic text-slate-600">
+                      <td
+                        colSpan={6}
+                        className="py-12 text-center italic text-slate-600"
+                      >
                         Keine Treffer.
                       </td>
                     </tr>
@@ -305,7 +349,9 @@ export default async function RechnungPage({
           {/* Mobile Cards */}
           <div className="md:hidden">
             {rows.length === 0 ? (
-              <div className="p-6 text-center italic text-slate-700">Keine Treffer.</div>
+              <div className="p-6 text-center italic text-slate-700">
+                Keine Treffer.
+              </div>
             ) : (
               <ul className="divide-y divide-white/70">
                 {rows.map((inv) => {
@@ -313,16 +359,29 @@ export default async function RechnungPage({
                   const netFinal = computeNetTotalInvoice(inv)
                   const rawStatus = inv.status ?? 'Erstellt'
                   const due = inv.due_date ?? inv.valid_until
-                  const showStatus = rawStatus !== 'Bezahlt' && isPast(due) ? 'Überfällig' : rawStatus
+                  const showStatus =
+                    rawStatus !== 'Bezahlt' && isPast(due)
+                      ? 'Überfällig'
+                      : rawStatus
 
                   return (
                     <li key={inv.id} className="p-4">
                       <div className="flex items-start justify-between gap-3">
                         <div>
-                          <div className="text-base font-semibold text-slate-900">{inv.invoice_number}</div>
-                          {c && <div className="text-sm text-slate-700">{c.first_name} {c.last_name}</div>}
-                          <div className="mt-1 text-sm text-slate-700">{inv.date}</div>
-                          <div className="text-sm font-semibold text-slate-900">{EUR.format(netFinal)}</div>
+                          <div className="text-base font-semibold text-slate-900">
+                            {inv.invoice_number}
+                          </div>
+                          {c && (
+                            <div className="text-sm text-slate-700">
+                              {c.first_name} {c.last_name}
+                            </div>
+                          )}
+                          <div className="mt-1 text-sm text-slate-700">
+                            {inv.date}
+                          </div>
+                          <div className="text-sm font-semibold text-slate-900">
+                            {EUR.format(netFinal)}
+                          </div>
                           <div className="mt-1">
                             <StatusBadge status={showStatus} />
                           </div>
@@ -331,9 +390,15 @@ export default async function RechnungPage({
                           <InvoiceActionsMenu
                             invoiceNumber={inv.invoice_number}
                             currentStatus={rawStatus}
-                            downloadHref={`/api/rechnung/download-invoice/${encodeURIComponent(inv.invoice_number)}`}
-                            editHref={`/dashboard/buchhaltung/rechnung/rechnung-bearbeiten/${encodeURIComponent(inv.invoice_number)}`}
-                            inlineHref={`/api/rechnung/download-invoice/${encodeURIComponent(inv.invoice_number)}?disposition=inline`}
+                            downloadHref={`/api/rechnung/download-invoice/${encodeURIComponent(
+                              inv.invoice_number
+                            )}`}
+                            editHref={`/dashboard/buchhaltung/rechnung/rechnung-bearbeiten/${encodeURIComponent(
+                              inv.invoice_number
+                            )}`}
+                            inlineHref={`/api/rechnung/download-invoice/${encodeURIComponent(
+                              inv.invoice_number
+                            )}?disposition=inline`}
                           />
                         </div>
                       </div>
@@ -347,19 +412,24 @@ export default async function RechnungPage({
           {/* Pager */}
           <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/60 bg-white/70 px-4 py-3 backdrop-blur">
             <div className="text-xs text-slate-600">
-              Seite <strong>{safePage}</strong> von <strong>{totalPages}</strong> · {total} Einträge
+              Seite <strong>{safePage}</strong> von{' '}
+              <strong>{totalPages}</strong> · {total} Einträge
             </div>
             <nav className="flex items-center gap-1">
               <Link
                 href={hrefForPage(Math.max(1, safePage - 1))}
                 aria-disabled={safePage === 1}
-                className={`rounded-lg border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow hover:bg-white ${safePage === 1 ? 'pointer-events-none opacity-40' : ''}`}
+                className={`rounded-lg border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow hover:bg-white ${
+                  safePage === 1 ? 'pointer-events-none opacity-40' : ''
+                }`}
               >
                 ← Zurück
               </Link>
               {pageNums.map((n, i) =>
                 n === '…' ? (
-                  <span key={`el-${i}`} className="px-2 text-slate-500">…</span>
+                  <span key={`el-${i}`} className="px-2 text-slate-500">
+                    …
+                  </span>
                 ) : (
                   <Link
                     key={n}
@@ -367,7 +437,9 @@ export default async function RechnungPage({
                     aria-current={n === safePage ? 'page' : undefined}
                     className={[
                       'rounded-lg px-3 py-1.5 text-sm border shadow',
-                      n === safePage ? 'bg-slate-900 text-white border-slate-900' : 'bg-white/80 border-white/60 hover:bg-white',
+                      n === safePage
+                        ? 'bg-slate-900 text-white border-slate-900'
+                        : 'bg-white/80 border-white/60 hover:bg-white',
                     ].join(' ')}
                   >
                     {n}
@@ -377,7 +449,11 @@ export default async function RechnungPage({
               <Link
                 href={hrefForPage(Math.min(totalPages, safePage + 1))}
                 aria-disabled={safePage === totalPages}
-                className={`rounded-lg border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow hover:bg-white ${safePage === totalPages ? 'pointer-events-none opacity-40' : ''}`}
+                className={`rounded-lg border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow hover:bg-white ${
+                  safePage === totalPages
+                    ? 'pointer-events-none opacity-40'
+                    : ''
+                }`}
               >
                 Weiter →
               </Link>
@@ -387,8 +463,13 @@ export default async function RechnungPage({
       </div>
 
       <p className="mt-3 text-xs text-slate-600">
-        Beträge sind <strong>netto</strong> (nach Rabatt). „Überfällig“ erscheint automatisch, wenn das Zahlungsziel überschritten ist und die Rechnung nicht als „Bezahlt“ markiert wurde.
+        Beträge sind <strong>netto</strong> (nach Rabatt). „Überfällig“
+        erscheint automatisch, wenn das Zahlungsziel überschritten ist und die
+        Rechnung nicht als „Bezahlt“ markiert wurde.
       </p>
+
+      {/* ⬇️ Neue Übersicht aller Automatisierungen */}
+      <AutomationOverview />
     </div>
   )
 }

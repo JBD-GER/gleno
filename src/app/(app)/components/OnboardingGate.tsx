@@ -586,7 +586,7 @@ export default function OnboardingGate() {
               <>
                 <StepHeader
                   title="Logo hochladen (optional)"
-                  subtitle="Dein Logo erscheint auf Angebot/Rechnung (falls im Template vorgesehen)."
+                  subtitle="Dein Logo erscheint auf Angebot/Rechnung (Wir empfehlen ein Logo mit transparentem Hintergrund)."
                 />
 
                 {logoSuccess && (

@@ -331,6 +331,80 @@ export function renderWebsiteDomainRequestInternalMail(opts: {
 }
 
 /* -------------------------------------------------------------------------- */
+/* NEU: Automatisierungs-Rechnungsmail                                        */
+/* -------------------------------------------------------------------------- */
+
+export function renderInvoiceAutomationMail(opts: {
+  customerName?: string
+  partnerName: string
+  amountGross?: number | null
+  invoiceNumber: string
+  intervalLabel?: string
+  runDate?: string
+}) {
+  const pre = `Neue Rechnung von ${opts.partnerName} über GLENO`
+  const title = `Neue Rechnung von ${opts.partnerName}`
+
+  const amountStr =
+    typeof opts.amountGross === 'number'
+      ? new Intl.NumberFormat('de-DE', {
+          style: 'currency',
+          currency: 'EUR',
+        }).format(opts.amountGross)
+      : '–'
+
+  const interval = opts.intervalLabel || 'wiederkehrend'
+  const runDate = opts.runDate || ''
+
+  const content = `
+  <tr>
+    <td align="center" style="padding:8px 28px 0 28px;">
+      <h1 style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:22px;line-height:1.35;color:#0b1220;font-weight:800;">
+        Ihre neue Rechnung
+      </h1>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:12px 28px 4px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        Hallo ${escapeHtml(opts.customerName || 'Kundin / Kunde')},
+      </p>
+      <p style="margin:8px 0 0 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        ${escapeHtml(opts.partnerName)} hat eine neue Rechnung für Sie erstellt.
+        Die Rechnung wurde automatisch über die <b>GLENO-Plattform</b> erzeugt.
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:8px 28px 4px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        <b>Rechnungsnummer:</b> ${escapeHtml(opts.invoiceNumber)}<br/>
+        <b>Betrag:</b> ${amountStr}<br/>
+        <b>Intervall:</b> ${escapeHtml(interval)}${
+          runDate
+            ? `<br/><b>Erstelldatum:</b> ${escapeHtml(runDate)}`
+            : ''
+        }
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:8px 28px 24px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:13px;line-height:1.6;color:#64748b;">
+        Die Rechnung ist dieser E-Mail als PDF beigefügt (sofern vom ausstellenden Partner bereitgestellt).
+        Bei Fragen zur Rechnung wenden Sie sich bitte direkt an Ihren Dienstleister
+        <b>${escapeHtml(opts.partnerName)}</b>.
+      </p>
+    </td>
+  </tr>`
+
+  return baseWrap(pre, title, content)
+}
+
+/* -------------------------------------------------------------------------- */
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"]/g, (c) =>

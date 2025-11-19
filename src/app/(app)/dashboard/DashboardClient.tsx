@@ -301,14 +301,14 @@ export default function DashboardClient({
 
           <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
             <div className="inline-flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-              <span>Umsatz dieses Jahr</span>
+              <span>Umsatz dieses Jahr: </span>
               <span className="font-semibold text-slate-900">
                 {euro(kpis.revenueYTD)}
               </span>
             </div>
 
             <Link
-              href="/dashboard/empfehlung"
+              href="/dashboard/kunden-werben-kunden"
               className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-slate-800"
             >
               <MegaphoneIcon className="h-4 w-4" />
@@ -350,7 +350,7 @@ export default function DashboardClient({
               </p>
               <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-slate-800 px-3 py-1 text-[11px] text-slate-100">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Beta-Special: Ihr Zugang bleibt dauerhaft kostenlos.
+                Online ab dem 20.11.2025, bleiben Sie aktiv.
               </div>
             </div>
           </div>
@@ -363,7 +363,7 @@ export default function DashboardClient({
               <li>Unternehmen bleibt 3 Monate aktiv – Sie erhalten 59 € Gutschrift</li>
             </ul>
             <Link
-              href="/dashboard/empfehlung"
+              href="/dashboard/kunden-werben-kunden"
               className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-emerald-200 underline-offset-2 hover:underline"
             >
               Mehr zum Empfehlungsprogramm

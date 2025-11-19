@@ -1,4 +1,3 @@
-// app/(app)/dashboard/page.tsx
 import { redirect } from 'next/navigation'
 import { supabaseServer } from '@/lib/supabase-server'
 import DashboardClient from './DashboardClient'
@@ -60,7 +59,6 @@ function parseMaybeJsonArray(val: unknown): any[] {
   }
   return []
 }
-/** Summe einer Zeile (Fallback) */
 function lineTotal(p: any): number {
   const direct = num(p.total) || num(p.line_total) || num(p.amount) || num(p.subtotal) || 0
   if (direct) return direct
@@ -98,10 +96,6 @@ type InvoiceLite = {
   net_after_discount?: number | null
 }
 
-/** Finale NETTO-Summe nach Rabatt.
- * 1) nutzt DB-Feld `net_after_discount` (falls vorhanden)
- * 2) sonst: berechnet aus positions + discount (+ tax_rate für Basis 'gross')
- */
 function computeNetAfter(inv: InvoiceLite): number {
   if (typeof inv.net_after_discount === 'number' && isFinite(inv.net_after_discount)) {
     return inv.net_after_discount
@@ -121,7 +115,6 @@ function computeNetAfter(inv: InvoiceLite): number {
     const capped = Math.min(Math.max(0, disc), net)
     return clamp(net - capped)
   } else {
-    // Rabatt auf Brutto ➜ brutto bilden, Rabatt abziehen, zu netto zurückrechnen
     const grossBefore = net * taxFactor
     const disc = d.type === 'percent' ? (grossBefore * d.value) / 100 : d.value
     const capped = Math.min(Math.max(0, disc), grossBefore)
@@ -131,7 +124,8 @@ function computeNetAfter(inv: InvoiceLite): number {
 }
 
 /* ===== Umsatz (nur NETTO nach Rabatt) ===== */
-function sumRevenueByMonth(invoices: InvoiceLite[], months: string[]): RevenuePoint[] {
+type RevenuePoint2 = RevenuePoint
+function sumRevenueByMonth(invoices: InvoiceLite[], months: string[]): RevenuePoint2[] {
   const map = new Map(months.map((m) => [m, 0]))
   for (const inv of invoices) {
     const key = ym(new Date(inv.date))
@@ -166,15 +160,15 @@ export default async function DashboardPage() {
   if (profile?.role === 'mitarbeiter') {
     return redirect('/dashboard/kalender')
   }
+
   const userId = user.id
 
-  // Zeitfenster
   const months = lastNMonths(12)
   const today = new Date()
   const todayIso = today.toISOString().slice(0, 10)
   const in30Iso = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10)
 
-  // --- KPIs ---
+  // KPIs
   const [{ count: employeesCount }] = await Promise.all([
     supabase.from('employees').select('id', { count: 'exact', head: true }).eq('user_id', userId),
   ])
@@ -188,14 +182,22 @@ export default async function DashboardPage() {
     supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('user_id', userId),
   ])
 
-  // --- Zeitreihen (Counts) ---
+  // Zeitreihen
   const since12m = new Date(firstDayOfMonth())
   since12m.setMonth(since12m.getMonth() - 11)
   const since12mIso = since12m.toISOString()
 
   const [customersCreatedRes, projectsCreatedRes] = await Promise.all([
-    supabase.from('customers').select('created_at').eq('user_id', userId).gte('created_at', since12mIso),
-    supabase.from('projects').select('created_at').eq('user_id', userId).gte('created_at', since12mIso),
+    supabase
+      .from('customers')
+      .select('created_at')
+      .eq('user_id', userId)
+      .gte('created_at', since12mIso),
+    supabase
+      .from('projects')
+      .select('created_at')
+      .eq('user_id', userId)
+      .gte('created_at', since12mIso),
   ])
 
   const seriesCustomers = bucketCountByMonth(
@@ -207,14 +209,13 @@ export default async function DashboardPage() {
     months,
   )
 
-  // --- Umsatz (NETTO nach Rabatt) ---
+  // Umsatz (NETTO nach Rabatt)
   const earliestMonthIso = (() => {
     const [y, m] = months[0].split('-').map((x) => Number(x))
     const d = new Date(y, m - 1, 1)
     return d.toISOString().slice(0, 10)
   })()
 
-  // Für Chart nur benötigte Felder laden
   const invoicesForChartRes = await supabase
     .from('invoices')
     .select('date, positions, tax_rate, discount, net_after_discount')
@@ -224,7 +225,6 @@ export default async function DashboardPage() {
   const chartInvoices = (invoicesForChartRes.data ?? []) as InvoiceLite[]
   const revenueByMonth = sumRevenueByMonth(chartInvoices, months)
 
-  // YTD (NETTO nach Rabatt)
   const startOfYear = new Date(new Date().getFullYear(), 0, 1)
   const invoicesForYtdRes = await supabase
     .from('invoices')
@@ -236,7 +236,7 @@ export default async function DashboardPage() {
   const ytdInvoices = (invoicesForYtdRes.data ?? []) as InvoiceLite[]
   const revenueYTD = sumRevenueBetween(ytdInvoices, startOfYear, endOfDay(today))
 
-  // --- Termine HEUTE ---
+  // Termine HEUTE
   const todayStart = startOfDay(today)
   const todayEnd = endOfDay(today)
   const todaysAppointmentsRes = await supabase
@@ -246,15 +246,22 @@ export default async function DashboardPage() {
     .gte('start_time', todayStart.toISOString())
     .lte('start_time', todayEnd.toISOString())
     .order('start_time', { ascending: true })
+
   const todaysAppointments = (todaysAppointmentsRes.data ?? []) as {
-    id: string; title: string | null; location: string; start_time: string; end_time: string | null; reason: string | null
+    id: string
+    title: string | null
+    location: string
+    start_time: string
+    end_time: string | null
+    reason: string | null
   }[]
 
-  // --- Warnungen ---
+  // Warnungen
   const materialsRes = await supabase
     .from('materials')
     .select('id, name, quantity, critical_quantity')
     .eq('user_id', userId)
+
   const lowMaterials = ((materialsRes.data ?? []) as any[])
     .filter((m) => Number(m.quantity) <= Number(m.critical_quantity))
     .slice(0, 10)
@@ -268,7 +275,6 @@ export default async function DashboardPage() {
   const dueRangeStart = todayIso
   const dueRangeEnd = in30Iso
 
-  // Fleet TÜV
   const dueFleetRes = await supabase
     .from('fleet')
     .select('id, license_plate, inspection_due_date')
@@ -277,13 +283,13 @@ export default async function DashboardPage() {
     .gte('inspection_due_date', dueRangeStart)
     .lte('inspection_due_date', dueRangeEnd)
     .order('inspection_due_date', { ascending: true })
+
   const dueFleet = (dueFleetRes.data ?? []).map((f: any) => ({
     id: String(f.id),
     license_plate: String(f.license_plate),
     inspection_due_date: f.inspection_due_date as string | null,
   }))
 
-  // Tools Prüfungen
   const dueToolsRes = await supabase
     .from('tools')
     .select('id, name, next_inspection_due')
@@ -292,6 +298,7 @@ export default async function DashboardPage() {
     .gte('next_inspection_due', dueRangeStart)
     .lte('next_inspection_due', dueRangeEnd)
     .order('next_inspection_due', { ascending: true })
+
   const dueTools = (dueToolsRes.data ?? []).map((t: any) => ({
     id: String(t.id),
     name: String(t.name),
@@ -299,7 +306,7 @@ export default async function DashboardPage() {
   }))
 
   return (
-    <div className="px-6 py-6">
+    <div className="w-full px-4 py-6 sm:px-6 lg:px-8">
       <DashboardClient
         userEmail={user.email ?? ''}
         kpis={{
@@ -307,12 +314,12 @@ export default async function DashboardPage() {
           customers: customersCount ?? 0,
           projects: projectsCount ?? 0,
           invoices: invoicesCount ?? 0,
-          revenueYTD, // ✅ NETTO nach Rabatt
+          revenueYTD,
         }}
         series={{
           customers: seriesCustomers,
           projects: seriesProjects,
-          revenue: revenueByMonth, // ✅ NETTO nach Rabatt je Monat (letzte 12)
+          revenue: revenueByMonth,
         }}
         alerts={{ lowMaterials, dueFleet, dueTools }}
         appointments={todaysAppointments}

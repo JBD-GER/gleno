@@ -24,6 +24,7 @@ type Req = {
   recommendations: any | null
   created_at: string
   updated_at: string
+  applications_count: number | null
 }
 
 type PartnerLite = {
@@ -118,7 +119,6 @@ export default async function AnfrageDetailPage({
 }: {
   params: Promise<{ id: string }>
 }) {
-  // ⚠️ Dynamic APIs: params ist ein Promise und muss awaited werden
   const { id } = await params
 
   const supabase = await supabaseServer()
@@ -130,10 +130,12 @@ export default async function AnfrageDetailPage({
     redirect('/login')
   }
 
-  // Anfrage laden
+  // Anfrage laden – inkl. applications_count
   const { data, error } = await supabase
     .from('market_requests')
-    .select('*')
+    .select(
+      'id, user_id, status, branch, category, city, zip, urgency, execution, budget_min, budget_max, request_text, summary, recommendations, created_at, updated_at, applications_count'
+    )
     .eq('id', id)
     .eq('user_id', session.user.id)
     .single()
@@ -146,7 +148,7 @@ export default async function AnfrageDetailPage({
   const activePartner: PartnerLite = null
   const statusLabel = normalizeStatus(req.status)
 
-  // Bewerbungen (Kurzliste)
+  // Bewerbungen (Kurzliste) – message_text statt note
   const { data: apps } = await supabase
     .from('market_applications')
     .select(
@@ -154,7 +156,7 @@ export default async function AnfrageDetailPage({
       id,
       status,
       created_at,
-      note,
+      message_text,
       partner_id,
       partner:partners(display_name, company_name)
     `
@@ -167,11 +169,14 @@ export default async function AnfrageDetailPage({
     partner_id: a.partner_id ?? null,
     partner_name: a?.partner?.display_name || a?.partner?.company_name || null,
     created_at: a.created_at,
-    note: a.note ?? null,
+    note: a.message_text ?? null,
     status: a.status ?? null,
   }))
 
-  const applicantsCount = applicants.length
+  // 🔢 Bewerbungszahl: gespeicherter Zähler vs. live gezählt
+  const liveCount = applicants.length
+  const storedCount = req.applications_count ?? 0
+  const applicantsCount = Math.max(storedCount, liveCount)
 
   return (
     <section className="relative mx-auto max-w-6xl px-4 sm:px-6 py-8 sm:py-10">

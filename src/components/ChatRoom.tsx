@@ -792,7 +792,8 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
         'flex flex-col rounded-3xl',
         'border border-white/70 bg-white/80 backdrop-blur-2xl',
         'shadow-[0_18px_55px_rgba(15,23,42,0.10)] ring-1 ring-white/60',
-        'max-h-[82vh]'
+        // 🔹 Feste, responsive Höhe für Chat-Card
+        'h-[820px] sm:h-[480px] lg:h-[1060px] max-h-[82vh]'
       )}
     >
       {/* Header */}
@@ -818,7 +819,7 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
       {/* Messages */}
       <div
         ref={listRef}
-        className="flex-1 overflow-y-auto px-3 py-3 space-y-3
+        className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3
                    bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.03),_transparent)]"
       >
         {filtered.map(m => {

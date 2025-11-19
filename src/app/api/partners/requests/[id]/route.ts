@@ -23,10 +23,16 @@ type MarketRequestRow = {
   applications_count: number
 }
 
-export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
+// ⬇️ ctx.params ist in Next 15 ein Promise – also awaiten
+export async function GET(
+  req: NextRequest,
+  ctx: { params: Promise<{ id: string }> }
+) {
   const { supabase, response } = supabaseServerRoute(req)
 
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) {
     return NextResponse.json(
       { error: 'unauthorized' },
@@ -41,7 +47,10 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
     .single()
 
   const isAdmin = (profile?.role || '').toLowerCase() === 'admin'
-  const reqId = ctx.params.id
+
+  // ⬇️ hier params awaiten
+  const { id } = await ctx.params
+  const reqId = id
 
   const url = new URL(req.url)
   const partner_id = url.searchParams.get('partner_id') || undefined
@@ -154,9 +163,7 @@ export async function GET(req: NextRequest, ctx: { params: { id: string } }) {
     // Zugriff ist dann nur daran gebunden, dass der User überhaupt Partner hat.
   }
 
-  const intro_text = r.request_text
-    ? r.request_text.slice(0, 4000)
-    : null
+  const intro_text = r.request_text ? r.request_text.slice(0, 4000) : null
 
   return NextResponse.json(
     {

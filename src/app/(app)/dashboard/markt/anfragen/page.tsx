@@ -3,6 +3,10 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
+import {
+  UserCircleIcon,
+  UserPlusIcon,
+} from '@heroicons/react/24/outline'
 
 const shellBg =
   'min-h-[100dvh] px-4 sm:px-6 lg:px-8 py-6 sm:py-10 text-slate-800 ' +
@@ -17,6 +21,12 @@ const btnGhost =
   'inline-flex items-center gap-2 rounded-2xl border border-white/70 bg-white/92 ' +
   'backdrop-blur-xl px-3 py-2 text-xs sm:text-sm text-slate-900 ' +
   'shadow-sm hover:bg-white hover:shadow-md transition'
+
+const btnPrimary =
+  'inline-flex items-center gap-2 rounded-2xl bg-slate-900 px-3.5 py-2 ' +
+  'text-xs sm:text-sm font-semibold text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)] ' +
+  'hover:bg-slate-950 hover:shadow-[0_14px_40px_rgba(15,23,42,0.45)] transition ' +
+  'disabled:opacity-50 disabled:shadow-none'
 
 const filterChipBase =
   'px-3 py-1 rounded-full text-[10px] sm:text-xs border transition'
@@ -124,6 +134,8 @@ export default function PartnerRequestsPage() {
     return branches.find((b) => b.slug === selectedBranch)?.name || ''
   })()
 
+  const isNoPartnerError = error === 'no_partner_found'
+
   return (
     <div className={shellBg}>
       {/* HERO */}
@@ -167,135 +179,164 @@ export default function PartnerRequestsPage() {
         </div>
       </section>
 
-      {/* FILTER + LISTE */}
-      <section className={`${cardBase} pt-4 pb-5 px-4 sm:px-5`}>
-        {/* Branchen-Filter */}
-        {branches.length > 0 && (
-          <div className="flex flex-wrap items-center gap-2 mb-3">
-            <button
-              type="button"
-              onClick={() => fetchList('all')}
-              className={
-                selectedBranch === 'all'
-                  ? filterChipActive
-                  : filterChipInactive
-              }
-            >
-              Alle
-            </button>
-            {branches.map((b) => (
+      {/* Hinweis: Kein Partnerprofil vorhanden */}
+      {!loading && isNoPartnerError && (
+        <section className="mb-6">
+          <div className="flex flex-col gap-3 rounded-2xl border border-amber-200/70 bg-amber-50/95 px-4 py-3 text-sm text-amber-900 shadow-[0_6px_22px_rgba(251,191,36,0.22)]">
+            <div className="flex items-start gap-2">
+              <UserCircleIcon className="mt-0.5 h-5 w-5 text-amber-500" />
+              <p>
+                Du hast noch <b>kein Partnerprofil</b>. Lege zuerst dein Profil
+                an, um passende Markt-Anfragen zu erhalten und dich darauf
+                bewerben zu können.
+              </p>
+            </div>
+            <div>
+              <Link
+                href="/dashboard/markt/partner-werden"
+                className={`${btnPrimary} inline-flex`}
+              >
+                <UserPlusIcon className="h-4 w-4" />
+                <span>Partnerprofil anlegen</span>
+              </Link>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* FILTER + LISTE – nur anzeigen, wenn ein Partnerprofil existiert
+          (also NICHT bei no_partner_found) */}
+      {!isNoPartnerError && (
+        <section className={`${cardBase} pt-4 pb-5 px-4 sm:px-5`}>
+          {/* Branchen-Filter */}
+          {branches.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 mb-3">
               <button
-                key={b.id}
                 type="button"
-                onClick={() => fetchList(b.slug)}
+                onClick={() => fetchList('all')}
                 className={
-                  selectedBranch === b.slug
+                  selectedBranch === 'all'
                     ? filterChipActive
                     : filterChipInactive
                 }
               >
-                {b.name}
+                Alle
               </button>
-            ))}
-          </div>
-        )}
+              {branches.map((b) => (
+                <button
+                  key={b.id}
+                  type="button"
+                  onClick={() => fetchList(b.slug)}
+                  className={
+                    selectedBranch === b.slug
+                      ? filterChipActive
+                      : filterChipInactive
+                  }
+                >
+                  {b.name}
+                </button>
+              ))}
+            </div>
+          )}
 
-        {/* States */}
-        {loading && (
-          <div className="mt-4 text-sm text-slate-700">
-            Lade Anfragen …
-          </div>
-        )}
+          {/* States */}
+          {loading && (
+            <div className="mt-4 text-sm text-slate-700">
+              Lade Anfragen …
+            </div>
+          )}
 
-        {error && !loading && (
-          <div className="mt-4 text-sm text-rose-700">
-            Fehler: {error}
-          </div>
-        )}
+          {/* andere Fehler (nicht no_partner_found) */}
+          {error && !loading && !isNoPartnerError && (
+            <div className="mt-4 text-sm text-rose-700">
+              Fehler: {error}
+            </div>
+          )}
 
-        {!loading && !error && items.length === 0 && (
-          <div className="mt-4 text-sm text-slate-600">
-            Keine passenden Anfragen gefunden.
-          </div>
-        )}
+          {!loading && !error && items.length === 0 && (
+            <div className="mt-4 text-sm text-slate-600">
+              Keine passenden Anfragen gefunden.
+            </div>
+          )}
 
-        {/* Liste */}
-        <div className="mt-4 grid grid-cols-1 gap-3">
-          {items.map((it) => {
-            const inactive =
-              !it.is_active ||
-              ['Gelöscht', 'Deaktiviert'].includes(it.status)
+          {/* Liste */}
+          <div className="mt-4 grid grid-cols-1 gap-3">
+            {items.map((it) => {
+              const inactive =
+                !it.is_active ||
+                ['Gelöscht', 'Deaktiviert'].includes(it.status)
 
-            return (
-              <article
-                key={it.id}
-                className={
-                  'group rounded-2xl border border-white/70 bg-white/95 px-4 py-3 ' +
-                  'ring-1 ring-white/70 backdrop-blur-xl shadow-[0_4px_18px_rgba(15,23,42,0.06)] ' +
-                  'hover:shadow-[0_10px_26px_rgba(15,23,42,0.10)] hover:bg-white transition'
-                }
-              >
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <h2 className="text-sm sm:text-base font-semibold text-slate-900 truncate">
-                        {it.title}
-                      </h2>
-                      <span
-                        className={
-                          'inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium ' +
-                          (inactive
-                            ? 'bg-slate-100 text-slate-500 line-through'
-                            : 'bg-emerald-50 text-emerald-700')
-                        }
-                      >
-                        {it.status}
-                      </span>
-                      <span className="inline-flex items-center rounded-full bg-slate-900 text-white text-[9px] px-2 py-0.5">
-                        {it.applications_count} Bewerbungen
-                      </span>
-                    </div>
-
-                    <div className="mt-0.5 flex flex-wrap gap-2 text-[10px] text-slate-600">
-                      {(it.city || it.zip) && (
-                        <span>
-                          {it.city || '—'}
-                          {it.zip ? ` (${it.zip})` : ''}
+              return (
+                <article
+                  key={it.id}
+                  className={
+                    'group rounded-2xl border border-white/70 bg-white/95 px-4 py-3 ' +
+                    'ring-1 ring-white/70 backdrop-blur-xl shadow-[0_4px_18px_rgba(15,23,42,0.06)] ' +
+                    'hover:shadow-[0_10px_26px_rgba(15,23,42,0.10)] hover:bg-white transition'
+                  }
+                >
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <h2 className="text-sm sm:text-base font-semibold text-slate-900 truncate">
+                          {it.title}
+                        </h2>
+                        <span
+                          className={
+                            'inline-flex items-center rounded-full px-2 py-0.5 text-[9px] font-medium ' +
+                            (inactive
+                              ? 'bg-slate-100 text-slate-500 line-through'
+                              : 'bg-emerald-50 text-emerald-700')
+                          }
+                        >
+                          {it.status}
                         </span>
-                      )}
-                      <span className="text-slate-300">•</span>
-                      <span>
-                        Erstellt am{' '}
-                        {new Date(
-                          it.created_at
-                        ).toLocaleDateString('de-DE')}
-                      </span>
+                        <span className="inline-flex items-center rounded-full bg-slate-900 text-white text-[9px] px-2 py-0.5">
+                          {it.applications_count} Bewerbungen
+                        </span>
+                      </div>
+
+                      <div className="mt-0.5 flex flex-wrap gap-2 text-[10px] text-slate-600">
+                        {(it.city || it.zip) && (
+                          <span>
+                            {it.city || '—'}
+                            {it.zip ? ` (${it.zip})` : ''}
+                          </span>
+                        )}
+                        <span className="text-slate-300">•</span>
+                        <span>
+                          Erstellt am{' '}
+                          {new Date(
+                            it.created_at
+                          ).toLocaleDateString('de-DE')}
+                        </span>
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+                      <Link
+                        href={`/dashboard/markt/anfragen/${it.id}${
+                          partnerId
+                            ? `?partner_id=${encodeURIComponent(partnerId)}`
+                            : ''
+                        }`}
+                        className={`${btnGhost} ${
+                          inactive
+                            ? 'opacity-40 pointer-events-none'
+                            : ''
+                        }`}
+                        aria-disabled={inactive}
+                      >
+                        Details
+                      </Link>
                     </div>
                   </div>
-
-                  <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
-                    <Link
-                      href={`/dashboard/markt/anfragen/${it.id}${
-                        partnerId
-                          ? `?partner_id=${encodeURIComponent(partnerId)}`
-                          : ''
-                      }`}
-                      className={`${btnGhost} ${
-                        inactive
-                          ? 'opacity-40 pointer-events-none'
-                          : ''
-                      }`}
-                      aria-disabled={inactive}
-                    >
-                      Details
-                    </Link>
-                  </div>
-                </div>
-              </article>
-            )
-          })}
-        </div>
-      </section>
+                </article>
+              )
+            })}
+          </div>
+        </section>
+      )}
     </div>
   )
 }

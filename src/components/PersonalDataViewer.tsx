@@ -8,7 +8,12 @@ import { supabaseClient } from '@/lib/supabase-client'
 type Props = { open: boolean; onClose: () => void; requestId: string }
 
 function Input({
-  label, type = 'text', value, onChange, placeholder, className = '',
+  label,
+  type = 'text',
+  value,
+  onChange,
+  placeholder,
+  className = '',
 }: {
   label: string
   type?: string
@@ -43,16 +48,30 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
   const [busy, setBusy] = React.useState(false)
   const [same, setSame] = React.useState(true)
   const [bill, setBill] = React.useState({
-    first_name: '', last_name: '', company: '',
-    street: '', house_number: '', postal_code: '', city: '',
-    phone: '', email: '',
+    first_name: '',
+    last_name: '',
+    company: '',
+    street: '',
+    house_number: '',
+    postal_code: '',
+    city: '',
+    phone: '',
+    email: '',
   })
   const [exec, setExec] = React.useState({
-    street: '', house_number: '', postal_code: '', city: '',
+    street: '',
+    house_number: '',
+    postal_code: '',
+    city: '',
   })
 
   // Darf bearbeiten? (Owner der Request)
   const [canEdit, setCanEdit] = React.useState(false)
+
+  // Lead-Button-Status
+  const [leadBusy, setLeadBusy] = React.useState(false)
+  const [leadDone, setLeadDone] = React.useState(false)
+  const [leadError, setLeadError] = React.useState<string | null>(null)
 
   // Initial laden (Viewer) + Owner prüfen
   React.useEffect(() => {
@@ -91,7 +110,9 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
         }
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [open, requestId, sb])
 
   // Realtime: INSERT/UPDATE -> neu laden; DELETE -> sofort leeren & Edit-Mode aus
@@ -101,7 +122,12 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
 
     ch.on(
       'postgres_changes',
-      { event: '*', schema: 'public', table: 'market_request_personal_data', filter: `request_id=eq.${requestId}` },
+      {
+        event: '*',
+        schema: 'public',
+        table: 'market_request_personal_data',
+        filter: `request_id=eq.${requestId}`,
+      },
       async (payload: any) => {
         if (payload?.eventType === 'DELETE') {
           setRow(null)
@@ -122,7 +148,9 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
     )
 
     ch.subscribe(() => {})
-    return () => { sb.removeChannel(ch) }
+    return () => {
+      sb.removeChannel(ch)
+    }
   }, [sb, requestId, open])
 
   // Custom-Event (z. B. nach Save/Delete)
@@ -147,7 +175,9 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
   // ESC zum Schließen
   React.useEffect(() => {
     if (!open) return
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose()
+    }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
   }, [open, onClose])
@@ -168,7 +198,12 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
     }
     const sameFlag = !!row.exec_same_as_billing
     const execState = sameFlag
-      ? { street: billState.street, house_number: billState.house_number, postal_code: billState.postal_code, city: billState.city }
+      ? {
+          street: billState.street,
+          house_number: billState.house_number,
+          postal_code: billState.postal_code,
+          city: billState.city,
+        }
       : {
           street: row.exec_street ?? '',
           house_number: row.exec_house_number ?? '',
@@ -222,7 +257,7 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
       const j = await res.json().catch(() => ({}))
       if (!res.ok) throw new Error(j?.error || res.statusText)
 
-      // Optional eigene Chat-Nachricht "aktualisiert" (ersetzt per startsWith die API-"bereitgestellt"-Box)
+      // Optional eigene Chat-Nachricht "aktualisiert"
       const { data: conv } = await sb
         .from('market_conversations')
         .select('id')
@@ -231,16 +266,18 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
       const { data: sess } = await sb.auth.getSession()
       const uid = sess?.session?.user?.id ?? null
       if (conv?.id && uid) {
-        // WICHTIG: beginnt mit dem gleichen Prefix wie im Chat, damit nur EINE grüne Box übrig bleibt (die neueste)
         await sb.from('market_messages').insert({
           conversation_id: conv.id,
           sender_user_id: uid,
-          body_text: 'Personen- und Adressdaten wurden bereitgestellt (aktualisiert).',
+          body_text:
+            'Personen- und Adressdaten wurden bereitgestellt (aktualisiert).',
         })
       }
 
       // Event für Header/Chips/Chat
-      window.dispatchEvent(new CustomEvent('personal-data:updated', { detail: { requestId } }))
+      window.dispatchEvent(
+        new CustomEvent('personal-data:updated', { detail: { requestId } })
+      )
 
       // Edit-Mode verlassen
       setEdit(false)
@@ -251,11 +288,62 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
     }
   }
 
+  // Lead anlegen – nur für Partner (nicht Owner)
+  async function handleCreateLead() {
+    if (!row || leadBusy) return
+    setLeadBusy(true)
+    setLeadError(null)
+    try {
+      const payload = {
+        company: row.bill_company ?? null,
+        first_name: String(row.bill_first_name ?? '').trim(),
+        last_name: String(row.bill_last_name ?? '').trim(),
+        email: row.bill_email ? String(row.bill_email).trim() : '',
+        phone: row.bill_phone ? String(row.bill_phone).trim() : '',
+        street: row.bill_street ?? null,
+        house_number: row.bill_house_number ?? null,
+        postal_code: row.bill_postal_code ?? null,
+        city: row.bill_city ?? null,
+        country: null,
+        status: 'Lead',
+        notes: `Aus Markt-Anfrage ${requestId}`,
+      }
+
+      const res = await fetch('/api/customers', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok) throw new Error(j?.message || 'Lead konnte nicht angelegt werden.')
+
+      setLeadDone(true)
+    } catch (err) {
+      setLeadError((err as Error).message)
+    } finally {
+      setLeadBusy(false)
+    }
+  }
+
   if (!open) return null
+
+  // einfache Heuristik: Adresse vorhanden?
+  const hasAddress =
+    !!row &&
+    !!(
+      (row.bill_street && row.bill_house_number) ||
+      row.bill_postal_code ||
+      row.bill_city
+    )
+
+  const canCreateLead = !!row && hasAddress
 
   const node = (
     <div className="fixed inset-0 z-[100000] flex items-center justify-center p-4">
-      <div className="absolute inset-0 backdrop-blur-2xl bg-white/10" onClick={onClose} />
+      <div
+        className="absolute inset-0 backdrop-blur-2xl bg-white/10"
+        onClick={onClose}
+      />
       <div className="relative z-10 w-full max-w-2xl rounded-3xl border border-white/60 bg-white/90 p-5 shadow-[0_10px_34px_rgba(2,6,23,0.12)]">
         <div className="flex items-start justify-between gap-4">
           <h3 className="text-lg font-medium">Personendaten</h3>
@@ -277,7 +365,10 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
                 Abbrechen
               </button>
             )}
-            <button onClick={onClose} className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm"
+            >
               Schließen
             </button>
           </div>
@@ -286,33 +377,108 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
         {/* Anzeige */}
         {!edit && (
           <>
-            {loading && <div className="mt-4 text-sm text-slate-600">Lade…</div>}
-            {!loading && !row && <div className="mt-4 text-sm text-slate-600">Es wurden noch keine Personendaten hinterlegt.</div>}
+            {loading && (
+              <div className="mt-4 text-sm text-slate-600">Lade…</div>
+            )}
+            {!loading && !row && (
+              <div className="mt-4 text-sm text-slate-600">
+                Es wurden noch keine Personendaten hinterlegt.
+              </div>
+            )}
 
             {!loading && row && (
               <div className="mt-4 space-y-6">
                 <section>
-                  <div className="text-sm font-medium text-slate-900">Rechnungsadresse</div>
+                  <div className="text-sm font-medium text-slate-900">
+                    Rechnungsadresse
+                  </div>
                   <dl className="mt-2 grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
-                    <DT v={`${row.bill_first_name ?? ''} ${row.bill_last_name ?? ''}`.trim()} k="Name" />
+                    <DT
+                      v={`${row.bill_first_name ?? ''} ${
+                        row.bill_last_name ?? ''
+                      }`.trim()}
+                      k="Name"
+                    />
                     <DT v={row.bill_company} k="Firma" />
-                    <DT v={`${row.bill_street ?? ''} ${row.bill_house_number ?? ''}`.trim()} k="Straße / Nr." />
-                    <DT v={`${row.bill_postal_code ?? ''} ${row.bill_city ?? ''}`.trim()} k="PLZ / Ort" />
+                    <DT
+                      v={`${row.bill_street ?? ''} ${
+                        row.bill_house_number ?? ''
+                      }`.trim()}
+                      k="Straße / Nr."
+                    />
+                    <DT
+                      v={`${row.bill_postal_code ?? ''} ${
+                        row.bill_city ?? ''
+                      }`.trim()}
+                      k="PLZ / Ort"
+                    />
                     <DT v={row.bill_phone} k="Telefon" />
                     <DT v={row.bill_email} k="E-Mail" />
                   </dl>
                 </section>
 
                 <section>
-                  <div className="text-sm font-medium text-slate-900">Ausführungsort</div>
-                  <div className="mt-1 text-xs text-slate-500">{row.exec_same_as_billing ? 'Wie Rechnungsadresse' : 'Abweichend'}</div>
+                  <div className="text-sm font-medium text-slate-900">
+                    Ausführungsort
+                  </div>
+                  <div className="mt-1 text-xs text-slate-500">
+                    {row.exec_same_as_billing
+                      ? 'Wie Rechnungsadresse'
+                      : 'Abweichend'}
+                  </div>
                   {!row.exec_same_as_billing && (
                     <dl className="mt-2 grid grid-cols-1 gap-2 text-sm md:grid-cols-2">
-                      <DT v={`${row.exec_street ?? ''} ${row.exec_house_number ?? ''}`.trim()} k="Straße / Nr." />
-                      <DT v={`${row.exec_postal_code ?? ''} ${row.exec_city ?? ''}`.trim()} k="PLZ / Ort" />
+                      <DT
+                        v={`${row.exec_street ?? ''} ${
+                          row.exec_house_number ?? ''
+                        }`.trim()}
+                        k="Straße / Nr."
+                      />
+                      <DT
+                        v={`${row.exec_postal_code ?? ''} ${
+                          row.exec_city ?? ''
+                        }`.trim()}
+                        k="PLZ / Ort"
+                      />
                     </dl>
                   )}
                 </section>
+
+                {/* Lead anlegen – nur für Partner (nicht Owner) */}
+                {!canEdit && canCreateLead && (
+                  <section className="mt-4 border-t border-slate-100 pt-4">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-sm text-slate-700">
+                        Du kannst diese Kontaktdaten direkt als{' '}
+                        <span className="font-medium">Lead</span> in deinem
+                        Kundenbereich speichern.
+                      </div>
+                      <div className="flex flex-col items-start gap-1 sm:items-end">
+                        <button
+                          onClick={handleCreateLead}
+                          disabled={leadBusy || leadDone}
+                          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-[0_8px_24px_rgba(15,23,42,0.35)] hover:bg-slate-950 disabled:opacity-50 disabled:shadow-none"
+                        >
+                          {leadDone
+                            ? 'Lead angelegt'
+                            : leadBusy
+                            ? 'Lege Lead an…'
+                            : 'Lead anlegen'}
+                        </button>
+                        {leadError && (
+                          <div className="text-[11px] text-rose-600">
+                            {leadError}
+                          </div>
+                        )}
+                        {leadDone && !leadError && (
+                          <div className="text-[11px] text-emerald-600">
+                            Lead wurde erfolgreich in deinen Kunden angelegt.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+                )}
               </div>
             )}
           </>
@@ -324,22 +490,79 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
             <div className="rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-[13px] text-amber-900">
               <div className="font-medium">Hinweis zum Datenschutz</div>
               <p className="mt-1 leading-relaxed">
-                Du kannst diese Daten später jederzeit über „Personendaten löschen“ entfernen.
-                Eine vollständige Löschung lokal gespeicherter Daten beim Partner kann nicht garantiert werden,
+                Du kannst diese Daten später jederzeit über „Personendaten
+                löschen“ entfernen. Eine vollständige Löschung lokal
+                gespeicherter Daten beim Partner kann nicht garantiert werden,
                 da diese vom Partner eigenverantwortlich zu löschen sind.
               </p>
             </div>
 
             <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-2">
-              <Input label="Vorname" value={bill.first_name} onChange={(e)=>setBill(s=>({ ...s, first_name: e.target.value }))} />
-              <Input label="Nachname" value={bill.last_name} onChange={(e)=>setBill(s=>({ ...s, last_name: e.target.value }))} />
-              <Input label="Firma (optional)" value={bill.company} onChange={(e)=>setBill(s=>({ ...s, company: e.target.value }))} className="md:col-span-2" />
-              <Input label="Straße" value={bill.street} onChange={(e)=>setBill(s=>({ ...s, street: e.target.value }))} />
-              <Input label="Hausnummer" value={bill.house_number} onChange={(e)=>setBill(s=>({ ...s, house_number: e.target.value }))} />
-              <Input label="PLZ" value={bill.postal_code} onChange={(e)=>setBill(s=>({ ...s, postal_code: e.target.value }))} />
-              <Input label="Ort" value={bill.city} onChange={(e)=>setBill(s=>({ ...s, city: e.target.value }))} />
-              <Input label="Telefon" value={bill.phone} onChange={(e)=>setBill(s=>({ ...s, phone: e.target.value }))} />
-              <Input label="E-Mail" type="email" value={bill.email} onChange={(e)=>setBill(s=>({ ...s, email: e.target.value }))} />
+              <Input
+                label="Vorname"
+                value={bill.first_name}
+                onChange={(e) =>
+                  setBill((s) => ({ ...s, first_name: e.target.value }))
+                }
+              />
+              <Input
+                label="Nachname"
+                value={bill.last_name}
+                onChange={(e) =>
+                  setBill((s) => ({ ...s, last_name: e.target.value }))
+                }
+              />
+              <Input
+                label="Firma (optional)"
+                value={bill.company}
+                onChange={(e) =>
+                  setBill((s) => ({ ...s, company: e.target.value }))
+                }
+                className="md:col-span-2"
+              />
+              <Input
+                label="Straße"
+                value={bill.street}
+                onChange={(e) =>
+                  setBill((s) => ({ ...s, street: e.target.value }))
+                }
+              />
+              <Input
+                label="Hausnummer"
+                value={bill.house_number}
+                onChange={(e) =>
+                  setBill((s) => ({ ...s, house_number: e.target.value }))
+                }
+              />
+              <Input
+                label="PLZ"
+                value={bill.postal_code}
+                onChange={(e) =>
+                  setBill((s) => ({ ...s, postal_code: e.target.value }))
+                }
+              />
+              <Input
+                label="Ort"
+                value={bill.city}
+                onChange={(e) =>
+                  setBill((s) => ({ ...s, city: e.target.value }))
+                }
+              />
+              <Input
+                label="Telefon"
+                value={bill.phone}
+                onChange={(e) =>
+                  setBill((s) => ({ ...s, phone: e.target.value }))
+                }
+              />
+              <Input
+                label="E-Mail"
+                type="email"
+                value={bill.email}
+                onChange={(e) =>
+                  setBill((s) => ({ ...s, email: e.target.value }))
+                }
+              />
             </div>
 
             <div className="mt-6">
@@ -347,7 +570,7 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
                 <input
                   type="checkbox"
                   checked={same}
-                  onChange={(e)=>setSame(e.target.checked)}
+                  onChange={(e) => setSame(e.target.checked)}
                   className="h-4 w-4 rounded border-slate-300 text-slate-900"
                 />
                 Ausführungsort wie Rechnungsadresse
@@ -355,10 +578,34 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
 
               {!same && (
                 <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-                  <Input label="Ausführungsort: Straße" value={exec.street} onChange={(e)=>setExec(s=>({ ...s, street: e.target.value }))} />
-                  <Input label="Hausnummer" value={exec.house_number} onChange={(e)=>setExec(s=>({ ...s, house_number: e.target.value }))} />
-                  <Input label="PLZ" value={exec.postal_code} onChange={(e)=>setExec(s=>({ ...s, postal_code: e.target.value }))} />
-                  <Input label="Ort" value={exec.city} onChange={(e)=>setExec(s=>({ ...s, city: e.target.value }))} />
+                  <Input
+                    label="Ausführungsort: Straße"
+                    value={exec.street}
+                    onChange={(e) =>
+                      setExec((s) => ({ ...s, street: e.target.value }))
+                    }
+                  />
+                  <Input
+                    label="Hausnummer"
+                    value={exec.house_number}
+                    onChange={(e) =>
+                      setExec((s) => ({ ...s, house_number: e.target.value }))
+                    }
+                  />
+                  <Input
+                    label="PLZ"
+                    value={exec.postal_code}
+                    onChange={(e) =>
+                      setExec((s) => ({ ...s, postal_code: e.target.value }))
+                    }
+                  />
+                  <Input
+                    label="Ort"
+                    value={exec.city}
+                    onChange={(e) =>
+                      setExec((s) => ({ ...s, city: e.target.value }))
+                    }
+                  />
                 </div>
               )}
             </div>

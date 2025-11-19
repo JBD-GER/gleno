@@ -92,7 +92,7 @@ async function loadApplications(): Promise<{
   applications?: ApplicationRow[]
   error?: string
 }> {
-  const h = await headers() // ✅ jetzt korrekt
+  const h = await headers() // ✅ korrekt in Next 15
   const host = h.get('x-forwarded-host') ?? h.get('host')
   const proto = h.get('x-forwarded-proto') ?? 'http'
   const cookie = h.get('cookie') ?? ''
@@ -127,9 +127,11 @@ const PAGE_SIZE = 10
 export default async function BewerbungenPage({
   searchParams,
 }: {
-  searchParams?: { page?: string }
+  // 🔧 In Next 15 ist searchParams ein Promise
+  searchParams?: Promise<{ page?: string }>
 }) {
-  const pageParam = Number(searchParams?.page ?? '1')
+  const sp = (searchParams ? await searchParams : {}) as { page?: string }
+  const pageParam = Number(sp.page ?? '1')
   const page = Number.isFinite(pageParam) && pageParam > 0 ? pageParam : 1
 
   const { ok, applications, error } = await loadApplications()

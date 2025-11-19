@@ -14,7 +14,11 @@ type DbReq = {
   created_at: string
   branch: string | null
   city: string | null
-  applications_count: number
+}
+
+type AppRow = {
+  id: string
+  request_id: string
 }
 
 /* ---------- Helpers ---------- */
@@ -120,10 +124,11 @@ export default async function AnfragenPage() {
     )
   }
 
+  // 1) Anfragen laden (ohne applications_count)
   const { data, error } = await supabase
     .from('market_requests')
     .select(
-      'id, summary, request_text, status, created_at, branch, city, applications_count'
+      'id, summary, request_text, status, created_at, branch, city'
     )
     .eq('user_id', session.user.id)
     .order('created_at', { ascending: false })
@@ -162,6 +167,26 @@ export default async function AnfragenPage() {
     const s = (r.status || '').toLowerCase()
     return s !== 'geloescht' && s !== 'gelöscht'
   }).length
+
+  // 2) Aktuelle Bewerber-Zahlen aus market_applications holen
+  let countsByRequest = new Map<string, number>()
+
+  if (rows.length > 0) {
+    const requestIds = rows.map((r) => r.id)
+
+    const { data: appsData, error: appsError } = await supabase
+      .from('market_applications')
+      .select('id, request_id')
+      .in('request_id', requestIds)
+
+    if (!appsError && appsData) {
+      countsByRequest = appsData.reduce((map, row) => {
+        const rId = (row as AppRow).request_id
+        map.set(rId, (map.get(rId) ?? 0) + 1)
+        return map
+      }, new Map<string, number>())
+    }
+  }
 
   return (
     <div className={pageBg}>
@@ -231,6 +256,8 @@ export default async function AnfragenPage() {
               (a.status || '').toLowerCase() === 'gelöscht'
             const snippet = snippetOf(a)
 
+            const applicantsCount = countsByRequest.get(a.id) ?? 0
+
             return (
               <div
                 key={a.id}
@@ -281,7 +308,7 @@ export default async function AnfragenPage() {
                       Bewerber:
                     </span>{' '}
                     <span className="text-slate-900">
-                      {a.applications_count ?? 0}
+                      {applicantsCount}
                     </span>
                   </div>
 

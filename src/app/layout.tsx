@@ -13,13 +13,7 @@ export const metadata: Metadata = {
   robots: {
     index: false,
     follow: false,
-    googleBot: {
-      index: false,
-      follow: false,
-      'max-image-preview': 'none',
-      'max-snippet': -1,
-      'max-video-preview': -1,
-    },
+    googleBot: { index: false, follow: false, 'max-image-preview': 'none', 'max-snippet': -1, 'max-video-preview': -1 },
   },
 }
 
@@ -106,24 +100,6 @@ export default function RootLayout({ children }: RootLayoutProps) {
             `}
           </Script>
         )}
-
-        {/* Digistore24 Promocode – externer Script-Loader (1:1 wie <script src="...">) */}
-        <Script
-          id="digistore-base"
-          src="https://www.digistore24-scripts.com/service/digistore.js"
-          strategy="beforeInteractive"
-        />
-
-        {/* Digistore24 Promocode – Initialisierung (entspricht zweitem <script>-Tag) */}
-        <Script id="digistore-promocode-init" strategy="beforeInteractive">
-          {`
-            // entspricht:
-            // digistorePromocode({ "product_id": 649531, "adjust_domain": true });
-            if (typeof window !== 'undefined' && typeof window.digistorePromocode === 'function') {
-              window.digistorePromocode({ product_id: 649531, adjust_domain: true });
-            }
-          `}
-        </Script>
       </head>
 
       <body className="min-h-screen bg-bg-200">
@@ -132,9 +108,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <noscript>
             <iframe
               src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
-              height="0"
-              width="0"
-              style={{ display: 'none', visibility: 'hidden' }}
+              height="0" width="0" style={{ display: 'none', visibility: 'hidden' }}
             />
           </noscript>
         )}

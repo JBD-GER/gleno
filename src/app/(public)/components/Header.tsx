@@ -6,13 +6,7 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { Transition } from '@headlessui/react'
 import {
-  Bars3Icon,
-  XMarkIcon,
-  HomeIcon,
-  ChartPieIcon,
-  Cog6ToothIcon,
-  LifebuoyIcon,
-  PresentationChartBarIcon,
+  Bars3Icon, XMarkIcon, HomeIcon, ChartPieIcon, Cog6ToothIcon, LifebuoyIcon, PresentationChartBarIcon,
 } from '@heroicons/react/24/outline'
 import { supabaseClient } from '@/lib/supabase-client'
 
@@ -32,54 +26,20 @@ export default function Header() {
 
   // 👉 Auf diesen Routen soll der Header IMMER „public“ bleiben (kein Auth-Status laden)
   const blindAuthOn = ['/neues-passwort', '/auth/callback']
-  const onBlindRoute = blindAuthOn.some((p) => (path ?? '').startsWith(p))
+  const onBlindRoute = blindAuthOn.some(p => (path ?? '').startsWith(p))
 
   const [open, setOpen] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
 
-  // Auth-Status laden (wie gehabt)
   useEffect(() => {
     if (onBlindRoute) {
+      // Erzwinge public-UI (so „sieht“ der Header den temporären Recovery-Login nicht)
       setUserEmail(null)
       return
     }
+    // Auf allen anderen Routen: echten Auth-Status laden
     supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null))
   }, [supabase, onBlindRoute])
-
-  // Digistore24 Promocode-Script einbinden (entspricht deinem <script>-Snippet)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-
-    // Schon vorhanden? → nichts tun (verhindert doppeltes Einfügen)
-    const existing = document.querySelector<HTMLScriptElement>('script[data-digistore="1"]')
-    if (existing) {
-      const ds = (window as any).digistorePromocode
-      if (typeof ds === 'function') {
-        ds({ product_id: 649531, adjust_all_urls: true, adjust_domain: true })
-      }
-      return
-    }
-
-    const script = document.createElement('script')
-    script.src = 'https://www.digistore24-scripts.com/service/digistore.js'
-    script.async = true
-    script.dataset.digistore = '1'
-
-    script.onload = () => {
-      const ds = (window as any).digistorePromocode
-      if (typeof ds === 'function') {
-        ds({ product_id: 649531, adjust_all_urls: true, adjust_domain: true })
-      } else {
-        console.warn('digistorePromocode ist nach Script-Load nicht definiert.')
-      }
-    }
-
-    script.onerror = () => {
-      console.error('Digistore24-Script konnte nicht geladen werden.')
-    }
-
-    document.body.appendChild(script)
-  }, [])
 
   const isDashboard = !onBlindRoute && path?.startsWith('/dashboard')
 
@@ -200,16 +160,11 @@ export default function Header() {
           })}
         </nav>
 
-        <Link
-          href={userEmail ? '/dashboard' : '/login'}
-          aria-current={!onBlindRoute && path?.startsWith('/dashboard') ? 'page' : undefined}
-        >
+        <Link href={userEmail ? '/dashboard' : '/login'} aria-current={!onBlindRoute && path?.startsWith('/dashboard') ? 'page' : undefined}>
           <button
-            className={`group relative overflow-hidden rounded-xl px-4 py-2 text-sm font-semibold text-white 
-                        shadow transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 
-                        focus-visible:ring-slate-900/20 hover:shadow-[0_14px_34px_rgba(10,27,64,.38)] ${
-                          !onBlindRoute && path?.startsWith('/dashboard') ? 'ring-2 ring-white/30' : ''
-                        }`}
+            className={`group relative overflow-hidden rounded-xl px-4 py-2 text-sm font-semibold text-white shadow transition
+                        hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20
+                        hover:shadow-[0_14px_34px_rgba(10,27,64,.38)] ${!onBlindRoute && path?.startsWith('/dashboard') ? 'ring-2 ring-white/30' : ''}`}
             style={{ backgroundColor: PRIMARY, boxShadow: '0 6px 18px rgba(10,27,64,.25)' }}
           >
             <span className="pointer-events-none absolute inset-y-0 -left-24 w-24 -skew-x-12 bg-white/25 opacity-0 blur-sm transition-all duration-500 group-hover:left-full group-hover:opacity-100" />

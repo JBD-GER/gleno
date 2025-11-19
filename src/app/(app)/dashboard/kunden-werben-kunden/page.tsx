@@ -82,7 +82,7 @@ export default async function EmpfehlungPage() {
             <div className="mt-4 space-y-2 text-xs text-slate-600">
               <p>Teilen Sie den Link zum Beispiel mit:</p>
               <ul className="list-inside list-disc space-y-0.5">
-                <li>anderen Gebäudereinigungs-Unternehmen</li>
+                <li>anderen Branchen-Unternehmen</li>
                 <li>befreundeten Unternehmer:innen</li>
                 <li>Ihrem Netzwerk (WhatsApp, E-Mail, Social Media)</li>
               </ul>

@@ -359,7 +359,7 @@ export default function DashboardClient({
             <p className="font-medium">So funktioniert&apos;s:</p>
             <ul className="mt-1 list-inside list-disc space-y-0.5">
               <li>Persönlichen Empfehlungslink aus Ihrem Profil kopieren</li>
-              <li>Mit Gebäudereinigungen & befreundeten Unternehmen teilen</li>
+              <li>Mit befreundeten Unternehmen teilen</li>
               <li>Unternehmen bleibt 3 Monate aktiv – Sie erhalten 59 € Gutschrift</li>
             </ul>
             <Link

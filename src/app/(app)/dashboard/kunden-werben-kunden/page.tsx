@@ -1,5 +1,114 @@
 import { redirect } from 'next/navigation'
 import { supabaseServer } from '@/lib/supabase-server'
+import { ReferralProfileBox } from './ReferralProfilBox'
+
+/** E-Mail maskieren: erster Buchstabe + **** */
+function maskEmail(email?: string | null) {
+  if (!email) return '—'
+  const [local] = email.split('@')
+  if (!local.length) return '—'
+  return `${local[0]}****`
+}
+
+/** Phase anhand subscription_status ableiten */
+function getPhaseLabel(subscriptionStatus?: string | null): string {
+  if (!subscriptionStatus || subscriptionStatus === 'none') return 'Kein Abo'
+  if (subscriptionStatus === 'trialing' || subscriptionStatus === 'trial_expired') {
+    return 'Testphase'
+  }
+  // alles andere behandeln wir als „Abo aktiv“
+  return 'Abo aktiv'
+}
+
+/** Auszahlungs-/Referral-Status berechnen (nur Anzeige-Logik, keine DB-Änderung) */
+function computeReferralDisplayStatus(opts: {
+  dbStatus: string
+  subscriptionStatus?: string | null
+  trialEndsAt?: string | null
+  createdAt?: string | null
+}) {
+  const { dbStatus, subscriptionStatus, trialEndsAt, createdAt } = opts
+  const now = new Date()
+
+  // Phase
+  const phaseLabel = getPhaseLabel(subscriptionStatus)
+
+  // Abo-Start-Datum (Heuristik):
+  // - Wenn Abo aktiv → nehmen wir trial_ends_at
+  // - sonst kein Abo-Start
+  let aboStart: Date | null = null
+  if (subscriptionStatus && subscriptionStatus !== 'trialing' && subscriptionStatus !== 'trial_expired') {
+    if (trialEndsAt) {
+      aboStart = new Date(trialEndsAt)
+    } else if (createdAt) {
+      aboStart = new Date(createdAt)
+    }
+  }
+
+  // Datum, ab wann Auszahlung „fällig“ wäre: 3 Monate + 1 Tag nach Abo-Start
+  let payoutEligibleAt: Date | null = null
+  if (aboStart) {
+    payoutEligibleAt = new Date(aboStart)
+    payoutEligibleAt.setMonth(payoutEligibleAt.getMonth() + 3)
+    payoutEligibleAt.setDate(payoutEligibleAt.getDate() + 1)
+  }
+
+  // Display-Status:
+  // - aus DB: 'offen' | 'qualifiziert' | 'ausgezahlt'
+  // - zusätzlich abgeleitet: 'auszahlung_faellig' (wenn 3 Monate + 1 Tag rum)
+  let displayStatus = dbStatus as
+    | 'offen'
+    | 'qualifiziert'
+    | 'ausgezahlt'
+    | 'auszahlung_faellig'
+
+  // Wenn Abo aktiv und DB-Status noch „offen“ → für Anzeige auf „qualifiziert“ heben
+  const isAboAktiv =
+    subscriptionStatus &&
+    !['trialing', 'trial_expired', 'none'].includes(subscriptionStatus)
+
+  if (dbStatus === 'offen' && isAboAktiv) {
+    displayStatus = 'qualifiziert'
+  }
+
+  // Wenn nicht bereits „ausgezahlt“ und Frist abgelaufen → „Auszahlung fällig“
+  if (dbStatus !== 'ausgezahlt' && payoutEligibleAt && now >= payoutEligibleAt) {
+    displayStatus = 'auszahlung_faellig'
+  }
+
+  const displayStatusLabel = (() => {
+    switch (displayStatus) {
+      case 'offen':
+        return 'Offen'
+      case 'qualifiziert':
+        return 'Qualifiziert (Abo aktiv)'
+      case 'auszahlung_faellig':
+        return 'Auszahlung fällig'
+      case 'ausgezahlt':
+        return 'Ausgezahlt'
+      default:
+        return 'Offen'
+    }
+  })()
+
+  const aboStartDisplay =
+    aboStart && !Number.isNaN(aboStart.getTime())
+      ? aboStart.toLocaleDateString('de-DE')
+      : '—'
+
+  const payoutEligibleDisplay =
+    payoutEligibleAt && !Number.isNaN(payoutEligibleAt.getTime())
+      ? payoutEligibleAt.toLocaleDateString('de-DE')
+      : '—'
+
+  return {
+    phaseLabel,
+    displayStatus,
+    displayStatusLabel,
+    aboStartDisplay,
+    payoutEligibleDisplay,
+  }
+}
 
 export default async function EmpfehlungPage() {
   const supabase = await supabaseServer()
@@ -13,9 +122,69 @@ export default async function EmpfehlungPage() {
     redirect('/login')
   }
 
-  const referralCode = user.id?.slice(0, 8) ?? ''
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://app.gleno.io'
-  const referralLink = `${appUrl}/register?ref=${referralCode}`
+  // === Referral-Code laden/erzeugen ===
+  let referralCode = ''
+
+  const { data: existing, error: referralSelectError } = await supabase
+    .from('referral_codes')
+    .select('code')
+    .eq('user_id', user.id)
+    .maybeSingle()
+
+  if (referralSelectError) {
+    console.error('Fehler beim Laden des Referral-Codes:', referralSelectError.message)
+  }
+
+  if (existing?.code) {
+    referralCode = existing.code
+  } else {
+    const { data: inserted, error: insertError } = await supabase
+      .from('referral_codes')
+      .insert({ user_id: user.id })
+      .select('code')
+      .single()
+
+    if (insertError) {
+      console.error('Fehler beim Erstellen des Referral-Codes:', insertError.message)
+      referralCode = 'FEHLER'
+    } else {
+      referralCode = inserted?.code ?? ''
+    }
+  }
+
+  const referralLink = referralCode
+    ? `https://www.gleno.de/registrieren?ref=${encodeURIComponent(referralCode)}`
+    : 'https://www.gleno.de/registrieren'
+
+  // === Geworbene Nutzer holen ===
+  const {
+    data: referrals,
+    error: referralsError,
+  } = await supabase
+    .from('user_referrals')
+    .select(
+      `
+      id,
+      status,
+      created_at,
+      qualified_at,
+      payout_at,
+      referred:referred_user_id (
+        email,
+        subscription_status,
+        trial_ends_at,
+        created_at
+      )
+    `
+    )
+    .eq('referrer_user_id', user.id)
+    .order('created_at', { ascending: false })
+
+  if (referralsError) {
+    console.error('Fehler beim Laden der Referrals:', referralsError.message)
+  }
+
+  const safeReferrals = referrals ?? []
 
   return (
     <div className="w-full space-y-8 p-4 sm:p-6 lg:p-8">
@@ -52,42 +221,12 @@ export default async function EmpfehlungPage() {
             </div>
           </div>
 
-          {/* HIER: volle Breite auf Handy, max-w-xs erst ab sm */}
-          <div className="mt-4 w-full shrink-0 rounded-2xl border border-slate-200 bg-slate-50 p-4 shadow-sm sm:mt-0 sm:max-w-xs">
-            <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-              Ihr Profil
-            </p>
-            <p className="mt-2 truncate text-sm font-semibold text-slate-900">
-              {user.email}
-            </p>
-
-            <div className="mt-4 space-y-2">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                Ihr Empfehlungs-Code
-              </p>
-              <div className="flex items-center justify-between rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-mono text-slate-900">
-                <span className="truncate">{referralCode}</span>
-              </div>
-            </div>
-
-            <div className="mt-3 space-y-2">
-              <p className="text-xs font-medium uppercase tracking-[0.18em] text-slate-500">
-                Ihr Empfehlungs-Link
-              </p>
-              <div className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs text-slate-900">
-                <p className="line-clamp-2 break-all">{referralLink}</p>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-2 text-xs text-slate-600">
-              <p>Teilen Sie den Link zum Beispiel mit:</p>
-              <ul className="list-inside list-disc space-y-0.5">
-                <li>anderen Branchen-Unternehmen</li>
-                <li>befreundeten Unternehmer:innen</li>
-                <li>Ihrem Netzwerk (WhatsApp, E-Mail, Social Media)</li>
-              </ul>
-            </div>
-          </div>
+          {/* Profil + Referral-Code (Client-Komponente) */}
+          <ReferralProfileBox
+            email={user.email ?? ''}
+            referralCode={referralCode}
+            referralLink={referralLink}
+          />
         </div>
       </section>
 
@@ -232,22 +371,97 @@ export default async function EmpfehlungPage() {
         </p>
       </section>
 
-      {/* Beta-Hinweis & Ausblick */}
+      {/* Beta-Hinweis & Ausblick + Tabelle „Was kommt als Nächstes?“ */}
       <section className="mb-4 w-full rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-800 shadow-sm sm:p-5">
         <div className="space-y-2">
           <h3 className="text-sm font-semibold text-slate-900">
             Was kommt als Nächstes?
           </h3>
           <p className="text-xs text-slate-700 sm:text-sm">
-            Bald sehen Sie hier eine detaillierte Übersicht über Ihre geworbenen Unternehmen:
-            Name, Status, Startdatum und wann Ihre 59 € Gutschrift fällig wird.
-          </p>
-          <p className="text-xs text-slate-700 sm:text-sm">
-            Als Beta-User helfen Sie uns mit Ihrem Feedback, das Programm noch fairer & smarter
-            zu machen. Wenn Sie Ideen haben, melden Sie sich jederzeit gern bei uns – wir bauen
-            GLENO gemeinsam mit Ihnen.
+            Unten sehen Sie Ihre geworbenen Unternehmen inklusive Phase (Testphase/Abo)
+            und dem aktuellen Auszahlungsstatus.
           </p>
         </div>
+
+        {/* Tabelle: Geworbene Unternehmen */}
+        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/60">
+          {safeReferrals.length === 0 ? (
+            <div className="px-4 py-6 text-center text-xs text-slate-500 sm:text-sm">
+              Es wurde bisher noch keine Einladung angenommen. Sobald ein Unternehmen sich über
+              Ihren Link registriert, erscheint es hier automatisch.
+            </div>
+          ) : (
+            <div className="overflow-x-auto rounded-xl">
+              <table className="min-w-full text-left text-xs text-slate-700 sm:text-sm">
+                <thead className="bg-slate-100/80 text-[11px] uppercase tracking-wide text-slate-500">
+                  <tr>
+                    <th className="px-4 py-2">Geworbenes Unternehmen</th>
+                    <th className="px-4 py-2">Phase</th>
+                    <th className="px-4 py-2">Abo seit</th>
+                    <th className="px-4 py-2">Auszahlungsstatus</th>
+                    <th className="px-4 py-2">Auszahlung frühestens ab</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {safeReferrals.map((row) => {
+                    const referred = (row as any).referred as
+                      | {
+                          email?: string | null
+                          subscription_status?: string | null
+                          trial_ends_at?: string | null
+                          created_at?: string | null
+                        }
+                      | null
+                      | undefined
+
+                    const {
+                      phaseLabel,
+                      displayStatusLabel,
+                      aboStartDisplay,
+                      payoutEligibleDisplay,
+                    } = computeReferralDisplayStatus({
+                      dbStatus: row.status,
+                      subscriptionStatus: referred?.subscription_status,
+                      trialEndsAt: referred?.trial_ends_at,
+                      createdAt: referred?.created_at,
+                    })
+
+                    const masked = maskEmail(referred?.email)
+
+                    return (
+                      <tr
+                        key={row.id}
+                        className="border-t border-slate-200/70 last:border-b hover:bg-slate-100/60"
+                      >
+                        <td className="px-4 py-2 align-middle text-xs sm:text-sm">
+                          {masked}
+                        </td>
+                        <td className="px-4 py-2 align-middle text-xs sm:text-sm">
+                          {phaseLabel}
+                        </td>
+                        <td className="px-4 py-2 align-middle text-xs sm:text-sm">
+                          {aboStartDisplay}
+                        </td>
+                        <td className="px-4 py-2 align-middle text-xs sm:text-sm">
+                          {displayStatusLabel}
+                        </td>
+                        <td className="px-4 py-2 align-middle text-xs sm:text-sm">
+                          {payoutEligibleDisplay}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <p className="mt-3 text-[11px] text-slate-500 sm:text-xs">
+          Hinweis: Die angezeigten Phasen und Auszahlungszeitpunkte werden automatisch anhand des
+          Abo-Status der geworbenen Unternehmen berechnet. Sobald die Bedingungen erfüllt sind,
+          markieren wir Ihre Empfehlung als auszahlungsreif und informieren Sie separat.
+        </p>
       </section>
     </div>
   )

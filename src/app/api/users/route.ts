@@ -189,6 +189,9 @@ export async function POST(req: Request) {
   const terms_version   = norm(body.terms_version)   || '1'
   const privacy_version = norm(body.privacy_version) || '1'
 
+  // 👉 Referral-Code (kommt von der Registrierung; kann null sein)
+  const referral_code   = norm(body.referral_code)
+
   let street       = norm(body.street)
   let house_number = norm(body.house_number)
   let postal_code  = norm(body.postal_code)
@@ -294,6 +297,32 @@ export async function POST(req: Request) {
 
   if (upErr) {
     return NextResponse.json({ error: upErr.message }, { status: 500 })
+  }
+
+  // 👉 Referral-Verknüpfung speichern, falls Code vorhanden
+  if (referral_code) {
+    try {
+      // 1) Welcher User gehört zu diesem Referral-Code?
+      const { data: refRow, error: refErr } = await adminClient
+        .from('referral_codes')
+        .select('user_id')
+        .eq('code', referral_code)
+        .maybeSingle()
+
+      if (!refErr && refRow?.user_id && refRow.user_id !== userId) {
+        // 2) Relation in user_referrals anlegen
+        await adminClient
+          .from('user_referrals')
+          .insert({
+            referrer_user_id: refRow.user_id,
+            referred_user_id: userId,
+            referral_code,
+            status: 'offen',
+          })
+      }
+    } catch {
+      // Fehler im Referral-System sollen die Registrierung nicht killen
+    }
   }
 
   return NextResponse.json(

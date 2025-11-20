@@ -1,8 +1,7 @@
-// src/app/(public)/registrieren/page.tsx
 'use client'
 
-import { useMemo, useState } from 'react'
-import { useRouter } from 'next/navigation'
+import { useMemo, useState, useEffect } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import {
@@ -17,6 +16,7 @@ import {
 const PRIMARY = '#5865f2'
 const TERMS_VERSION = '1'
 const PRIVACY_VERSION = '1'
+const REFERRAL_STORAGE_KEY = 'gleno_referral_code'
 
 const COUNTRY_OPTIONS = [
   { label: 'Deutschland', value: 'DE' },
@@ -43,6 +43,7 @@ function passwordScore(pw: string) {
 
 export default function RegisterPage() {
   const router = useRouter()
+  const searchParams = useSearchParams()
 
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -64,6 +65,47 @@ export default function RegisterPage() {
   const [showPw, setShowPw] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+
+  // 👉 Referral-Code-State
+  const [referralCode, setReferralCode] = useState<string | null>(null)
+
+  // Referral-Code beim Laden der Seite holen:
+  // 1. Aus URL (?ref=...)
+  // 2. Falls nicht vorhanden: aus localStorage
+  useEffect(() => {
+    try {
+      const paramsRef = searchParams.get('ref')
+      // Debug hilft dir im Browser (DevTools -> Console)
+      console.log('RegisterPage searchParams:', searchParams.toString())
+      console.log('RegisterPage ?ref=', paramsRef)
+
+      if (paramsRef && paramsRef.trim().length > 0) {
+        const clean = paramsRef.trim()
+        setReferralCode(clean)
+        try {
+          localStorage.setItem(REFERRAL_STORAGE_KEY, clean)
+        } catch {
+          // ignore
+        }
+        return
+      }
+
+      // Wenn kein ref in der URL: aus localStorage
+      try {
+        const stored = localStorage.getItem(REFERRAL_STORAGE_KEY)
+        if (stored && stored.trim().length > 0) {
+          setReferralCode(stored.trim())
+        }
+      } catch {
+        // ignore
+      }
+    } catch (e) {
+      console.error('Fehler beim Lesen des Referral-Codes:', e)
+    }
+  }, [searchParams])
+
+  const hasReferral = !!(referralCode && referralCode.trim().length > 0)
+
 
   const emailValid = useMemo(() => validateEmail(email), [email])
   const pwScore = useMemo(() => passwordScore(password), [password])
@@ -116,6 +158,8 @@ export default function RegisterPage() {
           accept_privacy: true,
           terms_version: TERMS_VERSION,
           privacy_version: PRIVACY_VERSION,
+          // 👉 Referral-Code mitschicken (kann null sein)
+          referral_code: referralCode,
         }),
       })
 
@@ -180,6 +224,17 @@ export default function RegisterPage() {
           <p className="mx-auto mt-2 max-w-2xl text-sm text-white/70">
             All-in-One für Angebote, Material, Team &amp; Benachrichtigungen.
           </p>
+
+          {/* Hinweis auf Empfehlungs-Code, falls vorhanden */}
+          {hasReferral && (
+            <p className="mx-auto mt-3 max-w-xl text-xs text-emerald-200">
+              Du registrierst dich mit einem Empfehlungs-Code:{' '}
+              <span className="rounded-md bg-emerald-900/40 px-2 py-1 font-mono text-[11px]">
+                {referralCode}
+              </span>
+            </p>
+          )}
+
         </div>
 
         {/* Card */}
@@ -389,9 +444,7 @@ export default function RegisterPage() {
                     type="button"
                     onClick={() => setShowPw((s) => !s)}
                     className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-600 hover:bg-slate-200/70"
-                    aria-label={
-                      showPw ? 'Passwort verbergen' : 'Passwort anzeigen'
-                    }
+                    aria-label={showPw ? 'Passwort verbergen' : 'Passwort anzeigen'}
                   >
                     {showPw ? (
                       <EyeSlashIcon className="h-5 w-5" />
@@ -463,8 +516,7 @@ export default function RegisterPage() {
                   </span>
                 </label>
                 <p className="mt-1 text-[11px] text-white/60">
-                  Versionen: AGB v{TERMS_VERSION} · Datenschutz v
-                  {PRIVACY_VERSION}
+                  Versionen: AGB v{TERMS_VERSION} · Datenschutz v{PRIVACY_VERSION}
                 </p>
               </div>
 
@@ -476,9 +528,7 @@ export default function RegisterPage() {
                 style={{ backgroundColor: PRIMARY }}
               >
                 <span
-                  className={`${
-                    loading ? 'opacity-0' : 'opacity-100'
-                  } transition-opacity`}
+                  className={`${loading ? 'opacity-0' : 'opacity-100'} transition-opacity`}
                 >
                   Konto erstellen
                 </span>

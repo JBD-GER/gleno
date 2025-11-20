@@ -13,7 +13,13 @@ export const metadata: Metadata = {
   robots: {
     index: false,
     follow: false,
-    googleBot: { index: false, follow: false, 'max-image-preview': 'none', 'max-snippet': -1, 'max-video-preview': -1 },
+    googleBot: {
+      index: false,
+      follow: false,
+      'max-image-preview': 'none',
+      'max-snippet': -1,
+      'max-video-preview': -1,
+    },
   },
 }
 
@@ -46,8 +52,7 @@ export default function RootLayout({ children }: RootLayoutProps) {
               var raw = localStorage.getItem('sf_consent_v1');
               if (raw) {
                 var c = JSON.parse(raw);
-                var granted = !!(c && (c.analytics || c.functional || c.marketing)); // deine Struktur
-                // explizit nach deinen Flags mappen:
+                var granted = !!(c && (c.analytics || c.functional || c.marketing));
                 var analyticsGranted = !!(c && c.analytics);
                 var marketingGranted = !!(c && c.marketing);
                 window.dataLayer = window.dataLayer || [];
@@ -88,6 +93,21 @@ export default function RootLayout({ children }: RootLayoutProps) {
           `}
         </Script>
 
+        {/* 4) Referral-Code aus URL speichern */}
+        <Script id="referral-capture" strategy="afterInteractive">
+          {`
+            (function() {
+              try {
+                var params = new URLSearchParams(window.location.search);
+                var ref = params.get('ref');
+                if (ref && ref.trim()) {
+                  localStorage.setItem('gleno_referral_code', ref.trim());
+                }
+              } catch (e) {}
+            })();
+          `}
+        </Script>
+
         {/* Google Tag Manager laden */}
         {gtmId && (
           <Script id="gtm-base" strategy="afterInteractive">
@@ -108,7 +128,9 @@ export default function RootLayout({ children }: RootLayoutProps) {
           <noscript>
             <iframe
               src={`https://www.googletagmanager.com/ns.html?id=${gtmId}`}
-              height="0" width="0" style={{ display: 'none', visibility: 'hidden' }}
+              height="0"
+              width="0"
+              style={{ display: 'none', visibility: 'hidden' }}
             />
           </noscript>
         )}

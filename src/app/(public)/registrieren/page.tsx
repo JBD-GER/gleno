@@ -1,6 +1,11 @@
 'use client'
 
-import { useMemo, useState, useEffect } from 'react'
+import {
+  useMemo,
+  useState,
+  useEffect,
+  Suspense,
+} from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
@@ -41,7 +46,26 @@ function passwordScore(pw: string) {
   return Math.min(s, 4)
 }
 
+/**
+ * Äußere Page-Komponente: nur Suspense + Wrapper
+ * → damit ist useSearchParams im Inneren sauber "eingekapselt"
+ */
 export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#0b1220]" />
+      }
+    >
+      <RegisterPageContent />
+    </Suspense>
+  )
+}
+
+/**
+ * Eigentliche Seite mit allen Hooks (inkl. useSearchParams)
+ */
+function RegisterPageContent() {
   const router = useRouter()
   const searchParams = useSearchParams()
 
@@ -75,7 +99,8 @@ export default function RegisterPage() {
   useEffect(() => {
     try {
       const paramsRef = searchParams.get('ref')
-      // Debug hilft dir im Browser (DevTools -> Console)
+
+      // Debug (Browser-Konsole)
       console.log('RegisterPage searchParams:', searchParams.toString())
       console.log('RegisterPage ?ref=', paramsRef)
 
@@ -105,7 +130,6 @@ export default function RegisterPage() {
   }, [searchParams])
 
   const hasReferral = !!(referralCode && referralCode.trim().length > 0)
-
 
   const emailValid = useMemo(() => validateEmail(email), [email])
   const pwScore = useMemo(() => passwordScore(password), [password])
@@ -234,7 +258,6 @@ export default function RegisterPage() {
               </span>
             </p>
           )}
-
         </div>
 
         {/* Card */}

@@ -180,8 +180,8 @@ export default function TimeEntriesModal({
     if (preset === '30tage') {
       const d = new Date(now)
       d.setDate(d.getDate() - 30)
-      newFrom = localDateStr(d)   // älteres Datum
-      newTo = localDateStr(now)   // heute
+      newFrom = localDateStr(d)
+      newTo = localDateStr(now)
     } else if (preset === '7tage') {
       const d = new Date(now)
       d.setDate(d.getDate() - 7)
@@ -189,7 +189,6 @@ export default function TimeEntriesModal({
       newTo = localDateStr(now)
     } else if (preset === 'monat') {
       const first = new Date(now.getFullYear(), now.getMonth(), 1)
-      // Bis = heute (aktueller Monat, bis aktueller Tag)
       newFrom = localDateStr(first)
       newTo = localDateStr(now)
     }
@@ -401,13 +400,34 @@ export default function TimeEntriesModal({
 
   /* ---------------- CSV-Export ---------------- */
   const exportCsv = () => {
-    const baseRows = filteredRows.length ? filteredRows : rows
-    if (!baseRows.length) {
+    if (!rows.length) {
       alert('Keine Einträge im gewählten Zeitraum – nichts zu exportieren.')
       return
     }
 
     const norm = normalizeRange(from, to)
+
+    // Strenger Filter: immer aktueller Zeitraum + aktueller Statusfilter
+    let baseRows = rows.filter((r) => {
+      if (!r.work_date) return false
+      if (norm.from && r.work_date < norm.from) return false
+      if (norm.to && r.work_date > norm.to) return false
+      return true
+    })
+
+    if (statusFilter !== 'alle') {
+      baseRows = baseRows.filter((r) => {
+        const m = merged(r)
+        if (statusFilter === 'laufend') return !m.end_time
+        if (statusFilter === 'fertig') return !!m.end_time
+        return true
+      })
+    }
+
+    if (!baseRows.length) {
+      alert('Im gewählten Zeitraum gibt es mit diesem Filter keine Einträge.')
+      return
+    }
 
     const esc = (v: unknown) => {
       if (v === null || v === undefined) return '""'
@@ -562,15 +582,12 @@ export default function TimeEntriesModal({
                     </div>
 
                     {/* Buttons */}
-                    <div className="flex flex-wrap items-center justify-between gap-3 lg:justify-end">
+                    <div className="flex flex-wrap items-center justify-between gap-2 lg:justify-end">
                       <button
                         type="button"
                         onClick={() => setCreating((v) => !v)}
-                        className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-xs font-medium text-emerald-800 shadow-sm outline-none hover:bg-emerald-100"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-[11px] font-medium text-emerald-800 shadow-sm outline-none hover:bg-emerald-100"
                       >
-                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
-                          +
-                        </span>
                         {creating
                           ? 'Neuen Eintrag abbrechen'
                           : 'Zeiteintrag hinzufügen'}
@@ -579,35 +596,26 @@ export default function TimeEntriesModal({
                       <button
                         onClick={exportCsv}
                         disabled={rows.length === 0}
-                        className="inline-flex items-center gap-3 rounded-full border border-slate-200 bg-white px-4 py-2.5 text-xs font-medium text-slate-800 shadow-sm outline-none hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-800 shadow-sm outline-none hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
                       >
-                        <span className="flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
-                          <ArrowDownTrayIcon className="h-4 w-4 text-slate-700" />
-                        </span>
-                        <span className="flex flex-col items-start leading-tight">
-                          <span className="text-[10px] uppercase tracking-wide text-slate-500">
-                            Export
-                          </span>
-                          <span className="text-[11px]">
-                            Gefilterte Einträge als CSV
-                          </span>
-                        </span>
+                        <ArrowDownTrayIcon className="h-4 w-4 text-slate-700" />
+                        <span>Gefilterte Einträge als CSV</span>
                       </button>
 
                       <button
                         onClick={() => load(true)}
                         disabled={loading}
-                        className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm outline-none hover:bg-slate-800 disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-sm outline-none hover:bg-slate-800 disabled:opacity-60"
                       >
                         <ArrowPathIcon
                           className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
                         />
-                        Aktualisieren
+                        <span>Aktualisieren</span>
                       </button>
 
                       <button
                         onClick={onClose}
-                        className="hidden rounded-full p-2 text-slate-500 outline-none hover:bg-slate-100 hover:text-slate-800 lg:inline-flex"
+                        className="hidden rounded-full p-1.5 text-slate-500 outline-none hover:bg-slate-100 hover:text-slate-800 lg:inline-flex"
                       >
                         <XMarkIcon className="h-5 w-5" />
                       </button>
@@ -867,7 +875,7 @@ export default function TimeEntriesModal({
                               setCreating(false)
                             }}
                             disabled={createBusy}
-                            className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-700 shadow-sm outline-none hover:bg-slate-50 disabled:opacity-50"
+                            className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm outline-none hover:bg-slate-50 disabled:opacity-50"
                           >
                             Abbrechen
                           </button>
@@ -875,7 +883,7 @@ export default function TimeEntriesModal({
                             type="button"
                             onClick={createEntry}
                             disabled={createBusy}
-                            className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm outline-none hover:bg-emerald-700 disabled:opacity-50"
+                            className="rounded-full bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white shadow-sm outline-none hover:bg-emerald-700 disabled:opacity-50"
                           >
                             {createBusy ? 'Speichert …' : 'Zeiteintrag speichern'}
                           </button>

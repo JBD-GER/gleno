@@ -158,34 +158,37 @@ export default function Sidebar({ userEmail }: SidebarProps) {
   const NAV_MANAGEMENT_ADMIN: NavItem[] = [
     { href: '/dashboard', label: 'Übersicht', icon: HomeIcon },
     { href: '/dashboard/kunde', label: 'Kunden', icon: UsersIcon },
-    { href: '/dashboard/mitarbeiter', label: 'Mitarbeiter', icon: UserCircleIcon },
+
     {
-      href: '/dashboard/logistik',
-      label: 'Logistik',
-      icon: Squares2X2Icon,
+      href: '/dashboard/verwaltung',
+      label: 'Verwaltung',
+      icon: UserCircleIcon,
       children: [
+        { href: '/dashboard/mitarbeiter', label: 'Mitarbeiter', icon: UserCircleIcon },
+        // Logistik Übersicht entfernt
         { href: '/dashboard/logistik/materialien', label: 'Materialien', icon: Squares2X2Icon },
         { href: '/dashboard/logistik/lieferanten', label: 'Lieferanten', icon: BuildingStorefrontIcon },
         { href: '/dashboard/logistik/fuhrpark', label: 'Fuhrpark', icon: TruckIcon },
         { href: '/dashboard/logistik/werkzeug', label: 'Werkzeug', icon: WrenchScrewdriverIcon },
       ],
     },
+
     { href: '/dashboard/kalender', label: 'Kalender', icon: CalendarDaysIcon },
+
     {
       href: '/dashboard/projekt',
       label: 'Projekte',
       icon: FolderOpenIcon,
       children: [
         { href: '/dashboard/projekt', label: 'Übersicht', icon: FolderOpenIcon },
-        { href: '/dashboard/projekt/projektplaner', label: 'Projektplaner', icon: ClipboardDocumentListIcon },
+        {
+          href: '/dashboard/projekt/projektplaner',
+          label: 'Projektplaner',
+          icon: ClipboardDocumentListIcon,
+        },
       ],
     },
-    {
-      href: '/dashboard/website',
-      label: 'Website',
-      icon: GlobeAltIcon,
-      badge: { text: 'Beta', tone: 'indigo' },
-    },
+
     {
       href: '/dashboard/buchhaltung',
       label: 'Buchhaltung',
@@ -198,11 +201,26 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         { href: '/dashboard/buchhaltung/katalog', label: 'Katalog', icon: BookOpenIcon },
       ],
     },
+
     {
-      href: '/dashboard/cloud',
-      label: 'Dokumenten-Cloud',
-      icon: ClipboardDocumentListIcon,
+      href: '/dashboard/tools',
+      label: 'Tools',
+      icon: WrenchScrewdriverIcon,
+      children: [
+        {
+          href: '/dashboard/website',
+          label: 'Website',
+          icon: GlobeAltIcon,
+          badge: { text: 'Beta', tone: 'indigo' },
+        },
+        {
+          href: '/dashboard/cloud',
+          label: 'Dokumenten-Cloud',
+          icon: ClipboardDocumentListIcon,
+        },
+      ],
     },
+
     {
       href: '/dashboard/einstellung',
       label: 'Einstellungen',
@@ -317,7 +335,6 @@ export default function Sidebar({ userEmail }: SidebarProps) {
   const switchTo = (target: 'management' | 'markt') => {
     if (target === space) return
 
-    // Mitarbeiter dürfen nicht auf Markt umschalten
     if (role === 'mitarbeiter' && target === 'markt') return
 
     setSpace(target)
@@ -352,12 +369,15 @@ export default function Sidebar({ userEmail }: SidebarProps) {
 
       setFeedbackSuccess('Danke für dein Feedback – es hat unser Team erreicht.')
       setFeedbackText('')
-    } catch (err) {
+    } catch {
       setFeedbackError('Leider ist ein Fehler aufgetreten. Bitte versuche es später erneut.')
     } finally {
       setFeedbackSending(false)
     }
   }
+
+  const secondaryButtonClasses =
+    'inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-900 shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:bg-white hover:border-slate-300'
 
   return (
     <>
@@ -416,7 +436,9 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             )}
           </div>
 
-          <p className="mt-1 max-w-[220px] truncate text-[10px] text-slate-500">{userEmail}</p>
+          <p className="mt-1 max-w-[220px] truncate text-[10px] text-slate-500">
+            {userEmail}
+          </p>
         </div>
 
         {/* Navigation */}
@@ -535,8 +557,19 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           </ul>
         </nav>
 
-        {/* Footer / Feedback + Logout */}
+        {/* Footer / Anleitung + Feedback + Logout */}
         <div className="border-t border-white/70 bg-white/60 backdrop-blur-xl p-3 shadow-[0_-6px_18px_rgba(15,23,42,0.06)] space-y-2">
+          {role !== 'mitarbeiter' && (
+            <button
+              type="button"
+              onClick={() => router.push('/dashboard/anleitung')}
+              className={secondaryButtonClasses}
+            >
+              <BookOpenIcon className="h-5 w-5" />
+              <span>Anleitung & erste Schritte</span>
+            </button>
+          )}
+
           <button
             type="button"
             onClick={() => {
@@ -544,10 +577,10 @@ export default function Sidebar({ userEmail }: SidebarProps) {
               setFeedbackError(null)
               setFeedbackSuccess(null)
             }}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-900 shadow-[0_6px_18px_rgba(15,23,42,0.06)] transition hover:bg-white hover:border-slate-300"
+            className={secondaryButtonClasses}
           >
             <ChatBubbleLeftRightIcon className="h-5 w-5" />
-            Feedback geben
+            <span>Feedback geben</span>
           </button>
 
           <button
@@ -558,7 +591,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
             className="inline-flex w-full items-center justify-center gap-2 rounded-2xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-[0_10px_30px_rgba(15,23,42,0.35)] transition hover:bg-black focus:outline-none focus:ring-2 focus:ring-slate-400 focus:ring-offset-2 focus:ring-offset-white"
           >
             <ArrowRightOnRectangleIcon className="h-5 w-5" />
-            Abmelden
+            <span>Abmelden</span>
           </button>
         </div>
       </div>
@@ -598,9 +631,7 @@ export default function Sidebar({ userEmail }: SidebarProps) {
                 />
               </div>
 
-              {feedbackError && (
-                <p className="text-xs text-rose-600">{feedbackError}</p>
-              )}
+              {feedbackError && <p className="text-xs text-rose-600">{feedbackError}</p>}
               {feedbackSuccess && (
                 <p className="text-xs text-emerald-600">{feedbackSuccess}</p>
               )}

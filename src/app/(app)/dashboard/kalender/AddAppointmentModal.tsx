@@ -1,16 +1,42 @@
 'use client'
 
-import React, { useState, useEffect, Fragment, useMemo, useRef } from 'react'
+import React, {
+  useState,
+  useEffect,
+  Fragment,
+  useMemo,
+  useRef,
+} from 'react'
 import { Dialog, Transition, Combobox, Listbox } from '@headlessui/react'
 import {
-  CalendarDaysIcon, ClockIcon, MapPinIcon, UserGroupIcon, XMarkIcon,
-  PencilSquareIcon, BriefcaseIcon, CheckIcon, ChevronUpDownIcon
+  CalendarDaysIcon,
+  ClockIcon,
+  MapPinIcon,
+  UserGroupIcon,
+  XMarkIcon,
+  PencilSquareIcon,
+  BriefcaseIcon,
+  CheckIcon,
+  ChevronUpDownIcon,
 } from '@heroicons/react/24/outline'
 import { supabaseClient } from '@/lib/supabase-client'
 
-type Person = { id: string; first_name: string | null; last_name?: string | null; email?: string | null }
+type Person = {
+  id: string
+  first_name: string | null
+  last_name?: string | null
+  email?: string | null
+}
 type Project = { id: string; title: string }
-type Props = { onSuccess?: () => void }
+
+type AddAppointmentModalProps = {
+  onSuccess?: () => void
+  /** kontrolliert von außen (Slot-Klick). Wenn weggelassen -> eigene Steuerung + Trigger-Button */
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  /** vorbelegte Startzeit z. B. vom Kalender-Slot (`YYYY-MM-DDTHH:mm`) */
+  initialStart?: string
+}
 
 /* Terminarten – INDIVIDUELL oben */
 const APPT_TYPES = [
@@ -42,60 +68,78 @@ function nextHalfHourISO() {
   d.setMinutes(d.getMinutes() + add)
   const tzOffset = d.getTimezoneOffset()
   const local = new Date(d.getTime() - tzOffset * 60000)
-  return local.toISOString().slice(0, 16) // "YYYY-MM-DDTHH:mm"
+  return local.toISOString().slice(0, 16)
 }
 
 const empName = (p: Person) =>
   `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() || 'Unbenannt'
 
-export default function AddAppointmentModal({ onSuccess }: Props) {
+export default function AddAppointmentModal({
+  onSuccess,
+  open,
+  onOpenChange,
+  initialStart,
+}: AddAppointmentModalProps) {
   const supabase = supabaseClient()
 
-  const [isOpen, setIsOpen] = useState(false)
+  const isControlled = typeof open === 'boolean'
+  const [internalOpen, setInternalOpen] = useState(false)
+  const isOpen = isControlled ? (open as boolean) : internalOpen
 
-  // Titel (= weiterhin in appointments.location)
-  const [type, setType] = useState<typeof APPT_TYPES[number]>(APPT_TYPES[0])
-  const [title, setTitle] = useState('') // nur bei INDIVIDUELL
+  const setOpen = (val: boolean) => {
+    if (!isControlled) setInternalOpen(val)
+    onOpenChange?.(val)
+  }
 
+  const defaultStart = useMemo(
+    () => initialStart ?? nextHalfHourISO(),
+    [initialStart],
+  )
+
+  const [type, setType] = useState<(typeof APPT_TYPES)[number]>(APPT_TYPES[0])
+  const [title, setTitle] = useState('')
   const [address, setAddress] = useState('')
-
-  const [start, setStart] = useState(nextHalfHourISO())
+  const [start, setStart] = useState(defaultStart)
   const [duration, setDuration] = useState(60)
-  const [hint, setHint] = useState('') // Hinweis
+  const [hint, setHint] = useState('')
 
-  // Kunden + Projekte
   const [customers, setCustomers] = useState<Person[]>([])
   const [customerQuery, setCustomerQuery] = useState('')
   const [customerSearching, setCustomerSearching] = useState(false)
-  const searchAbortRef = useRef<AbortController | null>(null)
   const debounceRef = useRef<number | null>(null)
 
   const [selectedCustomer, setSelectedCustomer] = useState<Person | null>(null)
 
   const [projects, setProjects] = useState<Project[]>([])
-  const [selectedProjectId, setSelectedProjectId] = useState<string>('') // nur ID
+  const [selectedProjectId, setSelectedProjectId] = useState<string>('')
   const [loadingProjects, setLoadingProjects] = useState(false)
 
-  // Mitarbeiter (Multi)
   const [employees, setEmployees] = useState<Person[]>([])
   const [selectedEmployees, setSelectedEmployees] = useState<Person[]>([])
 
   const [saving, setSaving] = useState(false)
 
-  /* ------------------ Stammdaten laden ------------------ */
+  /* wenn initialStart sich ändert (Slot-Klick), Start entsprechend setzen */
+  useEffect(() => {
+    if (initialStart) setStart(initialStart)
+  }, [initialStart])
+
+  /* Stammdaten laden, sobald Modal offen ist */
   useEffect(() => {
     if (!isOpen) return
     let cancelled = false
     ;(async () => {
       try {
-        // Mitarbeiter (alle der Firma) via Lookup-API
-        const empRes = await fetch('/api/lookups/employees', { credentials: 'include' })
+        const empRes = await fetch('/api/lookups/employees', {
+          credentials: 'include',
+        })
         const emp = await empRes.json()
         if (!cancelled) setEmployees(Array.isArray(emp) ? emp : [])
 
-        // Kunden initial (erste Seite) via Lookup-API
         setCustomerSearching(true)
-        const custRes = await fetch('/api/lookups/customers?limit=100', { credentials: 'include' })
+        const custRes = await fetch('/api/lookups/customers?limit=100', {
+          credentials: 'include',
+        })
         const cust = await custRes.json()
         if (!cancelled) setCustomers(Array.isArray(cust) ? cust : [])
       } catch {
@@ -107,20 +151,19 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
         if (!cancelled) setCustomerSearching(false)
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [isOpen])
 
-  /* ------------------ Live-Serversuche (Kunden) ------------------ */
+  /* Live-Kundensuche – debounced, ohne AbortError-Fehler */
   useEffect(() => {
     if (!isOpen) return
 
-    // debounce 250ms
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
-    debounceRef.current = window.setTimeout(async () => {
-      if (searchAbortRef.current) searchAbortRef.current.abort()
-      const ctrl = new AbortController()
-      searchAbortRef.current = ctrl
 
+    let cancelled = false
+    debounceRef.current = window.setTimeout(async () => {
       const q = customerQuery.trim()
       const url = q
         ? `/api/lookups/customers?query=${encodeURIComponent(q)}&limit=50`
@@ -128,23 +171,26 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
 
       try {
         setCustomerSearching(true)
-        const res = await fetch(url, { credentials: 'include', signal: ctrl.signal })
+        const res = await fetch(url, { credentials: 'include' })
+        if (!res.ok) return
         const data = await res.json()
-        setCustomers(Array.isArray(data) ? data : [])
-      } catch {
-        /* ignore abort/network */
+        if (!cancelled) setCustomers(Array.isArray(data) ? data : [])
+      } catch (e: any) {
+        if (!cancelled && e?.name !== 'AbortError') {
+          console.error(e)
+        }
       } finally {
-        setCustomerSearching(false)
+        if (!cancelled) setCustomerSearching(false)
       }
     }, 250) as unknown as number
 
     return () => {
+      cancelled = true
       if (debounceRef.current) window.clearTimeout(debounceRef.current)
-      if (searchAbortRef.current) searchAbortRef.current.abort()
     }
   }, [customerQuery, isOpen])
 
-  /* ------------------ Projekte nach Kunde laden ------------------ */
+  /* Projekte nach Kunde */
   useEffect(() => {
     ;(async () => {
       if (!selectedCustomer?.id) {
@@ -154,21 +200,20 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
       }
       setLoadingProjects(true)
       try {
-        // bleibt wie gehabt über Supabase; bei Bedarf später als Lookup-API umbauen
         const { data, error } = await supabase
           .from('projects')
           .select('id, title')
           .eq('customer_id', selectedCustomer.id)
           .order('created_at', { ascending: false })
         if (!error) setProjects(data ?? [])
-        setSelectedProjectId('') // Reset bei Kundenwechsel
+        setSelectedProjectId('')
       } finally {
         setLoadingProjects(false)
       }
     })()
   }, [selectedCustomer, supabase])
 
-  /* ------------------ Submit ------------------ */
+  /* Submit */
   const submit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!selectedCustomer) {
@@ -178,23 +223,28 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
 
     setSaving(true)
     try {
-      // Start (local datetime) -> echte Date
       const local = new Date(start)
       const dtStart = new Date(
-        local.getFullYear(), local.getMonth(), local.getDate(),
-        local.getHours(), local.getMinutes(), 0, 0
+        local.getFullYear(),
+        local.getMonth(),
+        local.getDate(),
+        local.getHours(),
+        local.getMinutes(),
+        0,
+        0,
       )
       const dtEnd = new Date(dtStart.getTime() + duration * 60000)
       const isoStart = dtStart.toISOString()
       const isoEnd = dtEnd.toISOString()
 
-      // Titel bestimmen
-      const finalTitle = type.key === 'INDIVIDUELL'
-        ? (title.trim() || 'Individueller Termin')
-        : type.label
+      const finalTitle =
+        type.key === 'INDIVIDUELL'
+          ? title.trim() || 'Individueller Termin'
+          : type.label
 
-      // Kompatibel: Titel → location; Adresse in Notiz anhängen
-      const combinedNotes = [hint, address ? `Adresse: ${address}` : ''].filter(Boolean).join('\n')
+      const combinedNotes = [hint, address ? `Adresse: ${address}` : '']
+        .filter(Boolean)
+        .join('\n')
 
       const payload: any = {
         location: finalTitle,
@@ -202,9 +252,10 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
         end_time: isoEnd,
         notes: combinedNotes,
         customer_id: selectedCustomer.id,
-        employee_ids: selectedEmployees.map(e => e.id),
+        employee_ids: selectedEmployees.map((e) => e.id),
       }
-      if (projects.length > 0 && selectedProjectId) payload.project_id = selectedProjectId
+      if (projects.length > 0 && selectedProjectId)
+        payload.project_id = selectedProjectId
       else payload.project_id = null
 
       const res = await fetch('/api/appointments', {
@@ -214,12 +265,19 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
         body: JSON.stringify(payload),
       })
       if (res.ok) {
-        setIsOpen(false)
+        setOpen(false)
         onSuccess?.()
         // Reset
-        setType(APPT_TYPES[0]); setTitle(''); setAddress('')
-        setStart(nextHalfHourISO()); setDuration(60); setHint('')
-        setSelectedCustomer(null); setProjects([]); setSelectedProjectId(''); setSelectedEmployees([])
+        setType(APPT_TYPES[0])
+        setTitle('')
+        setAddress('')
+        setStart(initialStart ?? nextHalfHourISO())
+        setDuration(60)
+        setHint('')
+        setSelectedCustomer(null)
+        setProjects([])
+        setSelectedProjectId('')
+        setSelectedEmployees([])
       } else {
         const err = await res.json().catch(() => ({}))
         alert('Fehler: ' + (err?.message ?? 'Unbekannter Fehler'))
@@ -229,24 +287,23 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
     }
   }
 
-  /* ------------------ Der UI-Teil ------------------ */
   return (
     <>
-      {/* Trigger-Button */}
-      <button
-        onClick={() => setIsOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg border border-white/60 bg-white/80 px-4 py-2 text-sm font-medium text-slate-900 shadow-sm backdrop-blur hover:bg-white"
-      >
-        <PencilSquareIcon className="h-5 w-5" />
-        Neuer Termin
-      </button>
+      {/* Trigger-Button nur, wenn nicht kontrolliert */}
+      {!isControlled && (
+        <button
+          onClick={() => setOpen(true)}
+          className="inline-flex items-center gap-2 rounded-2xl border border-white/70 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm backdrop-blur hover:bg-slate-50 active:scale-[0.98] transition"
+        >
+          <PencilSquareIcon className="h-5 w-5" />
+          Neuer Termin
+        </button>
+      )}
 
       <Transition show={isOpen} as={Fragment}>
-        <Dialog onClose={() => setIsOpen(false)} className="relative z-[200]">
-          {/* Overlay */}
-          <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm" />
+        <Dialog onClose={() => setOpen(false)} className="relative z-[200]">
+          <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" />
 
-          {/* Panel */}
           <div className="fixed inset-0 flex items-center justify-center p-4">
             <Transition.Child
               enter="ease-out duration-200"
@@ -256,32 +313,56 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
               leaveFrom="opacity-100 translate-y-0 scale-100"
               leaveTo="opacity-0 translate-y-2 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(2,6,23,0.35)] backdrop-blur-xl">
-                {/* Header */}
+              <Dialog.Panel className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/70 bg-white/92 shadow-[0_20px_70px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+                {/* Top-Bar */}
                 <div className="relative">
-                  <div className="h-1.5 w-full" style={{ background: 'linear-gradient(90deg,#0f172a,#1e293b)' }} />
-                  <button onClick={() => setIsOpen(false)} className="absolute right-4 top-3 rounded p-1 text-slate-600 hover:bg-white/60" aria-label="Schließen">
-                    <XMarkIcon className="h-6 w-6" />
+                  <div
+                    className="h-1.5 w-full"
+                    style={{
+                      background: 'linear-gradient(90deg,#0f172a,#1e293b)',
+                    }}
+                  />
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="absolute right-4 top-3 rounded-full p-1 text-slate-600 hover:bg-slate-100"
+                    aria-label="Schließen"
+                  >
+                    <XMarkIcon className="h-5 w-5" />
                   </button>
-                  <Dialog.Title className="px-6 pb-3 pt-4 text-lg font-semibold text-slate-900">Termin erstellen</Dialog.Title>
+                  <Dialog.Title className="px-6 pb-1 pt-4 text-lg font-semibold text-slate-900">
+                    Termin erstellen
+                  </Dialog.Title>
+                  <p className="px-6 pb-3 text-xs text-slate-500">
+                    Wählen Sie Art, Kunde, Mitarbeiter und Dauer – alles in einem
+                    schlanken Flow.
+                  </p>
                 </div>
 
-                {/* Body */}
-                <form onSubmit={submit} className="grid grid-cols-1 gap-4 px-6 pb-6 md:grid-cols-2">
+                <form
+                  onSubmit={submit}
+                  className="grid grid-cols-1 gap-4 px-6 pb-6 md:grid-cols-2"
+                >
                   {/* Art */}
                   <label className="col-span-1 md:col-span-2">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Art des Termins</span>
+                    <span className="mb-1 block text-sm font-medium text-slate-700">
+                      Art des Termins
+                    </span>
                     <select
                       value={type.key}
                       onChange={(e) => {
-                        const t = APPT_TYPES.find(x => x.key === e.target.value) ?? APPT_TYPES[0]
+                        const t =
+                          APPT_TYPES.find(
+                            (x) => x.key === e.target.value,
+                          ) ?? APPT_TYPES[0]
                         setType(t)
                         if (t.key !== 'INDIVIDUELL') setTitle('')
                       }}
-                      className="w-full rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
+                      className="w-full rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
                     >
-                      {APPT_TYPES.map(t => (
-                        <option key={t.key} value={t.key}>{t.label}</option>
+                      {APPT_TYPES.map((t) => (
+                        <option key={t.key} value={t.key}>
+                          {t.label}
+                        </option>
                       ))}
                     </select>
                   </label>
@@ -289,55 +370,88 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
                   {/* Freier Titel */}
                   {type.key === 'INDIVIDUELL' && (
                     <label className="col-span-1 md:col-span-2">
-                      <span className="mb-1 block text-sm font-medium text-slate-700">Titel</span>
+                      <span className="mb-1 block text-sm font-medium text-slate-700">
+                        Titel
+                      </span>
                       <input
                         type="text"
                         value={title}
                         onChange={(e) => setTitle(e.target.value)}
                         placeholder="z. B. Beratung vor Ort"
-                        className="w-full rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
+                        className="w-full rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
                       />
                     </label>
                   )}
 
-                  {/* Kunde – Combobox (Server-Live-Suche) */}
+                  {/* Kunde */}
                   <div className="col-span-1 md:col-span-2">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Kunde</span>
-                    <Combobox value={selectedCustomer} onChange={(val: Person | null) => {
-                      setSelectedCustomer(val)
-                      // reset projects on change
-                      setProjects([])
-                      setSelectedProjectId('')
-                    }} nullable>
+                    <span className="mb-1 block text-sm font-medium text-slate-700">
+                      Kunde
+                    </span>
+                    <Combobox
+                      value={selectedCustomer}
+                      onChange={(val: Person | null) => {
+                        setSelectedCustomer(val)
+                        setProjects([])
+                        setSelectedProjectId('')
+                      }}
+                      nullable
+                    >
                       <div className="relative">
                         <Combobox.Input
-                          className="w-full rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
+                          className="w-full rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
                           displayValue={(p: Person) =>
-                            p ? `${p.first_name ?? ''} ${p.last_name ?? ''}`.trim() : ''
+                            p
+                              ? `${p.first_name ?? ''} ${
+                                  p.last_name ?? ''
+                                }`.trim()
+                              : ''
                           }
                           placeholder="Kunden suchen…"
-                          onChange={(e) => setCustomerQuery(e.target.value)}
+                          onChange={(e) =>
+                            setCustomerQuery(e.target.value)
+                          }
                         />
-                        <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                          <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-white/60 bg-white/95 py-1 text-sm shadow-lg backdrop-blur">
+                        <Transition
+                          as={Fragment}
+                          leave="transition ease-in duration-100"
+                          leaveFrom="opacity-100"
+                          leaveTo="opacity-0"
+                        >
+                          <Combobox.Options className="absolute z-10 mt-1 max-h-60 w-full overflow-auto rounded-xl border border-slate-100 bg-white/98 py-1 text-sm shadow-lg backdrop-blur">
                             {customerSearching && (
-                              <div className="px-3 py-2 text-slate-500">Suche …</div>
+                              <div className="px-3 py-2 text-slate-500">
+                                Suche …
+                              </div>
                             )}
-                            {!customerSearching && customers.length === 0 && (
-                              <div className="px-3 py-2 text-slate-500">Keine Treffer</div>
-                            )}
+                            {!customerSearching &&
+                              customers.length === 0 && (
+                                <div className="px-3 py-2 text-slate-500">
+                                  Keine Treffer
+                                </div>
+                              )}
                             {customers.map((c) => (
                               <Combobox.Option
                                 key={c.id}
                                 value={c}
                                 className={({ active }) =>
-                                  `cursor-pointer px-3 py-2 ${active ? 'bg-slate-100 text-slate-900' : 'text-slate-700'}`
+                                  `cursor-pointer px-3 py-2 ${
+                                    active
+                                      ? 'bg-slate-100 text-slate-900'
+                                      : 'text-slate-700'
+                                  }`
                                 }
                               >
                                 <div className="font-medium">
-                                  {(c.first_name ?? '') + ' ' + (c.last_name ?? '')}
+                                  {(c.first_name ?? '') +
+                                    ' ' +
+                                    (c.last_name ?? '')}
                                 </div>
-                                {c.email && <div className="text-xs text-slate-500">{c.email}</div>}
+                                {c.email && (
+                                  <div className="text-xs text-slate-500">
+                                    {c.email}
+                                  </div>
+                                )}
                               </Combobox.Option>
                             ))}
                           </Combobox.Options>
@@ -346,7 +460,7 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
                     </Combobox>
                   </div>
 
-                  {/* Projekt – nur wenn vorhanden */}
+                  {/* Projekt */}
                   {selectedCustomer && projects.length > 0 && (
                     <div className="col-span-1 md:col-span-2">
                       <span className="mb-1 flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -354,16 +468,22 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
                       </span>
                       <select
                         value={selectedProjectId}
-                        onChange={(e) => setSelectedProjectId(e.target.value)}
-                        className="w-full rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
+                        onChange={(e) =>
+                          setSelectedProjectId(e.target.value)
+                        }
+                        className="w-full rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
                       >
                         <option value="">— Kein Projekt auswählen —</option>
                         {projects.map((p) => (
-                          <option key={p.id} value={p.id}>{p.title}</option>
+                          <option key={p.id} value={p.id}>
+                            {p.title}
+                          </option>
                         ))}
                       </select>
                       {loadingProjects && (
-                        <div className="mt-1 text-xs text-slate-500">Lade Projekte…</div>
+                        <div className="mt-1 text-xs text-slate-500">
+                          Lade Projekte…
+                        </div>
                       )}
                     </div>
                   )}
@@ -371,135 +491,167 @@ export default function AddAppointmentModal({ onSuccess }: Props) {
                   {/* Ort/Adresse */}
                   <label className="col-span-1 md:col-span-2">
                     <span className="mb-1 flex items-center gap-2 text-sm font-medium text-slate-700">
-                      <MapPinIcon className="h-4 w-4" /> Ort / Adresse (optional)
+                      <MapPinIcon className="h-4 w-4" /> Ort / Adresse
+                      (optional)
                     </span>
                     <input
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
                       placeholder="z. B. Musterstraße 12, Berlin"
-                      className="w-full rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
+                      className="w-full rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
                     />
                   </label>
 
-                  {/* Start */}
-                  <label>
-                    <span className="mb-1 flex items一起 gap-2 text-sm font-medium text-slate-700">
-                      <CalendarDaysIcon className="h-4 w-4" /> Startzeit
-                    </span>
-                    <input
-                      type="datetime-local"
-                      value={start}
-                      onChange={(e) => setStart(e.target.value)}
-                      required
-                      className="w-full rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
-                    />
-                  </label>
+                  {/* Startzeit + Mitarbeiter in EINER Zeile (auf Desktop) */}
+                  <div className="col-span-1 md:col-span-2 grid gap-4 md:grid-cols-2">
+                    {/* Start */}
+                    <label>
+                      <span className="mb-1 flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <CalendarDaysIcon className="h-4 w-4" /> Startzeit
+                      </span>
+                      <input
+                        type="datetime-local"
+                        value={start}
+                        onChange={(e) => setStart(e.target.value)}
+                        required
+                        className="w-full rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
+                      />
+                    </label>
 
-                  {/* Dauer */}
-                  <label>
+                    {/* Mitarbeiter */}
+                    <div>
+                      <span className="mb-1 flex items-center gap-2 text-sm font-medium text-slate-700">
+                        <UserGroupIcon className="h-4 w-4" /> Mitarbeiter
+                      </span>
+                      <Listbox
+                        value={selectedEmployees}
+                        onChange={setSelectedEmployees}
+                        multiple
+                      >
+                        <div className="relative">
+                          <Listbox.Button className="inline-flex w-full items-center justify-between rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-left text-sm text-slate-800 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200">
+                            <span className="truncate">
+                              {selectedEmployees.length === 0
+                                ? 'Mitarbeiter wählen…'
+                                : `${selectedEmployees.length} ausgewählt`}
+                            </span>
+                            <ChevronUpDownIcon className="h-4 w-4 text-slate-500" />
+                          </Listbox.Button>
+                          <Transition
+                            as={Fragment}
+                            leave="transition ease-in duration-100"
+                            leaveFrom="opacity-100"
+                            leaveTo="opacity-0"
+                          >
+                            <Listbox.Options className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-slate-100 bg-white/98 py-1 text-sm shadow-lg backdrop-blur">
+                              {employees.length === 0 && (
+                                <div className="px-3 py-2 text-slate-500">
+                                  Keine Mitarbeiter
+                                </div>
+                              )}
+                              {employees.map((emp) => (
+                                <Listbox.Option
+                                  key={emp.id}
+                                  value={emp}
+                                  className={({ active, selected }) =>
+                                    [
+                                      'flex cursor-pointer select-none items-center gap-2 px-3 py-2',
+                                      active
+                                        ? 'bg-slate-100 text-slate-900'
+                                        : 'text-slate-700',
+                                      selected ? 'font-medium' : '',
+                                    ].join(' ')
+                                  }
+                                >
+                                  {({ selected }) => (
+                                    <>
+                                      <span
+                                        className={`grid h-4 w-4 place-content-center rounded border ${
+                                          selected
+                                            ? 'border-slate-900 bg-slate-900 text-white'
+                                            : 'border-slate-300 text-transparent'
+                                        }`}
+                                      >
+                                        <CheckIcon className="h-3 w-3" />
+                                      </span>
+                                      <span className="truncate">
+                                        {empName(emp)}
+                                      </span>
+                                    </>
+                                  )}
+                                </Listbox.Option>
+                              ))}
+                            </Listbox.Options>
+                          </Transition>
+                        </div>
+                      </Listbox>
+                    </div>
+                  </div>
+
+                  {/* Dauer – JETZT GANZZEILIG */}
+                  <label className="col-span-1 md:col-span-2">
                     <span className="mb-1 flex items-center gap-2 text-sm font-medium text-slate-700">
-                      <ClockIcon className="h-4 w-4" /> Dauer (Minuten)
+                      <ClockIcon className="h-4 w-4" /> Dauer
                     </span>
+                    <div className="rounded-xl border border-slate-100 bg-white/70 p-1 backdrop-blur">
+                      <div className="grid grid-cols-5 gap-1">
+                        {[30, 60, 90, 120, 180].map((m) => (
+                          <button
+                            key={m}
+                            type="button"
+                            onClick={() => setDuration(m)}
+                            className={[
+                              'rounded-lg px-2 py-1 text-xs font-medium transition',
+                              duration === m
+                                ? 'bg-slate-900 text-white shadow-sm'
+                                : 'bg-white/60 text-slate-800 hover:bg-white',
+                            ].join(' ')}
+                          >
+                            {m} min
+                          </button>
+                        ))}
+                      </div>
+                    </div>
                     <input
                       type="number"
                       value={duration}
                       min={5}
                       onChange={(e) => setDuration(+e.target.value)}
-                      required
-                      className="w-full rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
+                      className="mt-2 w-full rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-xs text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
                     />
-                    <div className="mt-2 flex flex-wrap gap-2">
-                      {[30, 60, 90, 120, 180].map((m) => (
-                        <button
-                          key={m}
-                          type="button"
-                          onClick={() => setDuration(m)}
-                          className={`rounded-md px-2 py-1 text-xs border ${
-                            duration === m
-                              ? 'border-slate-900 bg-slate-900 text-white'
-                              : 'border-white/60 bg-white/80 text-slate-900 hover:bg-white'
-                          }`}
-                        >
-                          {m} min
-                        </button>
-                      ))}
-                    </div>
+                    <p className="mt-1 text-[10px] text-slate-500">
+                      Schnell eine Dauer anklicken oder individuell in Minuten anpassen.
+                    </p>
                   </label>
-
-                  {/* Mitarbeiter – Multi */}
-                  <div className="col-span-1 md:col-span-2">
-                    <span className="mb-1 flex items-center gap-2 text-sm font-medium text-slate-700">
-                      <UserGroupIcon className="h-4 w-4" /> Mitarbeiter
-                    </span>
-                    <Listbox value={selectedEmployees} onChange={setSelectedEmployees} multiple>
-                      <div className="relative">
-                        <Listbox.Button className="inline-flex w-full items-center justify-between rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-left text-sm text-slate-800 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200">
-                          <span className="truncate">
-                            {selectedEmployees.length === 0
-                              ? 'Mitarbeiter wählen…'
-                              : `${selectedEmployees.length} ausgewählt`}
-                          </span>
-                          <ChevronUpDownIcon className="h-4 w-4 text-slate-500" />
-                        </Listbox.Button>
-                        <Transition as={Fragment} leave="transition ease-in duration-100" leaveFrom="opacity-100" leaveTo="opacity-0">
-                          <Listbox.Options className="absolute z-10 mt-1 max-h-72 w-full overflow-auto rounded-xl border border-white/60 bg-white/95 py-1 text-sm shadow-lg backdrop-blur">
-                            {employees.length === 0 && (
-                              <div className="px-3 py-2 text-slate-500">Keine Mitarbeiter</div>
-                            )}
-                            {employees.map((emp) => (
-                              <Listbox.Option
-                                key={emp.id}
-                                value={emp}
-                                className={({ active, selected }) =>
-                                  [
-                                    'cursor-pointer select-none px-3 py-2 flex items-center gap-2',
-                                    active ? 'bg-slate-100 text-slate-900' : 'text-slate-700',
-                                    selected ? 'font-medium' : '',
-                                  ].join(' ')
-                                }
-                              >
-                                {({ selected }) => (
-                                  <>
-                                    <span className={`grid h-4 w-4 place-content-center rounded border ${selected ? 'bg-slate-900 border-slate-900 text-white' : 'border-slate-300 text-transparent'}`}>
-                                      <CheckIcon className="h-3 w-3" />
-                                    </span>
-                                    <span className="truncate">{empName(emp)}</span>
-                                  </>
-                                )}
-                              </Listbox.Option>
-                            ))}
-                          </Listbox.Options>
-                        </Transition>
-                      </div>
-                    </Listbox>
-                  </div>
 
                   {/* Hinweis */}
                   <label className="col-span-1 md:col-span-2">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">Hinweis</span>
+                    <span className="mb-1 block text-sm font-medium text-slate-700">
+                      Hinweis
+                    </span>
                     <textarea
                       value={hint}
                       onChange={(e) => setHint(e.target.value)}
                       rows={3}
                       placeholder="Details, Ansprechpartner, Besonderheiten …"
-                      className="w-full rounded-xl border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
+                      className="w-full rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
                     />
                   </label>
 
                   {/* Actions */}
-                  <div className="col-span-1 md:col-span-2 flex items-center justify-end gap-2 pt-1">
+                  <div className="col-span-1 flex items-center justify-end gap-2 pt-1 md:col-span-2">
                     <button
                       type="button"
-                      onClick={() => setIsOpen(false)}
-                      className="rounded-lg border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900 shadow-sm backdrop-blur hover:bg-white"
+                      onClick={() => setOpen(false)}
+                      className="rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 shadow-sm backdrop-blur hover:bg-white"
                     >
                       Abbrechen
                     </button>
                     <button
                       type="submit"
                       disabled={saving}
-                      className="rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-60"
+                      className="rounded-xl border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-60"
                     >
                       <span className="inline-flex items-center gap-2">
                         <CalendarDaysIcon className="h-5 w-5" />

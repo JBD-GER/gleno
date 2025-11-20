@@ -1,12 +1,19 @@
 'use client'
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react'
 import FullCalendar from '@fullcalendar/react'
 import dayGridPlugin from '@fullcalendar/daygrid'
 import timeGridPlugin from '@fullcalendar/timegrid'
 import interactionPlugin from '@fullcalendar/interaction'
 import deLocale from '@fullcalendar/core/locales/de'
 import type { EventContentArg, DatesSetArg } from '@fullcalendar/core'
+
 import AddAppointmentModal from './AddAppointmentModal'
 import EventDetailModal, { EventDetail } from './EventDetailModal'
 import {
@@ -39,11 +46,24 @@ type FCEventExt = {
   reason?: string | null
 }
 
-type Employee = { id: string; first_name: string | null; last_name: string | null }
+type Employee = {
+  id: string
+  first_name: string | null
+  last_name: string | null
+}
 
 /* ----------------------------- Helpers ----------------------------- */
 /** dunklere, ruhige Palette (kein Lila) */
-const PALETTE = ['#0f172a', '#1f2937', '#0b3a53', '#0a3d62', '#22333b', '#0a4a5a', '#2b3a55']
+const PALETTE = [
+  '#0f172a',
+  '#1f2937',
+  '#0b3a53',
+  '#0a3d62',
+  '#22333b',
+  '#0a4a5a',
+  '#2b3a55',
+]
+
 const REASON_LABEL: Record<string, string> = {
   ERSTGESPRÄCH: 'Erstgespräch',
   AUFMASS: 'Aufmaß',
@@ -65,16 +85,32 @@ const REASON_LABEL: Record<string, string> = {
   REFERENZFOTOS: 'Referenzfotos',
   INDIVIDUELL: 'Individuell',
 }
+
 function colorFromId(id: string) {
   let h = 0
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0
   return PALETTE[h % PALETTE.length]
 }
-const fullName = (e: Employee) => [e.first_name ?? '', e.last_name ?? ''].filter(Boolean).join(' ') || 'Unbenannt'
+
+const fullName = (e: Employee) =>
+  [e.first_name ?? '', e.last_name ?? ''].filter(Boolean).join(' ') ||
+  'Unbenannt'
+
 function toValidDate(v: string | null | undefined): Date | null {
   if (!v) return null
   const d = new Date(v)
   return isNaN(d.getTime()) ? null : d
+}
+
+/* helper für initial start für Modal */
+function dateToLocalInput(d: Date) {
+  const pad = (n: number) => String(n).padStart(2, '0')
+  const y = d.getFullYear()
+  const m = pad(d.getMonth() + 1)
+  const day = pad(d.getDate())
+  const h = pad(d.getHours())
+  const min = pad(d.getMinutes())
+  return `${y}-${m}-${day}T${h}:${min}`
 }
 
 /* ----------------------------- Component ----------------------------- */
@@ -89,6 +125,10 @@ export default function CalendarClient() {
   const [viewTitle, setViewTitle] = useState('')
 
   const calendarRef = useRef<FullCalendar | null>(null)
+
+  // Steuerung AddAppointmentModal von außen (Klick auf Slot)
+  const [createOpen, setCreateOpen] = useState(false)
+  const [createStart, setCreateStart] = useState<string | undefined>(undefined)
 
   /* -------------------- Mitarbeiter laden -------------------- */
   const loadEmployees = useCallback(async () => {
@@ -115,15 +155,19 @@ export default function CalendarClient() {
       const mapped = (data ?? []).map((a) => {
         const start = toValidDate(a.start_time) ?? new Date()
         let end = toValidDate(a.end_time)
-        if (!end || end.getTime() <= start.getTime()) end = new Date(start.getTime() + 60 * 60 * 1000)
+        if (!end || end.getTime() <= start.getTime())
+          end = new Date(start.getTime() + 60 * 60 * 1000)
 
         const accent = colorFromId(a.id)
         const isPast = end.getTime() < now.getTime()
-        const isSoon = !isPast && start.getTime() - now.getTime() <= 1000 * 60 * 60 * 24
-        const custName = [a.customer?.first_name, a.customer?.last_name].filter(Boolean).join(' ')
+        const isSoon =
+          !isPast && start.getTime() - now.getTime() <= 1000 * 60 * 60 * 24
+        const custName = [a.customer?.first_name, a.customer?.last_name]
+          .filter(Boolean)
+          .join(' ')
         const baseTitle =
           (a.title?.trim() || '') ||
-          (a.reason ? (REASON_LABEL[a.reason] ?? a.reason) : '') ||
+          (a.reason ? REASON_LABEL[a.reason] ?? a.reason : '') ||
           a.location
 
         return {
@@ -161,7 +205,8 @@ export default function CalendarClient() {
     const api = calendarRef.current?.getApi()
     if (!api) return
     const w = window.innerWidth
-    const desired = w < 640 ? 'timeGridDay' : w < 1024 ? 'timeGridWeek' : 'timeGridWeek'
+    const desired =
+      w < 640 ? 'timeGridDay' : w < 1024 ? 'timeGridWeek' : 'timeGridWeek'
     if (api.view.type !== desired) api.changeView(desired)
   }, [])
 
@@ -197,29 +242,110 @@ export default function CalendarClient() {
       .map((s) => s.trim())
       .filter(Boolean)
 
+    const durationMin =
+      event.start && event.end
+        ? Math.max(
+            15,
+            Math.round(
+              (event.end.getTime() - event.start.getTime()) / 60000,
+            ),
+          )
+        : 60
+
+    const isCompact = !isMonth && durationMin <= 30
+
+    const titleLine = `${event.title}${
+      ex.customerName ? ` – ${ex.customerName}` : ''
+    }`
+
+    // -------- Monatsansicht: sehr kompakt --------
+    if (isMonth) {
+      return (
+        <div className="flex items-center gap-1.5 text-[11px] leading-tight">
+          <span
+            className="inline-block h-1.5 w-1.5 rounded-full"
+            style={{ background: accent }}
+          />
+          <span className="truncate font-medium text-slate-800">
+            {titleLine}
+          </span>
+        </div>
+      )
+    }
+
+    // -------- Kompakte Events (z.B. 15 / 30 min) -> Titel + Mitarbeiter --------
+    if (isCompact) {
+      return (
+        <div
+          className="group relative flex h-full items-center rounded-xl border border-slate-200 bg-white/95 px-2 py-1 text-[11px] leading-tight shadow-sm hover:shadow-md"
+          style={{ boxShadow: '0 1px 0 rgba(2,6,23,0.06)' }}
+        >
+          <div
+            className="mr-2 h-full w-1 rounded-full"
+            style={{ background: accent }}
+          />
+          <div className="flex min-w-0 flex-1 flex-col">
+            <div
+              className={`truncate font-semibold ${
+                ex.isPast ? 'text-slate-400' : 'text-slate-900'
+              }`}
+            >
+              {titleLine}
+            </div>
+            {chips.length > 0 && (
+              <div className="mt-0.5 flex flex-wrap gap-1">
+                {chips.slice(0, 2).map((name, i) => (
+                  <span
+                    key={`${name}-${i}`}
+                    className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-700"
+                  >
+                    {name.slice(0, 2).toUpperCase()}
+                  </span>
+                ))}
+                {chips.length > 2 && (
+                  <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                    +{chips.length - 2}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )
+    }
+
+    // -------- Normale / längere Events --------
     return (
       <div
-        className={[
-          'group relative flex w-full flex-col rounded-xl border bg-white/80 backdrop-blur',
-          'shadow-sm hover:shadow-md transition-all',
-          isMonth ? 'p-1.5 border-slate-200' : 'p-2.5 border-slate-200',
-        ].join(' ')}
-        style={{ boxShadow: '0 1px 0 rgba(2,6,23,0.04)' }}
+        className="group relative flex h-full w-full flex-col rounded-xl border border-slate-200 bg-white/95 px-2.5 py-1.5 text-[11px] leading-tight shadow-sm hover:shadow-md"
+        style={{ boxShadow: '0 1px 0 rgba(2,6,23,0.06)' }}
       >
-        <div className="absolute inset-y-0 left-0 w-1.5 rounded-l-xl" style={{ background: accent }} />
-        <div className="flex items-center justify-between gap-2">
-          <div className="text-[11px] font-semibold tracking-wide text-slate-700">{timeText}</div>
-          {!isMonth && ex.isSoon && (
-            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">Bald</span>
+        <div
+          className="absolute inset-y-0 left-0 w-1.5 rounded-l-xl"
+          style={{ background: accent }}
+        />
+        <div className="ml-1.5 flex items-center justify-between gap-2">
+          {/* Zeit nur hier – nicht in der kompakten Variante */}
+          <div className="text-[11px] font-semibold tracking-wide text-slate-700">
+            {timeText}
+          </div>
+          {ex.isSoon && (
+            <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-semibold text-amber-700">
+              Bald
+            </span>
           )}
         </div>
 
-        <div className={`mt-0.5 line-clamp-2 text-xs ${ex.isPast ? 'text-slate-400' : 'text-slate-900'} font-medium`}>
-          {event.title}{ex.customerName ? ` – ${ex.customerName}` : ''}
+        <div
+          className={`ml-1.5 mt-0.5 line-clamp-2 text-xs font-medium ${
+            ex.isPast ? 'text-slate-400' : 'text-slate-900'
+          }`}
+        >
+          {titleLine}
         </div>
 
-        {!isMonth && chips.length > 0 && (
-          <div className="mt-1 flex flex-wrap gap-1.5">
+        {chips.length > 0 && (
+          <div className="ml-1.5 mt-1 flex flex-wrap gap-1.5">
             {chips.slice(0, 3).map((name, i) => (
               <span
                 key={`${name}-${i}`}
@@ -233,13 +359,6 @@ export default function CalendarClient() {
                 +{chips.length - 3}
               </span>
             )}
-          </div>
-        )}
-
-        {ex.notiz && !isMonth && (
-          <div className="mt-1 flex items-center gap-1.5 text-[10px] text-slate-500">
-            <span className="inline-block h-1.5 w-1.5 rounded-full" style={{ backgroundColor: accent }} />
-            Hinweis vorhanden
           </div>
         )}
       </div>
@@ -266,110 +385,149 @@ export default function CalendarClient() {
     requestAnimationFrame(() => setOpenDetail(true))
   }
 
+  /* --------------------- Klick auf freien Slot -> neues Modal --------------------- */
+  const onDateClick = (arg: any) => {
+    const d = arg.date as Date
+    setCreateStart(dateToLocalInput(d))
+    setCreateOpen(true)
+  }
+
   /* ------------------------- Header (Custom) ------------------------- */
   const api = calendarRef.current?.getApi()
-  const header = useMemo(() => (
-    <div className="flex flex-col gap-3 border-b border-white/60 bg-white/70 px-3 pb-3 pt-4 sm:px-4 md:px-6 backdrop-blur">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        {/* Navigation + Titel */}
-        <div className="flex min-w-0 items-center gap-2">
-          <button
-            className="rounded-lg border border-white/60 bg-white/80 p-2 text-slate-800 hover:bg-white"
-            onClick={() => api?.prev()}
-            aria-label="Vorherige Ansicht"
-          >
-            <ChevronLeftIcon className="h-5 w-5" />
-          </button>
-          <button
-            className="rounded-lg border border-white/60 bg-white/80 p-2 text-slate-800 hover:bg-white"
-            onClick={() => api?.next()}
-            aria-label="Nächste Ansicht"
-          >
-            <ChevronRightIcon className="h-5 w-5" />
-          </button>
-          <div className="ml-1 truncate text-base font-semibold text-slate-900 sm:text-lg">{viewTitle}</div>
+  const header = useMemo(
+    () => (
+      <div className="flex flex-col gap-3 border-b border-white/60 bg-white/80 px-3 pb-3 pt-4 backdrop-blur sm:px-4 md:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          {/* Navigation + Titel */}
+          <div className="flex min-w-0 items-center gap-2">
+            <button
+              className="rounded-lg border border-white/70 bg-white px-2 py-2 text-slate-800 shadow-sm hover:bg-slate-50"
+              onClick={() => api?.prev()}
+              aria-label="Vorherige Ansicht"
+            >
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <button
+              className="rounded-lg border border-white/70 bg-white px-2 py-2 text-slate-800 shadow-sm hover:bg-slate-50"
+              onClick={() => api?.next()}
+              aria-label="Nächste Ansicht"
+            >
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
+            <div className="ml-1 truncate text-base font-semibold text-slate-900 sm:text-lg">
+              {viewTitle}
+            </div>
+          </div>
+
+          {/* Actions */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Mitarbeiter-Filter */}
+            <div className="flex items-center gap-2 rounded-lg border border-white/70 bg-white px-2 py-1.5 shadow-sm">
+              <UserCircleIcon className="h-5 w-5 text-slate-600" />
+              <select
+                value={employeeId}
+                onChange={async (e) => {
+                  const v = (e.target.value || 'all') as 'all' | string
+                  setEmployeeId(v)
+                  employeeIdRef.current = v
+                  await loadAppointments(v)
+                }}
+                className="min-w-[180px] max-w-[60vw] bg-transparent text-sm text-slate-800 outline-none"
+              >
+                <option value="all">Alle Mitarbeiter</option>
+                {employees.map((emp) => (
+                  <option key={emp.id} value={emp.id}>
+                    {fullName(emp)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <button
+              onClick={() => api?.today()}
+              className="rounded-lg border border-white/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm hover:bg-slate-50"
+            >
+              Heute
+            </button>
+
+            {/* Views: mobil = Dropdown, ab sm = Segmented */}
+            <div className="sm:hidden">
+              <select
+                onChange={(e) => api?.changeView(e.target.value)}
+                className="rounded-lg border border-white/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm"
+                defaultValue={api?.view?.type ?? 'timeGridWeek'}
+              >
+                <option value="dayGridMonth">Monat</option>
+                <option value="timeGridWeek">Woche</option>
+                <option value="timeGridDay">Tag</option>
+              </select>
+            </div>
+            <div className="hidden overflow-hidden rounded-lg border border-white/70 bg-white sm:flex shadow-sm">
+              <button
+                onClick={() => api?.changeView('dayGridMonth')}
+                className="px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+              >
+                Monat
+              </button>
+              <button
+                onClick={() => api?.changeView('timeGridWeek')}
+                className="border-l border-white/70 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+              >
+                Woche
+              </button>
+              <button
+                onClick={() => api?.changeView('timeGridDay')}
+                className="border-l border-white/70 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+              >
+                Tag
+              </button>
+            </div>
+
+            {/* Weißer Button – eigenes Trigger-Modal (uncontrolled) */}
+            <AddAppointmentModal
+              onSuccess={() => loadAppointments(employeeIdRef.current)}
+            />
+          </div>
         </div>
 
-        {/* Actions */}
-        <div className="flex flex-wrap items-center gap-2">
-          {/* Mitarbeiter-Filter */}
-          <div className="flex items-center gap-2 rounded-lg border border-white/60 bg-white/80 px-2 py-1.5">
-            <UserCircleIcon className="h-5 w-5 text-slate-600" />
-            <select
-              value={employeeId}
-              onChange={async (e) => {
-                const v = (e.target.value || 'all') as 'all' | string
-                setEmployeeId(v)
-                employeeIdRef.current = v
-                await loadAppointments(v)
-              }}
-              className="min-w-[180px] max-w-[60vw] bg-transparent text-sm text-slate-800 outline-none"
-            >
-              <option value="all">Alle Mitarbeiter</option>
-              {employees.map((emp) => (
-                <option key={emp.id} value={emp.id}>
-                  {fullName(emp)}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <button
-            onClick={() => api?.today()}
-            className="rounded-lg border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900 hover:bg-white"
-          >
-            Heute
-          </button>
-
-          {/* Views: mobil = Dropdown, ab sm = Segmented */}
-          <div className="sm:hidden">
-            <select
-              onChange={(e) => api?.changeView(e.target.value)}
-              className="rounded-lg border border-white/60 bg-white/80 px-3 py-2 text-sm text-slate-900"
-              defaultValue={api?.view?.type ?? 'timeGridWeek'}
-            >
-              <option value="dayGridMonth">Monat</option>
-              <option value="timeGridWeek">Woche</option>
-              <option value="timeGridDay">Tag</option>
-            </select>
-          </div>
-          <div className="hidden overflow-hidden rounded-lg border border-white/60 bg-white/80 sm:flex">
-            <button onClick={() => api?.changeView('dayGridMonth')} className="px-3 py-2 text-sm text-slate-900 hover:bg-white">Monat</button>
-            <button onClick={() => api?.changeView('timeGridWeek')} className="border-l border-white/60 px-3 py-2 text-sm text-slate-900 hover:bg-white">Woche</button>
-            <button onClick={() => api?.changeView('timeGridDay')} className="border-l border-white/60 px-3 py-2 text-sm text-slate-900 hover:bg-white">Tag</button>
-          </div>
-
-          {/* Weißer Button (Trigger öffnet globales Modal) */}
-          <AddAppointmentModal onSuccess={() => loadAppointments(employeeIdRef.current)} />
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-amber-500" /> Bald (≤24h)
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-slate-300" /> Vergangen
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded bg-slate-200" /> Terminfarbe
+          </span>
         </div>
       </div>
-
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
-        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-amber-500" /> Bald (≤24h)</span>
-        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded-full bg-slate-300" /> Vergangen</span>
-        <span className="inline-flex items-center gap-1"><span className="h-2 w-2 rounded bg-slate-200" /> Terminfarbe (ruhig)</span>
-      </div>
-    </div>
-  ), [viewTitle, api, employees, employeeId, loadAppointments])
+    ),
+    [viewTitle, api, employees, employeeId, loadAppointments],
+  )
 
   /* ------------------------- Render ------------------------- */
   return (
     <div
-      className="overflow-hidden rounded-2xl border border-white/60 bg-white/75 shadow-[0_10px_40px_rgba(2,6,23,0.10)] backdrop-blur-xl"
-      style={{ backgroundImage: 'radial-gradient(1000px 500px at 120% -30%, rgba(2,6,23,0.08), transparent)' }}
+      className="flex h-[calc(100vh-180px)] flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/80 shadow-[0_10px_40px_rgba(2,6,23,0.08)] backdrop-blur-xl"
+      style={{
+        backgroundImage:
+          'radial-gradient(1000px 500px at 120% -30%, rgba(2,6,23,0.05), transparent)',
+      }}
     >
       {header}
 
-      <div className="px-1 pb-2 pt-2 sm:px-2">
+      {/* Kalender selbst scrollt, nicht die ganze Seite */}
+      <div className="flex-1 overflow-y-auto px-1 pb-2 pt-2 sm:px-2">
         <FullCalendar
           ref={calendarRef}
           plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
           initialView="timeGridWeek"
           locale={deLocale}
           headerToolbar={false}
-          height="auto"
+          height="100%"
           allDaySlot={false}
-          expandRows
+          expandRows={false}
           stickyHeaderDates
           navLinks
           nowIndicator
@@ -377,8 +535,17 @@ export default function CalendarClient() {
           slotEventOverlap={false}
           slotMinTime="06:00:00"
           slotMaxTime="20:00:00"
-          slotLabelFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
-          eventTimeFormat={{ hour: '2-digit', minute: '2-digit', hour12: false }}
+          scrollTime="08:00:00"
+          slotLabelFormat={{
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }}
+          eventTimeFormat={{
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false,
+          }}
           events={events}
           eventClick={onEventClick}
           eventContent={eventContent}
@@ -389,39 +556,77 @@ export default function CalendarClient() {
             const ex = arg.event.extendedProps as unknown as FCEventExt
             if (ex?.isPast) arg.el.classList.add('opacity-60')
           }}
+          dateClick={onDateClick}
         />
       </div>
 
-      {/* Detail-Modal (global) */}
+      {/* Detail-Modal */}
       <EventDetailModal
         isOpen={openDetail}
         onClose={() => {
           setOpenDetail(false)
-          // optional: beim Schließen nochmal syncen
           loadAppointments(employeeIdRef.current)
         }}
         event={selEvent ?? undefined}
-        onUpdated={() => loadAppointments(employeeIdRef.current)} 
+        onUpdated={() => loadAppointments(employeeIdRef.current)}
       />
 
-      {/* FC Skin (ruhig, clean) */}
+      {/* Add-Modal für Klick auf Slot (kontrolliert, mit Startzeit) */}
+      <AddAppointmentModal
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        initialStart={createStart}
+        onSuccess={() => {
+          setCreateOpen(false)
+          loadAppointments(employeeIdRef.current)
+        }}
+      />
+
+      {/* FC Skin */}
       <style jsx global>{`
         .fc .fc-timegrid-axis {
-          background: linear-gradient(180deg, rgba(248,250,252,.85), rgba(255,255,255,.85));
+          background: linear-gradient(
+            180deg,
+            rgba(248, 250, 252, 0.95),
+            rgba(255, 255, 255, 0.95)
+          );
         }
         .fc .fc-scrollgrid {
-          border: 1px solid rgba(226,232,240,1);
+          border: 1px solid rgba(226, 232, 240, 1);
           border-radius: 14px;
           overflow: hidden;
         }
-        .fc .fc-col-header-cell-cushion { padding: 8px 0; }
-        .fc-theme-standard td, .fc-theme-standard th { border-color: rgba(148,163,184,.22); }
-        .fc .fc-day-today { background: linear-gradient(180deg, rgba(2,6,23,0.06), transparent); }
-        .fc .fc-timegrid-now-indicator-line { border-color: #ef4444; }
+        .fc .fc-col-header-cell-cushion {
+          padding: 8px 0;
+        }
+        .fc-theme-standard td,
+        .fc-theme-standard th {
+          border-color: rgba(148, 163, 184, 0.22);
+        }
+        .fc .fc-day-today {
+          background: linear-gradient(
+            180deg,
+            rgba(254, 249, 195, 0.65),
+            rgba(254, 249, 195, 0.25)
+          );
+        }
+        .fc .fc-timegrid-now-indicator-line {
+          border-color: #ef4444;
+        }
         .fc .fc-timegrid-now-indicator-arrow {
           border-color: transparent transparent transparent #ef4444 !important;
         }
-        .fc-daygrid-event-harness { margin: 2px 6px; }
+        /* höhere Slots wie bei Google */
+        .fc .fc-timegrid-slot {
+          height: 3.2rem;
+        }
+        .fc .fc-scroller {
+          overflow-y: auto !important;
+          scrollbar-width: thin;
+        }
+        .fc-daygrid-event-harness {
+          margin: 2px 6px;
+        }
       `}</style>
     </div>
   )

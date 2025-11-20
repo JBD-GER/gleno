@@ -26,6 +26,11 @@ type Entry = {
   project?: { id: string; title: string } | null
 }
 
+type ProjectOption = {
+  id: string
+  title: string
+}
+
 type Props = {
   employeeId: string
   employeeName?: string
@@ -35,6 +40,7 @@ type Props = {
 
 /* ---------------- Helpers ---------------- */
 const pad = (n: number) => String(n).padStart(2, '0')
+
 const localDateStr = (d: Date) =>
   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
@@ -45,18 +51,21 @@ const toLocalDatetimeInput = (iso: string | null) => {
     d.getDate(),
   )}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
 const fromLocalDatetimeInput = (val: string): string | null => {
   if (!val) return null
   const d = new Date(val)
   if (isNaN(+d)) return null
   return d.toISOString()
 }
+
 const seconds = (a: string | null, b: string | null) => {
   if (!a || !b) return 0
   const A = +new Date(a)
   const B = +new Date(b)
   return Math.max(0, Math.round((B - A) / 1000))
 }
+
 const fmtHMS = (sec: number) => {
   const s = Math.max(0, Math.round(sec))
   const h = Math.floor(s / 3600)
@@ -90,6 +99,23 @@ const normalizeRow = (row: any): Entry => {
 
 type RangePreset = '30tage' | '7tage' | 'monat' | 'benutzerdefiniert'
 
+type NewEntryState = {
+  work_date: string
+  start_local: string
+  end_local: string
+  break_minutes: number
+  project_id: string
+  notes: string
+}
+
+// Datumspaar immer sortieren (älter → neuer)
+const normalizeRange = (from: string, to: string) => {
+  if (!from && !to) return { from: '', to: '' }
+  if (!from) return { from: to, to }
+  if (!to) return { from, to: from }
+  return from <= to ? { from, to } : { from: to, to: from }
+}
+
 export default function TimeEntriesModal({
   employeeId,
   employeeName,
@@ -104,19 +130,34 @@ export default function TimeEntriesModal({
   const [rows, setRows] = useState<Entry[]>([])
   const [edit, setEdit] = useState<Record<string, Partial<Entry>>>({})
 
+  // Standard: letzte 30 Tage → Von = 30 Tage zurück, Bis = heute
   const [from, setFrom] = useState<string>(() => {
-    const d = new Date()
+    const today = new Date()
+    const d = new Date(today)
     d.setDate(d.getDate() - 30)
     return localDateStr(d)
   })
   const [to, setTo] = useState<string>(() => localDateStr(new Date()))
 
-  // Zeitraum-Preset (wie im Dokumenten-Cloud-Modul)
   const [rangePreset, setRangePreset] = useState<RangePreset>('30tage')
-
-  // Toggle für Status: Alle / Laufend / Fertig
   const [statusFilter, setStatusFilter] =
     useState<'alle' | 'laufend' | 'fertig'>('alle')
+
+  // Projekte für den Mitarbeiter
+  const [projects, setProjects] = useState<ProjectOption[]>([])
+  const [projectsLoading, setProjectsLoading] = useState(false)
+
+  // Neuer manueller Eintrag
+  const [creating, setCreating] = useState(false)
+  const [createBusy, setCreateBusy] = useState(false)
+  const [newEntry, setNewEntry] = useState<NewEntryState>(() => ({
+    work_date: localDateStr(new Date()),
+    start_local: '',
+    end_local: '',
+    break_minutes: 0,
+    project_id: '',
+    notes: '',
+  }))
 
   const edited = (id: string) => edit[id] ?? {}
   const merged = (r: Entry) => ({ ...r, ...edited(r.id) })
@@ -137,31 +178,32 @@ export default function TimeEntriesModal({
     let newTo = to
 
     if (preset === '30tage') {
-      const d = new Date()
+      const d = new Date(now)
       d.setDate(d.getDate() - 30)
-      newFrom = localDateStr(d)
-      newTo = localDateStr(now)
+      newFrom = localDateStr(d)   // älteres Datum
+      newTo = localDateStr(now)   // heute
     } else if (preset === '7tage') {
-      const d = new Date()
+      const d = new Date(now)
       d.setDate(d.getDate() - 7)
       newFrom = localDateStr(d)
       newTo = localDateStr(now)
     } else if (preset === 'monat') {
       const first = new Date(now.getFullYear(), now.getMonth(), 1)
-      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0)
+      // Bis = heute (aktueller Monat, bis aktueller Tag)
       newFrom = localDateStr(first)
-      newTo = localDateStr(last)
+      newTo = localDateStr(now)
     }
+
     setRangePreset(preset)
     setFrom(newFrom)
     setTo(newTo)
   }
 
-  // Wenn der Benutzer manuell From/To ändert → benutzerdefiniert
   const onChangeFrom = (val: string) => {
     setFrom(val)
     setRangePreset('benutzerdefiniert')
   }
+
   const onChangeTo = (val: string) => {
     setTo(val)
     setRangePreset('benutzerdefiniert')
@@ -170,18 +212,21 @@ export default function TimeEntriesModal({
   /* ---------------- Laden ---------------- */
   const lastQueryRef = useRef<string>('')
 
-  const load = async () => {
+  const load = async (force: boolean = false) => {
     setLoading(true)
     setError(null)
     try {
+      const norm = normalizeRange(from, to)
+
       const params = new URLSearchParams()
-      if (from) params.set('from', from)
-      if (to) params.set('to', to)
+      if (norm.from) params.set('from', norm.from)
+      if (norm.to) params.set('to', norm.to)
       const url = `/api/employees/${employeeId}/time-entries${
         params.toString() ? `?${params.toString()}` : ''
       }`
 
-      if (lastQueryRef.current === url && rows.length > 0) {
+      // nur automatische Reloads "debouncen"
+      if (!force && lastQueryRef.current === url && rows.length > 0) {
         setLoading(false)
         return
       }
@@ -202,28 +247,51 @@ export default function TimeEntriesModal({
     }
   }
 
+  const loadProjects = async () => {
+    setProjectsLoading(true)
+    try {
+      const res = await fetch(`/api/employees/${employeeId}/projects`, {
+        cache: 'no-store',
+      })
+      const body = await safeJson(res)
+      if (!res.ok) {
+        console.error(body?.error || 'Projekte konnten nicht geladen werden')
+        setProjects([])
+        return
+      }
+      const list = Array.isArray(body) ? body : []
+      setProjects(list)
+    } catch (e) {
+      console.error('Fehler beim Laden der Projekte', e)
+      setProjects([])
+    } finally {
+      setProjectsLoading(false)
+    }
+  }
+
   useEffect(() => {
     if (!open) return
-    // beim ersten Öffnen Standard: letzte 30 Tage
+    // Beim Öffnen: Preset noch einmal bewusst setzen
     applyRangePreset('30tage')
+    loadProjects()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, employeeId])
 
   useEffect(() => {
     if (!open) return
-    const t = setTimeout(load, 200)
+    const t = setTimeout(() => load(false), 200)
     return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, from, to, employeeId])
 
-  // Gesamtzeit IM ZEITRAUM (immer alle, unabhängig vom Filter)
+  // Gesamtzeit im Zeitraum (immer alle, unabhängig vom Filter)
   const total = useMemo(() => {
     return rows.reduce((acc, r) => {
       const m = merged(r)
-      const sec =
+      const secVal =
         seconds(m.start_time ?? null, m.end_time ?? null) -
         Number(m.break_minutes || 0) * 60
-      return acc + Math.max(0, sec)
+      return acc + Math.max(0, secVal)
     }, 0)
   }, [rows, edit])
 
@@ -231,7 +299,6 @@ export default function TimeEntriesModal({
     setEdit((s) => ({ ...s, [id]: { ...(s[id] || {}), ...patch } }))
   }
 
-  // Filter nach Status (Toggle: alle / laufend / fertig)
   const filteredRows = useMemo(() => {
     return rows.filter((r) => {
       const m = merged(r)
@@ -263,7 +330,7 @@ export default function TimeEntriesModal({
       })
       const body = await safeJson(res)
       if (!res.ok) throw new Error(body?.error || 'Speichern fehlgeschlagen')
-      await load()
+      await load(true)
     } catch (e: any) {
       setError(e?.message || 'Fehler beim Speichern')
     } finally {
@@ -289,13 +356,58 @@ export default function TimeEntriesModal({
     }
   }
 
-  /* ---------------- CSV-Export (respektiert Filter) ---------------- */
+  /* --------- Neuer manueller Eintrag speichern --------- */
+  const resetNewEntry = () => {
+    setNewEntry({
+      work_date: localDateStr(new Date()),
+      start_local: '',
+      end_local: '',
+      break_minutes: 0,
+      project_id: '',
+      notes: '',
+    })
+  }
+
+  const createEntry = async () => {
+    setCreateBusy(true)
+    setError(null)
+    try {
+      const payload = {
+        work_date: newEntry.work_date,
+        start_time: fromLocalDatetimeInput(newEntry.start_local),
+        end_time: fromLocalDatetimeInput(newEntry.end_local),
+        break_minutes: Number(newEntry.break_minutes || 0),
+        notes: newEntry.notes || null,
+        project_id: newEntry.project_id || null,
+      }
+
+      const res = await fetch(`/api/employees/${employeeId}/time-entries`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      })
+      const body = await safeJson(res)
+      if (!res.ok) throw new Error(body?.error || 'Erstellen fehlgeschlagen')
+
+      resetNewEntry()
+      setCreating(false)
+      await load(true)
+    } catch (e: any) {
+      setError(e?.message || 'Fehler beim Erstellen')
+    } finally {
+      setCreateBusy(false)
+    }
+  }
+
+  /* ---------------- CSV-Export ---------------- */
   const exportCsv = () => {
     const baseRows = filteredRows.length ? filteredRows : rows
     if (!baseRows.length) {
       alert('Keine Einträge im gewählten Zeitraum – nichts zu exportieren.')
       return
     }
+
+    const norm = normalizeRange(from, to)
 
     const esc = (v: unknown) => {
       if (v === null || v === undefined) return '""'
@@ -359,7 +471,7 @@ export default function TimeEntriesModal({
       .toLowerCase()
 
     a.href = url
-    a.download = `zeiteintraege_${safeName}_${from}_bis_${to}.csv`
+    a.download = `zeiteintraege_${safeName}_${norm.from}_bis_${norm.to}.csv`
 
     document.body.appendChild(a)
     a.click()
@@ -380,6 +492,8 @@ export default function TimeEntriesModal({
         return 'Benutzerdefiniert'
     }
   }
+
+  const normDisplay = normalizeRange(from, to)
 
   /* ---------------- UI ---------------- */
   return (
@@ -427,8 +541,8 @@ export default function TimeEntriesModal({
                       <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
                         <span>
                           Zeitraum:{' '}
-                          <span className="font-mono">{from}</span> –{' '}
-                          <span className="font-mono">{to}</span>
+                          <span className="font-mono">{normDisplay.from}</span> –{' '}
+                          <span className="font-mono">{normDisplay.to}</span>
                         </span>
                         <span className="hidden sm:inline">
                           • Gesamt:{' '}
@@ -447,8 +561,21 @@ export default function TimeEntriesModal({
                       </div>
                     </div>
 
-                    {/* Export + Aktualisieren + Close */}
-                    <div className="flex items-center justify-between gap-3 lg:justify-end">
+                    {/* Buttons */}
+                    <div className="flex flex-wrap items-center justify-between gap-3 lg:justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setCreating((v) => !v)}
+                        className="inline-flex items-center gap-2 rounded-full border border-emerald-300 bg-emerald-50 px-4 py-2.5 text-xs font-medium text-emerald-800 shadow-sm outline-none hover:bg-emerald-100"
+                      >
+                        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-600 text-xs font-bold text-white">
+                          +
+                        </span>
+                        {creating
+                          ? 'Neuen Eintrag abbrechen'
+                          : 'Zeiteintrag hinzufügen'}
+                      </button>
+
                       <button
                         onClick={exportCsv}
                         disabled={rows.length === 0}
@@ -468,7 +595,7 @@ export default function TimeEntriesModal({
                       </button>
 
                       <button
-                        onClick={load}
+                        onClick={() => load(true)}
                         disabled={loading}
                         className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm outline-none hover:bg-slate-800 disabled:opacity-50"
                       >
@@ -489,7 +616,6 @@ export default function TimeEntriesModal({
 
                   {/* Filterzeile */}
                   <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    {/* Datum + Preset + Status */}
                     <div className="flex flex-1 flex-wrap items-end gap-3">
                       <div className="w-full max-w-[150px]">
                         <label className="mb-1 block text-[11px] text-slate-600">
@@ -581,7 +707,7 @@ export default function TimeEntriesModal({
                       </span>
                     </div>
 
-                    {/* Close-Button auf Mobile */}
+                    {/* Close-Button Mobile */}
                     <button
                       onClick={onClose}
                       className="mt-1 inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none hover:bg-slate-50 lg:hidden"
@@ -600,6 +726,164 @@ export default function TimeEntriesModal({
 
                 {/* Content */}
                 <div className="max-h-[70vh] overflow-y-auto px-5 pb-5 pt-3">
+                  {/* Neuer manueller Eintrag */}
+                  {creating && (
+                    <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-slate-800">
+                      <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <div className="text-xs font-semibold uppercase tracking-wide text-emerald-700">
+                          Manuellen Zeiteintrag hinzufügen
+                        </div>
+                        {projectsLoading && (
+                          <div className="text-[11px] text-emerald-700">
+                            Projekte werden geladen …
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid gap-3 md:grid-cols-12 md:items-end">
+                        {/* Datum */}
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block text-[11px] text-slate-600">
+                            Datum
+                          </label>
+                          <input
+                            type="date"
+                            value={newEntry.work_date}
+                            onChange={(e) =>
+                              setNewEntry((s) => ({
+                                ...s,
+                                work_date: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-emerald-200 bg-white px-2 py-1.5 text-sm shadow-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                          />
+                        </div>
+
+                        {/* Start */}
+                        <div className="md:col-span-3">
+                          <label className="mb-1 block text-[11px] text-slate-600">
+                            Start (Datum & Uhrzeit)
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={newEntry.start_local}
+                            onChange={(e) =>
+                              setNewEntry((s) => ({
+                                ...s,
+                                start_local: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-emerald-200 bg-white px-2 py-1.5 text-sm shadow-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                          />
+                        </div>
+
+                        {/* Ende */}
+                        <div className="md:col-span-3">
+                          <label className="mb-1 block text-[11px] text-slate-600">
+                            Ende (Datum & Uhrzeit)
+                          </label>
+                          <input
+                            type="datetime-local"
+                            value={newEntry.end_local}
+                            onChange={(e) =>
+                              setNewEntry((s) => ({
+                                ...s,
+                                end_local: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-emerald-200 bg-white px-2 py-1.5 text-sm shadow-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                          />
+                        </div>
+
+                        {/* Pause */}
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block text-[11px] text-slate-600">
+                            Pause (Minuten)
+                          </label>
+                          <input
+                            type="number"
+                            min={0}
+                            step={5}
+                            value={Number(newEntry.break_minutes || 0)}
+                            onChange={(e) =>
+                              setNewEntry((s) => ({
+                                ...s,
+                                break_minutes: Number(e.target.value || 0),
+                              }))
+                            }
+                            className="w-full rounded-xl border border-emerald-200 bg-white px-2 py-1.5 text-right text-sm shadow-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                          />
+                        </div>
+
+                        {/* Projekt */}
+                        <div className="md:col-span-2">
+                          <label className="mb-1 block text-[11px] text-slate-600">
+                            Projekt
+                          </label>
+                          <select
+                            value={newEntry.project_id}
+                            onChange={(e) =>
+                              setNewEntry((s) => ({
+                                ...s,
+                                project_id: e.target.value,
+                              }))
+                            }
+                            className="w-full rounded-xl border border-emerald-200 bg-white px-2 py-1.5 text-sm shadow-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                          >
+                            <option value="">Kein Projekt</option>
+                            {projects.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.title}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Notiz */}
+                        <div className="md:col-span-12">
+                          <label className="mb-1 block text-[11px] text-slate-600">
+                            Notiz
+                          </label>
+                          <textarea
+                            value={newEntry.notes}
+                            onChange={(e) =>
+                              setNewEntry((s) => ({
+                                ...s,
+                                notes: e.target.value,
+                              }))
+                            }
+                            rows={2}
+                            className="w-full min-h-[40px] max-h-28 resize-none overflow-y-auto rounded-xl border border-emerald-200 bg-white px-2 py-1.5 text-sm shadow-sm outline-none focus:border-emerald-300 focus:ring-2 focus:ring-emerald-200"
+                            placeholder="Optionale Notiz zum Einsatz …"
+                          />
+                        </div>
+
+                        {/* Buttons */}
+                        <div className="md:col-span-12 flex flex-wrap items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              resetNewEntry()
+                              setCreating(false)
+                            }}
+                            disabled={createBusy}
+                            className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-700 shadow-sm outline-none hover:bg-slate-50 disabled:opacity-50"
+                          >
+                            Abbrechen
+                          </button>
+                          <button
+                            type="button"
+                            onClick={createEntry}
+                            disabled={createBusy}
+                            className="rounded-full bg-emerald-600 px-4 py-1.5 text-xs font-medium text-white shadow-sm outline-none hover:bg-emerald-700 disabled:opacity-50"
+                          >
+                            {createBusy ? 'Speichert …' : 'Zeiteintrag speichern'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Mobile: Karten */}
                   <div className="space-y-3 md:hidden">
                     {filteredRows.length === 0 && !loading && (
@@ -725,9 +1009,7 @@ export default function TimeEntriesModal({
                                 <input
                                   type="text"
                                   value={m.project?.title ?? ''}
-                                  placeholder={
-                                    m.project_id ? '(Projekt zugeordnet)' : ''
-                                  }
+                                  placeholder={m.project_id ? '(Projekt zugeordnet)' : ''}
                                   disabled
                                   className="w-full rounded-xl border border-dashed border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-500"
                                   title={m.project_id || undefined}
@@ -735,7 +1017,6 @@ export default function TimeEntriesModal({
                               </div>
                             </div>
 
-                            {/* MOBILE Notiz */}
                             <div>
                               <label className="mb-1 block text-[11px] text-slate-600">
                                 Notiz
@@ -783,7 +1064,7 @@ export default function TimeEntriesModal({
                     })}
                   </div>
 
-                  {/* Desktop/Tablet: Liste mit separater Notiz-Zeile */}
+                  {/* Desktop/Tablet-Tabelle */}
                   <div className="hidden md:block">
                     {filteredRows.length === 0 && !loading && (
                       <div className="rounded-2xl border border-slate-200 bg-white/95 p-6 text-sm text-slate-600 shadow-sm">
@@ -834,7 +1115,6 @@ export default function TimeEntriesModal({
                                 key={r.id}
                                 className="px-3 py-2.5 text-[13px] text-slate-800 transition hover:bg-slate-50/70"
                               >
-                                {/* obere Zeile: Zeiten / Projekt / Dauer / Aktionen */}
                                 <div
                                   className="grid grid-cols-12 items-center gap-2"
                                   style={{
@@ -940,9 +1220,7 @@ export default function TimeEntriesModal({
                                     >
                                       <span className="inline-flex items-center gap-1">
                                         <PencilSquareIcon className="h-4 w-4" />
-                                        {savingId === r.id
-                                          ? '…'
-                                          : 'Speichern'}
+                                        {savingId === r.id ? '…' : 'Speichern'}
                                       </span>
                                     </button>
                                     <button
@@ -953,15 +1231,13 @@ export default function TimeEntriesModal({
                                     >
                                       <span className="inline-flex items-center gap-1">
                                         <TrashIcon className="h-4 w-4" />
-                                        {deletingId === r.id
-                                          ? '…'
-                                          : 'Löschen'}
+                                        {deletingId === r.id ? '…' : 'Löschen'}
                                       </span>
                                     </button>
                                   </div>
                                 </div>
 
-                                {/* Notiz – eigene Zeile über die volle Breite */}
+                                {/* Notiz */}
                                 <div className="mt-2">
                                   <label className="mb-1 block text-[11px] text-slate-600">
                                     Notiz

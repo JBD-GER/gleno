@@ -39,7 +39,7 @@ function addInterval(
   const dt = new Date(Date.UTC(y, m - 1, d))
   if (unit === 'day') dt.setUTCDate(dt.getUTCDate() + value)
   if (unit === 'week') dt.setUTCDate(dt.getUTCDate() + value * 7)
-  if (unit === 'month') dt.setUTCMonth(dt.getUTCMonth() + value)
+  if (unit === 'month') dt.setUTCMonth(dt.getMonth() + value)
   if (unit === 'year') dt.setUTCFullYear(dt.getFullYear() + value)
   const y2 = dt.getUTCFullYear()
   const m2 = String(dt.getUTCMonth() + 1).padStart(2, '0')
@@ -215,6 +215,15 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
+    const automationSecret = process.env.INVOICE_AUTOMATION_SECRET
+    if (!automationSecret) {
+      console.error('[Automation] INVOICE_AUTOMATION_SECRET fehlt')
+      return NextResponse.json(
+        { message: 'Serverfehler: INVOICE_AUTOMATION_SECRET fehlt' },
+        { status: 500 }
+      )
+    }
+
     const today = todayYYYYMMDD()
 
     const { data: automations, error } = await supabaseAdmin
@@ -227,14 +236,12 @@ export async function GET(req: NextRequest) {
 
     if (error) throw error
     if (!automations || automations.length === 0) {
-      return NextResponse.json({ message: 'nothing to do' })
+      return NextResponse.json({ message: 'nothing to do', ok: true, successCount: 0, errorCount: 0 })
     }
 
     const baseUrl =
       process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
       'http://localhost:3000'
-
-    const cookieHeader = req.headers.get('cookie') || ''
 
     let successCount = 0
     let errorCount = 0
@@ -277,12 +284,12 @@ export async function GET(req: NextRequest) {
         const runDate = (a.next_run_date as string) || today
         const idempotencyKey = `${a.id}_${runDate}`
 
-        // 4) Neue Rechnung generieren
+        // 4) Neue Rechnung generieren – jetzt mit Automation-Secret & systemUserId
         const res = await fetch(`${baseUrl}/api/rechnung/generate-invoice`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            ...(cookieHeader ? { Cookie: cookieHeader } : {}),
+            Authorization: `Bearer ${automationSecret}`,
           },
           body: JSON.stringify({
             customer,
@@ -297,6 +304,8 @@ export async function GET(req: NextRequest) {
               idempotencyKey,
             },
             positions: invoice.positions ?? [],
+            // wichtig für die Ausnahme in generate-invoice:
+            systemUserId: invoice.user_id,
           }),
         })
 

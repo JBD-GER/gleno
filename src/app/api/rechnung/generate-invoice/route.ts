@@ -162,18 +162,49 @@ const supabaseAdmin = createClient(
 /* --------------- route --------------- */
 export async function POST(req: NextRequest) {
   try {
-    // 1) Auth
-    const supabase = await supabaseServer()
-    const {
-      data: { user },
-      error: authErr,
-    } = await supabase.auth.getUser()
-    if (authErr || !user) throw new Error('Nicht eingeloggt')
+    // --- 1) Cron-Erkennung über Secret-Token ---
+    const url = new URL(req.url)
+    const authHeader = req.headers.get('authorization') || ''
+    const headerToken = authHeader.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : ''
+    const queryToken = url.searchParams.get('token') || ''
+    const automationSecret = process.env.INVOICE_AUTOMATION_SECRET || ''
+    const isAutomationCall =
+      !!automationSecret &&
+      (headerToken === automationSecret || queryToken === automationSecret)
 
-    // 2) Payload
-    const { customer, meta, positions: rawPositions } = await req.json()
+    // --- 2) Payload EINMAL lesen ---
+    const {
+      customer,
+      meta,
+      positions: rawPositions,
+      systemUserId,
+    } = await req.json()
     const positions = (rawPositions ?? []) as Position[]
 
+    // --- 3) User ermitteln (normaler Login ODER Cron-Ausnahme) ---
+    let userId: string
+
+    if (isAutomationCall) {
+      // Sonderfall: Cronjob / Automation darf ohne Browser-Login rein,
+      // muss aber explizit eine userId mitgeben.
+      if (!systemUserId || typeof systemUserId !== 'string') {
+        throw new Error('systemUserId fehlt für Automation-Aufruf')
+      }
+      userId = systemUserId
+    } else {
+      // Normaler Aufruf: nur eingeloggte User
+      const supabase = await supabaseServer()
+      const {
+        data: { user },
+        error: authErr,
+      } = await supabase.auth.getUser()
+      if (authErr || !user) throw new Error('Nicht eingeloggt')
+      userId = user.id
+    }
+
+    // --- 4) Meta aus Payload ---
     const {
       date,
       title,
@@ -207,13 +238,13 @@ export async function POST(req: NextRequest) {
     const isPreview = !commit
     const isUpdate = !!(existingInvoiceNumber && existingInvoiceNumber.trim())
 
-    // 3) Rechnungsdatum (bei Bearbeitung unverändert)
+    // --- 5) Rechnungsdatum (bei Bearbeitung unverändert) ---
     let persistedDateDb: string | null = null
     if (existingInvoiceNumber) {
       const { data: existing } = await supabaseAdmin
         .from('invoices')
         .select('date')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('invoice_number', existingInvoiceNumber)
         .maybeSingle()
       if (existing?.date) persistedDateDb = existing.date as string
@@ -222,13 +253,13 @@ export async function POST(req: NextRequest) {
     const baseDateDb = persistedDateDb ?? metaDateDb ?? todayYYYYMMDD()
     const dueDb = addDaysYYYYMMDD(baseDateDb, 14)
 
-    // 4) Billing/Kontakt & Profil
+    // --- 6) Billing/Kontakt & Profil ---
     const { data: bsData, error: bsErr } = await supabaseAdmin
       .from('billing_settings')
       .select(
         'account_holder, iban, bic, billing_phone, billing_email, invoice_prefix, invoice_start, invoice_suffix'
       )
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .single()
     if (bsErr || !bsData) throw new Error('Billing‐Settings nicht gefunden')
 
@@ -237,15 +268,12 @@ export async function POST(req: NextRequest) {
       .select(
         'first_name,last_name,company_name,street,house_number,postal_code,city,logo_path,website'
       )
-      .eq('id', user.id)
+      .eq('id', userId)
       .single()
     if (profErr || !prof) throw new Error('Profil-Daten nicht gefunden')
     const profile = prof as Profile
 
-    // 5) Rechnungsnummer – immer VOR PDF-Erstellung bestimmen
-    // - Edit: vorhandene Nummer verwenden
-    // - Neue Rechnung + commit: echte Nummer via RPC + idempotencyKey
-    // - Preview neuer Rechnung: leer lassen (keine "Entwurf"-Nummer im PDF)
+    // --- 7) Rechnungsnummer – immer VOR PDF-Erstellung bestimmen ---
     let invoiceNumber = existingInvoiceNumber?.trim() || ''
 
     if (!isPreview && !isUpdate) {
@@ -257,7 +285,7 @@ export async function POST(req: NextRequest) {
       const existingByKey = await supabaseAdmin
         .from('invoices')
         .select('invoice_number')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .eq('idempotency_key', idempotencyKey)
         .maybeSingle()
 
@@ -266,7 +294,7 @@ export async function POST(req: NextRequest) {
       } else {
         const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc(
           'next_invoice_number',
-          { p_user_id: user.id }
+          { p_user_id: userId }
         )
         if (rpcErr) throw rpcErr
         const newNo = Array.isArray(rpcRes)
@@ -277,7 +305,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 6) Template laden – via Storage.download
+    // --- 8) Template laden – via Storage.download ---
     const tplBlobResp = await supabaseAdmin.storage
       .from('rechnungvorlagen')
       .download(billingSettings.template)
@@ -287,7 +315,7 @@ export async function POST(req: NextRequest) {
     const tplBytes = await tplBlobResp.data.arrayBuffer()
     const templateDoc = await PDFDocument.load(tplBytes)
 
-    // 7) PDF erstellen
+    // --- 9) PDF erstellen ---
     const pdfDoc = await PDFDocument.create()
     const [tplPageRef] = await pdfDoc.copyPages(templateDoc, [0])
     let page = pdfDoc.addPage(tplPageRef)
@@ -295,7 +323,7 @@ export async function POST(req: NextRequest) {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
     const fontBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
 
-    // 8) Logo-Zone
+    // --- 10) Logo-Zone ---
     const M = 32
     const reservedLogoH = 120
     const reservedLogoW = Math.min(width - 2 * (M + 8), 420)
@@ -340,7 +368,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 9) Summen
+    // --- 11) Summen ---
     const netSubtotal = positions.reduce<number>(
       (s, p) =>
         s +
@@ -384,7 +412,7 @@ export async function POST(req: NextRequest) {
       grossTotal = netSubtotal + taxAmount
     }
 
-    // 10) Layout-Konstanten
+    // --- 12) Layout-Konstanten ---
     const grayLine = rgb(0.8, 0.8, 0.8)
     const footerH = height * 0.1
     const minSpaceToFooter = 5
@@ -398,7 +426,7 @@ export async function POST(req: NextRequest) {
     const priceX = width - M - 125
     const totalX = width - M - 10
 
-    // 11) Kopf & Kunde
+    // --- 13) Kopf & Kunde ---
     const baseY = logoBoxBottom - 20
     const headerCompanyOrName = profile.company_name?.trim()
       ? profile.company_name
@@ -409,7 +437,6 @@ export async function POST(req: NextRequest) {
       { x: M, y: baseY, size: 9, font }
     )
 
-    // Kunde links – Firmenname bevorzugen, strukturierte Adresse mit Fallback
     const cFirst = ((customer as any).first_name ?? '').toString().trim()
     const cLast = ((customer as any).last_name ?? '').toString().trim()
     const cCompany = ((customer as any).company ?? '').toString().trim()
@@ -541,7 +568,7 @@ export async function POST(req: NextRequest) {
       y0 -= 18
     }
 
-    // 12) Tabelle + Positionen
+    // --- 14) Tabelle + Positionen ---
     let tableY0 = y0 - headerOffsetFirst
     if (tableY0 < footerH + minSpaceToFooter + 40) {
       const [p] = await pdfDoc.copyPages(templateDoc, [0])
@@ -683,7 +710,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 13) Summenblock
+    // --- 15) Summenblock ---
     const linesCount =
       discount.enabled && discount.value > 0 ? 5 : 3
     const summaryBlockH = 20 + linesCount * 16 + 12
@@ -842,7 +869,7 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // 14) Fußzeile
+    // --- 16) Fußzeilen auf allen Seiten ---
     const pagesAll = pdfDoc.getPages()
     for (const pg of pagesAll) {
       pg.drawLine({
@@ -902,10 +929,10 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // 15) Bytes erzeugen
+    // --- 17) Bytes erzeugen ---
     const pdfBytes = await pdfDoc.save()
 
-    // 16) Persistenz (nur COMMIT)
+    // --- 18) Persistenz (nur COMMIT) ---
     if (commit) {
       const isUpdateCommit = isUpdate
 
@@ -922,7 +949,7 @@ export async function POST(req: NextRequest) {
         if (upload.error) throw new Error('Upload fehlgeschlagen')
 
         const payloadUpdate: Record<string, any> = {
-          user_id: user.id,
+          user_id: userId,
           customer_id: (customer as any).id,
           invoice_number: invoiceNumber,
           date: baseDateDb,
@@ -970,7 +997,7 @@ export async function POST(req: NextRequest) {
               status: 'Erstellt',
               status_changed_at: new Date().toISOString(),
             })
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('invoice_number', invoiceNumber)
             .is('status', null)
         } catch {}
@@ -990,7 +1017,7 @@ export async function POST(req: NextRequest) {
         if (upload.error) throw new Error('Upload fehlgeschlagen')
 
         const payloadCreate: Record<string, any> = {
-          user_id: user.id,
+          user_id: userId,
           customer_id: (customer as any).id,
           invoice_number: invoiceNumber,
           date: baseDateDb,
@@ -1039,14 +1066,14 @@ export async function POST(req: NextRequest) {
               status: 'Erstellt',
               status_changed_at: new Date().toISOString(),
             })
-            .eq('user_id', user.id)
+            .eq('user_id', userId)
             .eq('invoice_number', invoiceNumber)
             .is('status', null)
         } catch {}
       }
     }
 
-    // 17) Response (PDF direkt)
+    // --- 19) Response (PDF direkt) ---
     const pdfAb = new ArrayBuffer(pdfBytes.byteLength)
     new Uint8Array(pdfAb).set(pdfBytes)
 

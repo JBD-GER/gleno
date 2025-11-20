@@ -1,4 +1,4 @@
-// app/api/time-entries/[entryId]/route.ts
+// src/app/api/time-entries/[entryId]/route.ts
 import { NextResponse, type NextRequest } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
@@ -9,7 +9,11 @@ export async function PATCH(
   try {
     const { entryId } = await ctx.params
     const supa = await supabaseServer()
-    const { data: { user }, error: authErr } = await supa.auth.getUser()
+    const {
+      data: { user },
+      error: authErr,
+    } = await supa.auth.getUser()
+
     if (authErr || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -27,7 +31,7 @@ export async function PATCH(
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    // 2) Eigentümerschaft über employee prüfen (robust, auch wenn entry.user_id null/alt ist)
+    // 2) Eigentümerschaft über employee prüfen
     const { data: emp } = await supa
       .from('employees')
       .select('id, user_id')
@@ -40,7 +44,7 @@ export async function PATCH(
 
     // 3) Patch bauen (+ Backfill user_id)
     const patch: any = {
-      user_id: user.id, // Backfill / vereinheitlichen
+      user_id: user.id,
       work_date: body.work_date,
       start_time: body.start_time ?? null,
       end_time: body.end_time ?? null,
@@ -58,12 +62,18 @@ export async function PATCH(
       .single()
 
     if (updErr) {
-      return NextResponse.json({ error: updErr.message }, { status: 400 })
+      return NextResponse.json(
+        { error: updErr.message },
+        { status: 400 }
+      )
     }
 
     return NextResponse.json(updated)
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: e?.message || 'Server error' },
+      { status: 500 }
+    )
   }
 }
 
@@ -74,7 +84,11 @@ export async function DELETE(
   try {
     const { entryId } = await ctx.params
     const supa = await supabaseServer()
-    const { data: { user }, error: authErr } = await supa.auth.getUser()
+    const {
+      data: { user },
+      error: authErr,
+    } = await supa.auth.getUser()
+
     if (authErr || !user) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
@@ -106,11 +120,17 @@ export async function DELETE(
       .eq('id', entryId)
 
     if (delErr) {
-      return NextResponse.json({ error: delErr.message }, { status: 400 })
+      return NextResponse.json(
+        { error: delErr.message },
+        { status: 400 }
+      )
     }
 
     return NextResponse.json({ ok: true })
   } catch (e: any) {
-    return NextResponse.json({ error: e?.message || 'Server error' }, { status: 500 })
+    return NextResponse.json(
+      { error: e?.message || 'Server error' },
+      { status: 500 }
+    )
   }
 }

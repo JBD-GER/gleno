@@ -2,12 +2,12 @@ import { redirect } from 'next/navigation'
 import { supabaseServer } from '@/lib/supabase-server'
 import { ReferralProfileBox } from './ReferralProfilBox'
 
-/** E-Mail maskieren: erster Buchstabe + **** */
+/** E-Mail maskieren: erster Buchstabe + ****@****.** */
 function maskEmail(email?: string | null) {
   if (!email) return '—'
   const [local] = email.split('@')
-  if (!local.length) return '—'
-  return `${local[0]}****`
+  if (!local || local.length === 0) return '—'
+  return `${local[0]}****@****.**`
 }
 
 /** Phase anhand subscription_status ableiten */
@@ -16,32 +16,74 @@ function getPhaseLabel(subscriptionStatus?: string | null): string {
   if (subscriptionStatus === 'trialing' || subscriptionStatus === 'trial_expired') {
     return 'Testphase'
   }
+  // gekündigte Abos
+  if (['canceled', 'cancelled', 'cancelling'].includes(subscriptionStatus)) {
+    return 'Gekündigt'
+  }
   // alles andere behandeln wir als „Abo aktiv“
   return 'Abo aktiv'
 }
 
-/** Auszahlungs-/Referral-Status berechnen (nur Anzeige-Logik, keine DB-Änderung) */
+/**
+ * Auszahlungs-/Referral-Status berechnen
+ * - nutzt bevorzugt DB-Felder (qualified_at, payout_at)
+ * - berechnet "Auszahlung frühestens ab" = Abo-Start + 3 Monate + 1 Tag
+ * - wenn Abo gekündigt → Status "gekündigt" (kein Anspruch mehr)
+ */
 function computeReferralDisplayStatus(opts: {
   dbStatus: string
+  qualifiedAt?: string | null
+  payoutAt?: string | null
   subscriptionStatus?: string | null
   trialEndsAt?: string | null
   createdAt?: string | null
 }) {
-  const { dbStatus, subscriptionStatus, trialEndsAt, createdAt } = opts
+  const {
+    dbStatus,
+    qualifiedAt,
+    payoutAt,
+    subscriptionStatus,
+    trialEndsAt,
+    createdAt,
+  } = opts
   const now = new Date()
 
-  // Phase
+  const isCancelled =
+    !!subscriptionStatus &&
+    ['canceled', 'cancelled', 'cancelling'].includes(subscriptionStatus)
+
+  // Phase (Kein Abo / Testphase / Abo aktiv / Gekündigt)
   const phaseLabel = getPhaseLabel(subscriptionStatus)
 
-  // Abo-Start-Datum (Heuristik):
-  // - Wenn Abo aktiv → nehmen wir trial_ends_at
-  // - sonst kein Abo-Start
+  // Abo-Start:
+  // 1. Wenn in der DB hinterlegt (qualified_at) → immer bevorzugen
+  // 2. Sonst Heuristik: bei "Abo aktiv" → trial_ends_at oder created_at
   let aboStart: Date | null = null
-  if (subscriptionStatus && subscriptionStatus !== 'trialing' && subscriptionStatus !== 'trial_expired') {
-    if (trialEndsAt) {
-      aboStart = new Date(trialEndsAt)
-    } else if (createdAt) {
-      aboStart = new Date(createdAt)
+
+  if (qualifiedAt) {
+    const d = new Date(qualifiedAt)
+    if (!Number.isNaN(d.getTime())) {
+      aboStart = d
+    }
+  } else {
+    const isAboAktiv =
+      subscriptionStatus &&
+      !['trialing', 'trial_expired', 'none', 'canceled', 'cancelled', 'cancelling'].includes(
+        subscriptionStatus
+      )
+
+    if (isAboAktiv) {
+      if (trialEndsAt) {
+        const d = new Date(trialEndsAt)
+        if (!Number.isNaN(d.getTime())) {
+          aboStart = d
+        }
+      } else if (createdAt) {
+        const d = new Date(createdAt)
+        if (!Number.isNaN(d.getTime())) {
+          aboStart = d
+        }
+      }
     }
   }
 
@@ -55,24 +97,39 @@ function computeReferralDisplayStatus(opts: {
 
   // Display-Status:
   // - aus DB: 'offen' | 'qualifiziert' | 'ausgezahlt'
-  // - zusätzlich abgeleitet: 'auszahlung_faellig' (wenn 3 Monate + 1 Tag rum)
+  // - zusätzlich abgeleitet: 'auszahlung_faellig' | 'gekündigt'
   let displayStatus = dbStatus as
     | 'offen'
     | 'qualifiziert'
     | 'ausgezahlt'
     | 'auszahlung_faellig'
+    | 'gekündigt'
 
-  // Wenn Abo aktiv und DB-Status noch „offen“ → für Anzeige auf „qualifiziert“ heben
   const isAboAktiv =
     subscriptionStatus &&
-    !['trialing', 'trial_expired', 'none'].includes(subscriptionStatus)
+    ![
+      'trialing',
+      'trial_expired',
+      'none',
+      'canceled',
+      'cancelled',
+      'cancelling',
+    ].includes(subscriptionStatus)
 
+  // Wenn Abo aktiv und DB-Status noch „offen“ → für Anzeige auf „qualifiziert“ heben
   if (dbStatus === 'offen' && isAboAktiv) {
     displayStatus = 'qualifiziert'
   }
 
-  // Wenn nicht bereits „ausgezahlt“ und Frist abgelaufen → „Auszahlung fällig“
-  if (dbStatus !== 'ausgezahlt' && payoutEligibleAt && now >= payoutEligibleAt) {
+  // Wenn Abo gekündigt → immer "gekündigt" anzeigen, keine Auszahlung mehr
+  if (isCancelled) {
+    displayStatus = 'gekündigt'
+    payoutEligibleAt = null
+  } else if (payoutAt) {
+    // Wenn ein Auszahlungstermin in der DB steht → Status immer "ausgezahlt"
+    displayStatus = 'ausgezahlt'
+  } else if (dbStatus !== 'ausgezahlt' && payoutEligibleAt && now >= payoutEligibleAt) {
+    // Wenn nicht bereits „ausgezahlt“ und Frist abgelaufen → „Auszahlung fällig“
     displayStatus = 'auszahlung_faellig'
   }
 
@@ -86,6 +143,8 @@ function computeReferralDisplayStatus(opts: {
         return 'Auszahlung fällig'
       case 'ausgezahlt':
         return 'Ausgezahlt'
+      case 'gekündigt':
+        return 'Gekündigt (kein Anspruch mehr)'
       default:
         return 'Offen'
     }
@@ -170,6 +229,7 @@ export default async function EmpfehlungPage() {
       qualified_at,
       payout_at,
       referred:referred_user_id (
+        id,
         email,
         subscription_status,
         trial_ends_at,
@@ -378,13 +438,13 @@ export default async function EmpfehlungPage() {
             Was kommt als Nächstes?
           </h3>
           <p className="text-xs text-slate-700 sm:text-sm">
-            Unten sehen Sie Ihre geworbenen Unternehmen inklusive Phase (Testphase/Abo)
-            und dem aktuellen Auszahlungsstatus.
+            Unten sehen Sie Ihre geworbenen Unternehmen inklusive Phase
+            (Testphase/Abo/Gekündigt) und dem aktuellen Auszahlungsstatus.
           </p>
         </div>
 
-        {/* Tabelle: Geworbene Unternehmen */}
-        <div className="mt-4 rounded-xl border border-slate-200 bg-slate-50/60">
+        {/* Desktop-Tabelle */}
+        <div className="mt-4 hidden rounded-xl border border-slate-200 bg-slate-50/60 sm:block">
           {safeReferrals.length === 0 ? (
             <div className="px-4 py-6 text-center text-xs text-slate-500 sm:text-sm">
               Es wurde bisher noch keine Einladung angenommen. Sobald ein Unternehmen sich über
@@ -395,7 +455,7 @@ export default async function EmpfehlungPage() {
               <table className="min-w-full text-left text-xs text-slate-700 sm:text-sm">
                 <thead className="bg-slate-100/80 text-[11px] uppercase tracking-wide text-slate-500">
                   <tr>
-                    <th className="px-4 py-2">Geworbenes Unternehmen</th>
+                    <th className="px-4 py-2">Geworbenes Unternehmen (E-Mail)</th>
                     <th className="px-4 py-2">Phase</th>
                     <th className="px-4 py-2">Abo seit</th>
                     <th className="px-4 py-2">Auszahlungsstatus</th>
@@ -403,9 +463,10 @@ export default async function EmpfehlungPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {safeReferrals.map((row) => {
-                    const referred = (row as any).referred as
+                  {safeReferrals.map((row: any) => {
+                    const referred = row.referred as
                       | {
+                          id?: string
                           email?: string | null
                           subscription_status?: string | null
                           trial_ends_at?: string | null
@@ -421,6 +482,8 @@ export default async function EmpfehlungPage() {
                       payoutEligibleDisplay,
                     } = computeReferralDisplayStatus({
                       dbStatus: row.status,
+                      qualifiedAt: row.qualified_at,
+                      payoutAt: row.payout_at,
                       subscriptionStatus: referred?.subscription_status,
                       trialEndsAt: referred?.trial_ends_at,
                       createdAt: referred?.created_at,
@@ -457,9 +520,82 @@ export default async function EmpfehlungPage() {
           )}
         </div>
 
+        {/* Mobile-Kartenansicht */}
+        <div className="mt-4 space-y-3 sm:hidden">
+          {safeReferrals.length === 0 ? (
+            <div className="rounded-xl border border-slate-200 bg-slate-50 px-3 py-4 text-center text-xs text-slate-500">
+              Es wurde bisher noch keine Einladung angenommen.
+            </div>
+          ) : (
+            safeReferrals.map((row: any) => {
+              const referred = row.referred as
+                | {
+                    id?: string
+                    email?: string | null
+                    subscription_status?: string | null
+                    trial_ends_at?: string | null
+                    created_at?: string | null
+                  }
+                | null
+                | undefined
+
+              const {
+                phaseLabel,
+                displayStatusLabel,
+                aboStartDisplay,
+                payoutEligibleDisplay,
+              } = computeReferralDisplayStatus({
+                dbStatus: row.status,
+                qualifiedAt: row.qualified_at,
+                payoutAt: row.payout_at,
+                subscriptionStatus: referred?.subscription_status,
+                trialEndsAt: referred?.trial_ends_at,
+                createdAt: referred?.created_at,
+              })
+
+              const masked = maskEmail(referred?.email)
+
+              return (
+                <div
+                  key={row.id}
+                  className="rounded-xl border border-slate-200 bg-white px-3 py-3 text-xs shadow-sm"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="font-semibold text-slate-900">{masked}</span>
+                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] text-slate-600">
+                      {phaseLabel}
+                    </span>
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    <p className="flex justify-between">
+                      <span className="text-slate-500">Abo seit:</span>
+                      <span className="font-medium text-slate-800">
+                        {aboStartDisplay}
+                      </span>
+                    </p>
+                    <p className="flex justify-between">
+                      <span className="text-slate-500">Auszahlungsstatus:</span>
+                      <span className="font-medium text-slate-800">
+                        {displayStatusLabel}
+                      </span>
+                    </p>
+                    <p className="flex justify-between">
+                      <span className="text-slate-500">Auszahlung ab:</span>
+                      <span className="font-medium text-slate-800">
+                        {payoutEligibleDisplay}
+                      </span>
+                    </p>
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
+
         <p className="mt-3 text-[11px] text-slate-500 sm:text-xs">
           Hinweis: Die angezeigten Phasen und Auszahlungszeitpunkte werden automatisch anhand des
-          Abo-Status der geworbenen Unternehmen berechnet. Sobald die Bedingungen erfüllt sind,
+          Abo-Status der geworbenen Unternehmen berechnet. Wenn ein Abo gekündigt wurde, wird dies
+          als „Gekündigt (kein Anspruch mehr)“ angezeigt. Sobald alle Bedingungen erfüllt sind,
           markieren wir Ihre Empfehlung als auszahlungsreif und informieren Sie separat.
         </p>
       </section>

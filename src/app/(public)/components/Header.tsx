@@ -6,18 +6,25 @@ import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { Transition } from '@headlessui/react'
 import {
-  Bars3Icon, XMarkIcon, HomeIcon, ChartPieIcon, Cog6ToothIcon, LifebuoyIcon, PresentationChartBarIcon,
+  Bars3Icon,
+  XMarkIcon,
+  HomeIcon,
+  ChartPieIcon,
+  Cog6ToothIcon,
+  LifebuoyIcon,
+  PresentationChartBarIcon,
 } from '@heroicons/react/24/outline'
 import { supabaseClient } from '@/lib/supabase-client'
+import Script from 'next/script' // <-- Meta Pixel
 
 const PRIMARY = '#0a1b40'
 
 const navLinks = [
-  { href: '/',           label: 'Startseite',  icon: HomeIcon },
-  { href: '/funktionen', label: 'Funktionen',  icon: Cog6ToothIcon },
-  { href: '/preis',      label: 'Preis',       icon: ChartPieIcon },
-  { href: '/support',    label: 'Support',     icon: LifebuoyIcon },
-  { href: '/markt',      label: 'Markt',       icon: PresentationChartBarIcon },
+  { href: '/', label: 'Startseite', icon: HomeIcon },
+  { href: '/funktionen', label: 'Funktionen', icon: Cog6ToothIcon },
+  { href: '/preis', label: 'Preis', icon: ChartPieIcon },
+  { href: '/support', label: 'Support', icon: LifebuoyIcon },
+  { href: '/markt', label: 'Markt', icon: PresentationChartBarIcon },
 ]
 
 export default function Header() {
@@ -26,7 +33,7 @@ export default function Header() {
 
   // 👉 Auf diesen Routen soll der Header IMMER „public“ bleiben (kein Auth-Status laden)
   const blindAuthOn = ['/neues-passwort', '/auth/callback']
-  const onBlindRoute = blindAuthOn.some(p => (path ?? '').startsWith(p))
+  const onBlindRoute = blindAuthOn.some((p) => (path ?? '').startsWith(p))
 
   const [open, setOpen] = useState(false)
   const [userEmail, setUserEmail] = useState<string | null>(null)
@@ -38,13 +45,45 @@ export default function Header() {
       return
     }
     // Auf allen anderen Routen: echten Auth-Status laden
-    supabase.auth.getUser().then(({ data }) => setUserEmail(data.user?.email ?? null))
+    supabase.auth
+      .getUser()
+      .then(({ data }) => setUserEmail(data.user?.email ?? null))
   }, [supabase, onBlindRoute])
 
   const isDashboard = !onBlindRoute && path?.startsWith('/dashboard')
 
   return (
     <>
+      {/* Meta Pixel Code */}
+      <Script
+        id="meta-pixel"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            !function(f,b,e,v,n,t,s)
+            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
+            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
+            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
+            n.queue=[];t=b.createElement(e);t.async=!0;
+            t.src=v;s=b.getElementsByTagName(e)[0];
+            s.parentNode.insertBefore(t,s)}(window, document,'script',
+            'https://connect.facebook.net/en_US/fbevents.js');
+            fbq('init', '24847308948271777');
+            fbq('track', 'PageView');
+          `,
+        }}
+      />
+      <noscript>
+        <img
+          height="1"
+          width="1"
+          style={{ display: 'none' }}
+          src="https://www.facebook.com/tr?id=24847308948271777&ev=PageView&noscript=1"
+          alt=""
+        />
+      </noscript>
+      {/* End Meta Pixel Code */}
+
       {/* Mobile Topbar */}
       <div className="fixed inset-x-0 top-0 z-50 flex h-14 items-center justify-between border-b border-white/60 bg-white/80 px-4 backdrop-blur-xl md:hidden min-w-0 max-w-[100vw] overflow-x-hidden">
         <Link href="/" className="flex items-center gap-2 min-w-0" aria-label="Startseite">
@@ -71,10 +110,7 @@ export default function Header() {
       {/* Mobile Drawer */}
       <Transition show={open}>
         <div className="fixed inset-0 z-50">
-          <div
-            className="fixed inset-0 bg-black/20"
-            onClick={() => setOpen(false)}
-          />
+          <div className="fixed inset-0 bg-black/20" onClick={() => setOpen(false)} />
           <nav className="fixed right-0 top-0 h-full w-72 overflow-y-auto border-l border-white/60 bg-white/80 p-6 backdrop-blur-xl">
             <div className="mb-6 flex items-center justify-between">
               <span className="text-lg font-semibold text-slate-900">Menü</span>
@@ -115,7 +151,10 @@ export default function Header() {
                 <button
                   onClick={() => setOpen(false)}
                   className="group relative w-full overflow-hidden rounded-xl px-4 py-2 text-sm font-semibold text-white shadow transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20 hover:shadow-[0_12px_30px_rgba(10,27,64,.35)]"
-                  style={{ backgroundColor: PRIMARY, boxShadow: '0 6px 18px rgba(10,27,64,.25)' }}
+                  style={{
+                    backgroundColor: PRIMARY,
+                    boxShadow: '0 6px 18px rgba(10,27,64,.25)',
+                  }}
                 >
                   <span className="pointer-events-none absolute inset-y-0 -left-24 w-24 -skew-x-12 bg-white/25 opacity-0 blur-sm transition-all duration-500 group-hover:left-full group-hover:opacity-100" />
                   <span className="pointer-events-none absolute inset-0 rounded-xl ring-0 ring-white/0 transition group-hover:ring-2 group-hover:ring-white/20" />
@@ -150,7 +189,9 @@ export default function Header() {
                 key={href}
                 href={href}
                 className={`rounded-xl px-3 py-2 text-sm font-medium transition ${
-                  active ? 'text-white' : 'border border-white/60 bg-white/70 text-slate-800 hover:bg-white'
+                  active
+                    ? 'text-white'
+                    : 'border border-white/60 bg-white/70 text-slate-800 hover:bg-white'
                 }`}
                 style={active ? { backgroundColor: PRIMARY } : {}}
               >
@@ -160,11 +201,18 @@ export default function Header() {
           })}
         </nav>
 
-        <Link href={userEmail ? '/dashboard' : '/login'} aria-current={!onBlindRoute && path?.startsWith('/dashboard') ? 'page' : undefined}>
+        <Link
+          href={userEmail ? '/dashboard' : '/login'}
+          aria-current={!onBlindRoute && path?.startsWith('/dashboard') ? 'page' : undefined}
+        >
           <button
             className={`group relative overflow-hidden rounded-xl px-4 py-2 text-sm font-semibold text-white shadow transition
                         hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-900/20
-                        hover:shadow-[0_14px_34px_rgba(10,27,64,.38)] ${!onBlindRoute && path?.startsWith('/dashboard') ? 'ring-2 ring-white/30' : ''}`}
+                        hover:shadow-[0_14px_34px_rgba(10,27,64,.38)] ${
+                          !onBlindRoute && path?.startsWith('/dashboard')
+                            ? 'ring-2 ring-white/30'
+                            : ''
+                        }`}
             style={{ backgroundColor: PRIMARY, boxShadow: '0 6px 18px rgba(10,27,64,.25)' }}
           >
             <span className="pointer-events-none absolute inset-y-0 -left-24 w-24 -skew-x-12 bg-white/25 opacity-0 blur-sm transition-all duration-500 group-hover:left-full group-hover:opacity-100" />

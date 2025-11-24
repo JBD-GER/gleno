@@ -23,6 +23,9 @@ const TERMS_VERSION = '1'
 const PRIVACY_VERSION = '1'
 const REFERRAL_STORAGE_KEY = 'gleno_referral_code'
 
+// 👉 fiktiver Conversion-Wert für kostenlose Registrierung
+const TIKTOK_SIGNUP_VALUE = 10
+
 const COUNTRY_OPTIONS = [
   { label: 'Deutschland', value: 'DE' },
   { label: 'Österreich', value: 'AT' },
@@ -149,6 +152,33 @@ function RegisterPageContent() {
     acceptTerms &&
     acceptPrivacy
 
+  // 👉 TikTok Pixel Event für kostenlose Registrierung
+  function trackTikTokSignup() {
+    try {
+      if (typeof window === 'undefined') return
+      const w = window as any
+      const ttq = w.ttq
+      if (!ttq || typeof ttq.track !== 'function') return
+
+      // Event-Name so wählen, wie du ihn im TikTok-Event-Manager konfiguriert hast:
+      // z.B. 'CompletePayment' oder 'CompleteRegistration'
+      ttq.track('CompleteRegistration', {
+        value: TIKTOK_SIGNUP_VALUE, // reine Zahl, kein €
+        currency: 'EUR',
+        contents: [
+          {
+            content_type: 'signup',
+            content_id: 'gleno_free_registration',
+            quantity: 1,
+            price: TIKTOK_SIGNUP_VALUE,
+          },
+        ],
+      })
+    } catch (e) {
+      console.error('TikTok Tracking Fehler:', e)
+    }
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     setError(null)
@@ -194,6 +224,9 @@ function RegisterPageContent() {
         setLoading(false)
         return
       }
+
+      // 👉 HIER TikTok-Event feuern (Wert 10 EUR für Backend-Optimierung)
+      trackTikTokSignup()
 
       router.push('/danke')
     } catch (err: any) {

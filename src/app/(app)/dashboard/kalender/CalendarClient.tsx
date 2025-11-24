@@ -447,167 +447,181 @@ export default function CalendarClient() {
   }
 
   /* ------------------------- Header (Custom) ------------------------- */
-  const api = calendarRef.current?.getApi()
   const handleChangeViewMode = (mode: ViewMode) => {
     setViewMode(mode)
   }
 
   const header = useMemo(
-  () => (
-    <div className="flex flex-col gap-3 border-b border-white/60 bg-white/85 px-3 pb-3 pt-4 backdrop-blur sm:px-4 md:px-6">
-      {/* Zeile 1: Navigation + Titel + View-Toggle */}
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Navigation + Titel */}
-        <div className="flex min-w-0 items-center gap-2">
-          <button
-            className="rounded-lg border border-white/70 bg-white px-2.5 py-2 text-slate-800 shadow-sm hover:bg-slate-50"
-            onClick={() => api?.prev()}
-            aria-label="Vorherige Ansicht"
-          >
-            <ChevronLeftIcon className="h-5 w-5" />
-          </button>
-          <button
-            className="rounded-lg border border-white/70 bg-white px-2.5 py-2 text-slate-800 shadow-sm hover:bg-slate-50"
-            onClick={() => api?.next()}
-            aria-label="Nächste Ansicht"
-          >
-            <ChevronRightIcon className="h-5 w-5" />
-          </button>
-          <div className="ml-1 truncate text-base font-semibold text-slate-900 sm:text-lg">
-            {viewTitle}
-          </div>
-        </div>
-
-        {/* Neuer Kalender/Liste-Toggle – EIN Design für Desktop, Tablet & Handy */}
-        <div className="flex items-center gap-2">
-          <div className="inline-flex overflow-hidden rounded-full border border-white/70 bg-white shadow-sm">
+    () => (
+      <div className="flex flex-col gap-3 border-b border-white/60 bg-white/85 px-3 pb-3 pt-4 backdrop-blur sm:px-4 md:px-6">
+        {/* Zeile 1: Navigation + Titel + View-Toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          {/* Navigation + Titel */}
+          <div className="flex min-w-0 items-center gap-2">
             <button
-              type="button"
-              onClick={() => handleChangeViewMode('calendar')}
-              className={`flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm ${
-                viewMode === 'calendar'
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-700 hover:bg-slate-50'
-              }`}
+              className="rounded-lg border border-white/70 bg-white px-2.5 py-2 text-slate-800 shadow-sm hover:bg-slate-50"
+              onClick={() =>
+                calendarRef.current?.getApi()?.prev()
+              }
+              aria-label="Vorherige Ansicht"
             >
-              <CalendarDaysIcon
-                className={`h-4 w-4 ${
-                  viewMode === 'calendar' ? 'text-white' : 'text-slate-600'
+              <ChevronLeftIcon className="h-5 w-5" />
+            </button>
+            <button
+              className="rounded-lg border border-white/70 bg-white px-2.5 py-2 text-slate-800 shadow-sm hover:bg-slate-50"
+              onClick={() =>
+                calendarRef.current?.getApi()?.next()
+              }
+              aria-label="Nächste Ansicht"
+            >
+              <ChevronRightIcon className="h-5 w-5" />
+            </button>
+            <div className="ml-1 truncate text-base font-semibold text-slate-900 sm:text-lg">
+              {viewTitle}
+            </div>
+          </div>
+
+          {/* Kalender/Liste-Toggle */}
+          <div className="flex items-center gap-2">
+            <div className="inline-flex overflow-hidden rounded-full border border-white/70 bg-white shadow-sm">
+              <button
+                type="button"
+                onClick={() => handleChangeViewMode('calendar')}
+                className={`flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm ${
+                  viewMode === 'calendar'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-700 hover:bg-slate-50'
                 }`}
-              />
-              <span className="hidden sm:inline">Kalender</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => handleChangeViewMode('list')}
-              className={`flex items-center gap-1 border-l border-white/70 px-3 py-1.5 text-xs sm:text-sm ${
-                viewMode === 'list'
-                  ? 'bg-slate-900 text-white'
-                  : 'text-slate-700 hover:bg-slate-50'
-              }`}
-            >
-              <ListBulletIcon
-                className={`h-4 w-4 ${
-                  viewMode === 'list' ? 'text-white' : 'text-slate-600'
+              >
+                <CalendarDaysIcon
+                  className={`h-4 w-4 ${
+                    viewMode === 'calendar' ? 'text-white' : 'text-slate-600'
+                  }`}
+                />
+                <span className="hidden sm:inline">Kalender</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleChangeViewMode('list')}
+                className={`flex items-center gap-1 border-l border-white/70 px-3 py-1.5 text-xs sm:text-sm ${
+                  viewMode === 'list'
+                    ? 'bg-slate-900 text-white'
+                    : 'text-slate-700 hover:bg-slate-50'
                 }`}
-              />
-              <span className="hidden sm:inline">Liste</span>
-            </button>
+              >
+                <ListBulletIcon
+                  className={`h-4 w-4 ${
+                    viewMode === 'list' ? 'text-white' : 'text-slate-600'
+                  }`}
+                />
+                <span className="hidden sm:inline">Liste</span>
+              </button>
+            </div>
           </div>
         </div>
-      </div>
 
-      {/* Zeile 2: Filter, Heute, Kalender-View-Auswahl */}
-      <div className="flex flex-wrap items-center gap-2">
-        {/* Mitarbeiter-Filter */}
-        <div className="flex items-center gap-2 rounded-lg border border-white/70 bg-white px-2.5 py-1.5 shadow-sm">
-          <UserCircleIcon className="h-5 w-5 text-slate-600" />
-          <select
-            value={employeeId}
-            onChange={async (e) => {
-              const v = (e.target.value || 'all') as 'all' | string
-              setEmployeeId(v)
-              employeeIdRef.current = v
-              await loadAppointments(v)
-            }}
-            className="min-w-[180px] max-w-[60vw] bg-transparent text-sm text-slate-800 outline-none"
-          >
-            <option value="all">Alle Mitarbeiter</option>
-            {employees.map((emp) => (
-              <option key={emp.id} value={emp.id}>
-                {fullName(emp)}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Heute-Button */}
-        <button
-          onClick={() => api?.today()}
-          className="rounded-lg border border-white/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm hover:bg-slate-50"
-        >
-          Heute
-        </button>
-
-        {/* Kalender-View-Auswahl – auf Handy kompakt, auf Tablet/Desktop Buttons */}
-        <div className="flex flex-1 justify-end gap-2">
-          {/* Mobile/Tablet: Dropdown */}
-          <select
-            onChange={(e) => api?.changeView(e.target.value)}
-            className="flex sm:hidden rounded-lg border border-white/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm"
-            defaultValue={api?.view?.type ?? 'timeGridWeek'}
-          >
-            <option value="dayGridMonth">Monat</option>
-            <option value="timeGridWeek">Woche</option>
-            <option value="timeGridDay">Tag</option>
-          </select>
-
-          {/* Ab sm: Drei Buttons */}
-          <div className="hidden overflow-hidden rounded-lg border border-white/70 bg-white shadow-sm sm:inline-flex">
-            <button
-              onClick={() => api?.changeView('dayGridMonth')}
-              className="px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+        {/* Zeile 2: Filter, Heute, Kalender-View-Auswahl */}
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Mitarbeiter-Filter */}
+          <div className="flex items-center gap-2 rounded-lg border border-white/70 bg-white px-2.5 py-1.5 shadow-sm">
+            <UserCircleIcon className="h-5 w-5 text-slate-600" />
+            <select
+              value={employeeId}
+              onChange={async (e) => {
+                const v = (e.target.value || 'all') as 'all' | string
+                setEmployeeId(v)
+                employeeIdRef.current = v
+                await loadAppointments(v)
+              }}
+              className="min-w-[180px] max-w-[60vw] bg-transparent text-sm text-slate-800 outline-none"
             >
-              Monat
-            </button>
-            <button
-              onClick={() => api?.changeView('timeGridWeek')}
-              className="border-l border-white/70 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
-            >
-              Woche
-            </button>
-            <button
-              onClick={() => api?.changeView('timeGridDay')}
-              className="border-l border-white/70 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
-            >
-              Tag
-            </button>
+              <option value="all">Alle Mitarbeiter</option>
+              {employees.map((emp) => (
+                <option key={emp.id} value={emp.id}>
+                  {fullName(emp)}
+                </option>
+              ))}
+            </select>
           </div>
 
-          {/* Neuer Termin – bleibt wie gehabt */}
-          <AddAppointmentModal
-            onSuccess={() => loadAppointments(employeeIdRef.current)}
-          />
+          {/* Heute-Button */}
+          <button
+            onClick={() =>
+              calendarRef.current?.getApi()?.today()
+            }
+            className="rounded-lg border border-white/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm hover:bg-slate-50"
+          >
+            Heute
+          </button>
+
+          {/* Kalender-View-Auswahl – auf Handy kompakt, auf Tablet/Desktop Buttons */}
+          <div className="flex flex-1 justify-end gap-2">
+            {/* Mobile/Tablet: Dropdown */}
+            <select
+              onChange={(e) =>
+                calendarRef.current
+                  ?.getApi()
+                  ?.changeView(e.target.value)
+              }
+              className="flex sm:hidden rounded-lg border border-white/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm"
+              defaultValue="timeGridWeek"
+            >
+              <option value="dayGridMonth">Monat</option>
+              <option value="timeGridWeek">Woche</option>
+              <option value="timeGridDay">Tag</option>
+            </select>
+
+            {/* Ab sm: Drei Buttons */}
+            <div className="hidden overflow-hidden rounded-lg border border-white/70 bg-white shadow-sm sm:inline-flex">
+              <button
+                onClick={() =>
+                  calendarRef.current?.getApi()?.changeView('dayGridMonth')
+                }
+                className="px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+              >
+                Monat
+              </button>
+              <button
+                onClick={() =>
+                  calendarRef.current?.getApi()?.changeView('timeGridWeek')
+                }
+                className="border-l border-white/70 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+              >
+                Woche
+              </button>
+              <button
+                onClick={() =>
+                  calendarRef.current?.getApi()?.changeView('timeGridDay')
+                }
+                className="border-l border-white/70 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+              >
+                Tag
+              </button>
+            </div>
+
+            {/* Neuer Termin – bleibt wie gehabt */}
+            <AddAppointmentModal
+              onSuccess={() => loadAppointments(employeeIdRef.current)}
+            />
+          </div>
+        </div>
+
+        {/* Legende */}
+        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-amber-500" /> Bald (≤24h)
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded-full bg-slate-300" /> Vergangen
+          </span>
+          <span className="inline-flex items-center gap-1">
+            <span className="h-2 w-2 rounded bg-slate-200" /> Terminfarbe
+          </span>
         </div>
       </div>
-
-      {/* Legende */}
-      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
-        <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-amber-500" /> Bald (≤24h)
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded-full bg-slate-300" /> Vergangen
-        </span>
-        <span className="inline-flex items-center gap-1">
-          <span className="h-2 w-2 rounded bg-slate-200" /> Terminfarbe
-        </span>
-      </div>
-    </div>
-  ),
-  [viewTitle, api, employees, employeeId, loadAppointments, viewMode],
-)
-
+    ),
+    [viewTitle, employees, employeeId, loadAppointments, viewMode],
+  )
 
   /* ------------------------- Render ------------------------- */
   return (

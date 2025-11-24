@@ -1,6 +1,12 @@
 'use client'
 
-import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import React, {
+  useState,
+  useMemo,
+  useEffect,
+  useCallback,
+  useRef,
+} from 'react'
 import { useAngebot } from './AngebotContext'
 import type { Position } from './AngebotContext'
 import { normalizeDraft, replacePlaceholders, type AIDraft } from '@/lib/ai-draft'
@@ -37,7 +43,7 @@ function displayNameOf(c: any) {
   return company || `${first} ${last}`.trim()
 }
 
-// NEU: Draft -> Positions Normalisierung ins Angebots-Format
+// Draft -> Positions Normalisierung ins Angebots-Format
 function draftToPositions(d: AIDraft, customer: any): Position[] {
   return (d.positions ?? []).map((p) => {
     const desc = replacePlaceholders(String(p.description ?? ''), customer)
@@ -180,7 +186,7 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
   }
 
   // ─────────────────────────────────────────────────────────────
-  // NEU: KI-Entwurf aus sessionStorage anbieten (minimal-invasiv)
+  // KI-Entwurf aus sessionStorage anbieten
   // ─────────────────────────────────────────────────────────────
   const [aiDraftAvailable, setAiDraftAvailable] = useState(false)
   const [aiApplied, setAiApplied] = useState(false)
@@ -197,7 +203,7 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
     try {
       const raw = sessionStorage.getItem('ai_offer_draft')
       if (!raw) return
-      const parsed = normalizeDraft(JSON.parse(raw))
+      const parsed = normalizeDraft(JSON.parse(raw) as AIDraft)
 
       // Platzhalter im Titel/Intro ersetzen
       const title = parsed.title ? replacePlaceholders(parsed.title, selectedCustomer) : ''
@@ -217,25 +223,42 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
         })
       }
       setAiApplied(true)
-      // Draft optional nach Übernahme löschen, damit er nicht erneut angezeigt wird:
-      // sessionStorage.removeItem('ai_offer_draft')
+      // sessionStorage.removeItem('ai_offer_draft') // optional
     } catch {}
   }
-  // ─────────────────────────────────────────────────────────────
 
   return (
-    <div>
-      <h2 className="mb-4 text-2xl font-semibold tracking-tight text-gray-900">1. Kunde wählen</h2>
+    <div className="space-y-4">
+      <h2 className="mb-1 text-2xl font-semibold tracking-tight text-gray-900">
+        1. Kunde wählen
+      </h2>
 
-      {/* NEU: KI-Entwurf-Leiste – erscheint nur, wenn Draft vorhanden */}
+      {/* KI-Entwurf-Leiste – erscheint nur, wenn Draft vorhanden */}
       {aiDraftAvailable && (
-        <div className="mb-4 rounded-lg border border-indigo-200 bg-indigo-50/70 p-3 text-sm text-indigo-900">
+        <div className="mb-2 rounded-lg border border-indigo-200 bg-indigo-50/70 p-3 text-sm text-indigo-900">
           <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-            <div className="font-medium">KI-Entwurf gefunden</div>
+            <div>
+              <div className="font-medium">KI-Entwurf gefunden</div>
+              <p className="mt-1 text-xs sm:text-sm text-indigo-800">
+                Für dieses Angebot liegt ein gespeicherter KI-Entwurf vor. Wähle zuerst einen Kunden
+                und übernimm dann den Entwurf, um Titel, Einleitung, Positionen und Rabatt automatisch
+                zu befüllen.
+              </p>
+              {aiApplied && (
+                <p className="mt-1 text-xs text-emerald-700">
+                  KI-Entwurf übernommen – bitte Inhalte prüfen und bei Bedarf anpassen.
+                </p>
+              )}
+            </div>
             <div className="flex items-center gap-2">
               <button
-                onClick={() => { sessionStorage.removeItem('ai_offer_draft'); setAiDraftAvailable(false) }}
-                className="rounded-md border border-indigo-200 bg-white px-3 py-1 hover:bg-indigo-50"
+                onClick={() => {
+                  try {
+                    sessionStorage.removeItem('ai_offer_draft')
+                  } catch {}
+                  setAiDraftAvailable(false)
+                }}
+                className="rounded-md border border-indigo-200 bg-white px-3 py-1 text-xs sm:text-sm hover:bg-indigo-50"
                 title="Entwurf verwerfen"
               >
                 Verwerfen
@@ -243,35 +266,43 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
               <button
                 onClick={applyAIDraft}
                 disabled={!selectedCustomer}
-                className={`rounded-md px-3 py-1 text-white ${selectedCustomer ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-400'}`}
+                className={`rounded-md px-3 py-1 text-xs sm:text-sm text-white ${
+                  selectedCustomer ? 'bg-slate-900 hover:bg-slate-800' : 'bg-slate-400 cursor-not-allowed'
+                }`}
                 title={!selectedCustomer ? 'Bitte zuerst einen Kunden wählen' : 'Entwurf übernehmen'}
               >
                 KI-Entwurf anwenden
               </button>
             </div>
           </div>
-          {aiApplied && <div className="mt-2 text-xs text-indigo-700">Entwurf übernommen – prüfe Titel, Intro und Positionen.</div>}
         </div>
       )}
 
-      {/* Kundensuche (unverändert) */}
-      <div className="mb-3 relative">
+      {/* Kundensuche */}
+      <div className="relative mb-3">
         <input
           ref={inputRef}
           type="text"
           placeholder="Firma, Vorname, Nachname, E-Mail oder Kundennr. suchen…"
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setShowCustomerResults(!!e.target.value.trim()) }}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setShowCustomerResults(!!e.target.value.trim())
+          }}
           onFocus={() => setShowCustomerResults(!!query.trim())}
           onKeyDown={onKeyDown}
-          className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 pr-9 text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
+          className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 pr-9 text-sm text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
         />
         {query && (
           <button
             type="button"
             aria-label="Suche leeren"
             title="Suche leeren"
-            onClick={() => { setQuery(''); setShowCustomerResults(false); setHighlightIdx(-1) }}
+            onClick={() => {
+              setQuery('')
+              setShowCustomerResults(false)
+              setHighlightIdx(-1)
+            }}
             className="absolute inset-y-0 right-0 my-1 mr-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100"
           >
             ×
@@ -305,12 +336,13 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
                         <div className="truncate font-medium text-gray-900">{name}</div>
                         <div className="truncate text-xs text-gray-500">
                           {company ? person : null}
-                          {company && c.email ? ' • ' : ''}{c.email}
+                          {company && c.email ? ' • ' : ''}
+                          {c.email}
                           {c.customer_number ? ` • ${c.customer_number}` : ''}
                         </div>
                       </div>
                       {isActive && (
-                        <span className="ml-2 shrink-0 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+                        <span className="ml-2 inline-flex shrink-0 items-center rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
                           gewählt
                         </span>
                       )}
@@ -325,9 +357,11 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
         )}
       </div>
 
-      {/* Templates (wie gehabt) */}
-      <div className="mt-8">
-        <h3 className="mb-3 text-lg font-semibold text-gray-900">Optional: Template auswählen &amp; übernehmen</h3>
+      {/* Templates */}
+      <div className="mt-4">
+        <h3 className="mb-3 text-lg font-semibold text-gray-900">
+          Optional: Template auswählen &amp; übernehmen
+        </h3>
 
         <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <input
@@ -335,7 +369,7 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
             placeholder="Templates nach Titel oder Name suchen…"
             value={tplQuery}
             onChange={(e) => setTplQuery(e.target.value)}
-            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-gray-900 outline-none ring-indigo-200/60 focus:ring-4 sm:max-w-md"
+            className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm text-gray-900 outline-none ring-indigo-200/60 focus:ring-4 sm:max-w-md"
           />
           <div className="text-sm text-gray-500">
             {tplLoading
@@ -352,11 +386,14 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
           ) : filteredTpls.length === 0 ? (
             <div className="p-4 text-sm text-gray-500">Keine Templates gefunden.</div>
           ) : (
-            <ul className="max-h-72 overflow-auto divide-y divide-gray-100">
+            <ul className="max-h-72 divide-y divide-gray-100 overflow-auto">
               {filteredTpls.map((t) => {
                 const picked = appliedTplId === t.id
                 return (
-                  <li key={t.id} className="flex items-start gap-3 px-3 py-3 hover:bg-gray-50">
+                  <li
+                    key={t.id}
+                    className="flex flex-col gap-2 px-3 py-3 sm:flex-row sm:items-start sm:justify-between hover:bg-gray-50"
+                  >
                     <div className="min-w-0 flex-1">
                       <div className="flex flex-wrap items-center gap-2">
                         <span className="truncate font-medium text-gray-900">{t.name}</span>
@@ -369,15 +406,23 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
                       </div>
                       {(t.title || t.intro) && (
                         <p className="mt-1 line-clamp-2 text-xs text-gray-600">
-                          {t.title ?? ''}{t.title && t.intro ? ' — ' : ''}{t.intro ?? ''}
+                          {t.title ?? ''}
+                          {t.title && t.intro ? ' — ' : ''}
+                          {t.intro ?? ''}
                         </p>
                       )}
                     </div>
-                    <div className="shrink-0">
+                    <div className="shrink-0 pt-1 sm:pt-0">
                       <button
                         onClick={() => applyTemplate(t)}
                         disabled={!selectedCustomer}
-                        title={!selectedCustomer ? 'Bitte zuerst einen Kunden wählen' : (picked ? 'Template ausgewählt' : 'Template übernehmen')}
+                        title={
+                          !selectedCustomer
+                            ? 'Bitte zuerst einen Kunden wählen'
+                            : picked
+                              ? 'Template ausgewählt'
+                              : 'Template übernehmen'
+                        }
                         className={[
                           'rounded-lg px-3 py-1.5 text-sm font-medium transition',
                           picked
@@ -403,8 +448,8 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
           <button
             onClick={handleNext}
             disabled={!selectedCustomer}
-            className={`rounded-lg px-4 py-2 text-white ${
-              selectedCustomer ? 'bg-primary hover:bg-primary-dark' : 'bg-slate-300'
+            className={`rounded-lg px-4 py-2 text-sm font-medium text-white ${
+              selectedCustomer ? 'bg-primary hover:bg-primary-dark' : 'bg-slate-300 cursor-not-allowed'
             }`}
             title={!selectedCustomer ? 'Bitte zuerst einen Kunden wählen' : 'Weiter'}
           >

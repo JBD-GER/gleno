@@ -4,6 +4,7 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { supabaseClient } from '@/lib/supabase-client'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 
 type Role = 'admin' | 'konsument' | 'partner' | 'unknown'
 
@@ -12,7 +13,7 @@ type Props = {
   onClose: () => void
   appointmentId: string
   requestId: string
-  /** lower-cased request status key, e.g. 'termin bestätigt' or 'termin bestaetigt' */
+  /** lower-cased request status key, z. B. 'termin bestätigt' oder 'termin bestaetigt' */
   requestStatusKey: string
 }
 
@@ -38,7 +39,7 @@ export default function AppointmentReviewModal({
     requestStatusKey === 'termin bestätigt' ||
     requestStatusKey === 'termin bestaetigt'
 
-  /* Rolle bestimmen (Konsument / Partner-Owner / Admin) */
+  // Rolle bestimmen
   React.useEffect(() => {
     if (!open) return
     let cancelled = false
@@ -97,7 +98,7 @@ export default function AppointmentReviewModal({
     }
   }, [open, requestId, sb])
 
-  /* Termin laden (immer aktuelle Daten) */
+  // Termin laden
   React.useEffect(() => {
     if (!open) return
     let cancelled = false
@@ -118,7 +119,7 @@ export default function AppointmentReviewModal({
     }
   }, [open, appointmentId, sb])
 
-  /* ESC + Body-Scroll sperren */
+  // ESC + Body Scroll sperren
   React.useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -195,34 +196,42 @@ export default function AppointmentReviewModal({
 
   const node = (
     <div className="fixed inset-0 z-[100000] flex items-start justify-center p-4">
+      {/* Overlay */}
       <div
         className="absolute inset-0 bg-slate-900/25 backdrop-blur-xl"
         onClick={() => !busy && onClose()}
       />
+
+      {/* Card */}
       <div
         className={cls(
           'relative z-10 mt-10 w-full max-w-2xl',
           'max-h-[92vh] overflow-y-auto',
           'rounded-3xl border border-white/60 bg-white/90',
-          'backdrop-blur-xl p-6',
+          'backdrop-blur-xl p-4 sm:p-6',
           'shadow-[0_10px_34px_rgba(2,6,23,0.12)] ring-1 ring-white/60',
         )}
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-medium text-slate-900">
+        {/* Header */}
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="pr-4">
+            <h3 className="text-base sm:text-lg font-medium text-slate-900">
               Termin prüfen
             </h3>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
               Details zum vorgeschlagenen Termin.
             </p>
           </div>
+          {/* X oben rechts */}
           <button
             type="button"
             onClick={() => !busy && onClose()}
-            className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/95 shadow-sm
+                       hover:bg-slate-50 disabled:opacity-60 shrink-0"
+            disabled={!!busy}
+            aria-label="Schließen"
           >
-            Schließen
+            <XMarkIcon className="h-4 w-4 text-slate-500" />
           </button>
         </div>
 
@@ -240,7 +249,7 @@ export default function AppointmentReviewModal({
           <>
             <div className="mt-4 space-y-4 text-sm">
               <div>
-                <div className="text-xs text-slate-600 mb-1">
+                <div className="mb-1 text-xs text-slate-600">
                   Überschrift
                 </div>
                 <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2">
@@ -249,7 +258,7 @@ export default function AppointmentReviewModal({
               </div>
 
               <div>
-                <div className="text-xs text-slate-600 mb-1">Art</div>
+                <div className="mb-1 text-xs text-slate-600">Art</div>
                 <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2">
                   {row.kind === 'vor_ort'
                     ? 'Vor Ort'
@@ -259,9 +268,10 @@ export default function AppointmentReviewModal({
                 </div>
               </div>
 
+              {/* Datum / Uhrzeit / Dauer als "Table" */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
                 <div>
-                  <div className="text-xs text-slate-600 mb-1">
+                  <div className="mb-1 text-xs text-slate-600">
                     Datum
                   </div>
                   <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2">
@@ -269,7 +279,7 @@ export default function AppointmentReviewModal({
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-600 mb-1">
+                  <div className="mb-1 text-xs text-slate-600">
                     Uhrzeit
                   </div>
                   <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2">
@@ -280,7 +290,7 @@ export default function AppointmentReviewModal({
                   </div>
                 </div>
                 <div>
-                  <div className="text-xs text-slate-600 mb-1">
+                  <div className="mb-1 text-xs text-slate-600">
                     Dauer
                   </div>
                   <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2">
@@ -291,7 +301,7 @@ export default function AppointmentReviewModal({
 
               {row.kind === 'vor_ort' && (
                 <div>
-                  <div className="text-xs text-slate-600 mb-1">
+                  <div className="mb-1 text-xs text-slate-600">
                     Ort
                   </div>
                   <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2">
@@ -302,7 +312,7 @@ export default function AppointmentReviewModal({
 
               {row.kind === 'video' && (
                 <div>
-                  <div className="text-xs text-slate-600 mb-1">
+                  <div className="mb-1 text-xs text-slate-600">
                     Meeting-Link
                   </div>
                   <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2 break-all">
@@ -314,7 +324,7 @@ export default function AppointmentReviewModal({
               {row.kind === 'telefonie' && (
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <div>
-                    <div className="text-xs text-slate-600 mb-1">
+                    <div className="mb-1 text-xs text-slate-600">
                       Telefon (Kund:in)
                     </div>
                     <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2">
@@ -322,7 +332,7 @@ export default function AppointmentReviewModal({
                     </div>
                   </div>
                   <div>
-                    <div className="text-xs text-slate-600 mb-1">
+                    <div className="mb-1 text-xs text-slate-600">
                       Telefon (Unternehmen)
                     </div>
                     <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2">
@@ -333,7 +343,7 @@ export default function AppointmentReviewModal({
               )}
 
               <div>
-                <div className="text-xs text-slate-600 mb-1">
+                <div className="mb-1 text-xs text-slate-600">
                   Notiz
                 </div>
                 <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2 whitespace-pre-wrap">
@@ -342,13 +352,14 @@ export default function AppointmentReviewModal({
               </div>
             </div>
 
-            <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+            {/* Actions */}
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:flex-wrap sm:items-center sm:justify-end gap-2">
               {canDecline && (
                 <button
                   type="button"
                   onClick={doDecline}
                   disabled={busy !== null}
-                  className="rounded-xl bg-rose-600 px-4 py-2 text-sm text-white disabled:opacity-50"
+                  className="w-full sm:w-auto rounded-xl bg-rose-600 px-4 py-2 text-sm text-white disabled:opacity-50"
                 >
                   {busy === 'decline'
                     ? 'Sage ab…'
@@ -361,7 +372,7 @@ export default function AppointmentReviewModal({
                   type="button"
                   onClick={doConfirm}
                   disabled={busy !== null}
-                  className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
+                  className="w-full sm:w-auto rounded-xl bg-slate-900 px-4 py-2 text-sm text-white disabled:opacity-50"
                 >
                   {busy === 'confirm'
                     ? 'Bestätige…'

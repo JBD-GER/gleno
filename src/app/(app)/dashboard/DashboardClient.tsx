@@ -1,8 +1,8 @@
+// src/app/(app)/dashboard/DashboardClient.tsx
 'use client'
 
 import { useMemo, useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import {
   UserGroupIcon,
   BriefcaseIcon,
@@ -125,7 +125,7 @@ export default function DashboardClient({
         borderWidth: 2.5,
         pointRadius: 3,
         pointHoverRadius: 5,
-        borderColor: '#0a1b40', // dein Dunkelblau
+        borderColor: '#0a1b40',
         pointBackgroundColor: '#0a1b40',
         fill: 'start' as const,
         backgroundColor: (ctx: any) => {
@@ -262,21 +262,19 @@ export default function DashboardClient({
     },
   }
 
-  /* UI-Helfer */
+  /* UI-Helfer: flachere KPI-Card */
   const kpiCard = (title: string, value: string | number, Icon: any) => (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="flex items-center gap-3">
-        <div className="rounded-xl bg-slate-900 text-white p-2 shadow-sm">
-          <Icon className="h-5 w-5" />
-        </div>
-        <div>
-          <p className="text-[11px] uppercase tracking-wide text-slate-500">
-            {title}
-          </p>
-          <p className="text-2xl font-semibold tracking-tight text-slate-900">
-            {value}
-          </p>
-        </div>
+    <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:px-3.5 sm:py-3">
+      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm sm:h-10 sm:w-10">
+        <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+      </div>
+      <div className="min-w-0">
+        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 sm:text-[11px]">
+          {title}
+        </p>
+        <p className="truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
+          {value}
+        </p>
       </div>
     </div>
   )
@@ -285,77 +283,69 @@ export default function DashboardClient({
   return (
     <section className="space-y-6">
       {/* OBERE WEISSE BOX */}
-      <div className="rounded-2xl border border-slate-200 bg-white p-5 sm:p-6 shadow-sm">
-        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-          <div>
+      <div className="rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-5 sm:py-4 lg:px-6 lg:py-4">
+        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="space-y-1">
             <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
               Willkommen zurück
             </h1>
             <p className="text-sm text-slate-600">
               Eingeloggt als <span className="font-medium">{userEmail}</span>
             </p>
-            <p className="mt-2 text-xs text-slate-500 sm:text-sm">
+            <p className="text-xs text-slate-500 sm:text-sm">
               Behalten Sie Mitarbeiter, Kunden, Projekte und Ihren Umsatz jederzeit im Blick.
             </p>
-          </div>
-
-          <div className="flex flex-col items-stretch gap-2 sm:flex-row sm:items-center sm:gap-3">
-            <div className="inline-flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs text-slate-700">
-              <span>Umsatz dieses Jahr: </span>
-              <span className="font-semibold text-slate-900">
-                {euro(kpis.revenueYTD)}
-              </span>
-            </div>
-
-            <Link
-              href="/dashboard/kunden-werben-kunden"
-              className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-900 px-4 py-2 text-xs font-medium text-white shadow-sm transition hover:bg-slate-800"
-            >
-              <MegaphoneIcon className="h-4 w-4" />
-              Kunden werben Kunden
-              <ArrowRightIcon className="h-3.5 w-3.5" />
-            </Link>
           </div>
         </div>
       </div>
 
-      {/* KPIs */}
+      {/* KPIs – flacher + Umsatz-Card breit, aber nicht hoch */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
-        {kpiCard('Mitarbeiter', kpis.employees, UserGroupIcon)}
-        {kpiCard('Kunden', kpis.customers, UserGroupIcon)}
-        {kpiCard('Projekte', kpis.projects, BriefcaseIcon)}
-        {kpiCard('Rechnungen', kpis.invoices, DocumentChartBarIcon)}
-        {kpiCard('Umsatz YTD', euro(kpis.revenueYTD), BanknotesIcon)}
+        <div>{kpiCard('Mitarbeiter', kpis.employees, UserGroupIcon)}</div>
+        <div>{kpiCard('Kunden', kpis.customers, UserGroupIcon)}</div>
+        <div>{kpiCard('Projekte', kpis.projects, BriefcaseIcon)}</div>
+        <div>{kpiCard('Rechnungen', kpis.invoices, DocumentChartBarIcon)}</div>
+        <div className="col-span-2 md:col-span-1">
+          {kpiCard('Umsatz YTD', euro(kpis.revenueYTD), BanknotesIcon)}
+        </div>
       </div>
 
-      {/* DEUTLICHE KUNDEN-WERBEN-KUNDEN BOX */}
-      <div className="rounded-2xl bg-slate-900 p-5 text-slate-50 shadow-sm">
+      {/* KUNDEN-WERBEN-KUNDEN – mobil sehr kompakt, Desktop normal */}
+      <div className="rounded-2xl bg-slate-900 px-4 py-4 text-slate-50 shadow-sm sm:px-5 sm:py-5">
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-3">
-            <div className="rounded-xl bg-slate-800 p-2">
-              <MegaphoneIcon className="h-6 w-6" />
+            <div className="rounded-xl bg-slate-800 p-2 sm:p-2.5">
+              <MegaphoneIcon className="h-5 w-5 sm:h-6 sm:w-6" />
             </div>
             <div className="space-y-1.5">
               <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-300">
                 Kunden werben Kunden
               </p>
-              <h2 className="text-lg text-white font-semibold leading-snug sm:text-xl">
+              <h2 className="text-base font-semibold leading-snug text-white sm:text-lg md:text-xl">
                 Empfehlen Sie GLENO weiter & sichern Sie sich{' '}
                 <span className="text-emerald-300">59 € Gutschrift</span> pro geworbenem Unternehmen.
               </h2>
-              <p className="text-xs text-slate-200 sm:text-sm">
+              <p className="text-xs text-slate-200 sm:text-[13px]">
                 Für jedes Unternehmen, das über Ihren Link startet und mindestens{' '}
                 <span className="font-semibold">3 Monate aktiv Kunde</span> bleibt, schreiben wir
                 Ihnen <span className="font-semibold">59 € gut</span>.
               </p>
-              <div className="mt-1 inline-flex items-center gap-2 rounded-full bg-slate-800 px-3 py-1 text-[11px] text-slate-100">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                Online ab dem 20.11.2025, bleiben Sie aktiv.
+
+              {/* CTA – auf Mobile direkt unter dem Text */}
+              <div className="mt-2 md:hidden">
+                <Link
+                  href="/dashboard/kunden-werben-kunden"
+                  className="inline-flex w-full items-center justify-center gap-1 rounded-full bg-white px-4 py-2 text-xs font-semibold text-slate-900 shadow-sm"
+                >
+                  Jetzt Empfehlungslink ansehen
+                  <ArrowRightIcon className="h-3.5 w-3.5" />
+                </Link>
               </div>
             </div>
           </div>
 
-          <div className="mt-1 text-xs text-slate-100 md:mt-0 md:text-sm">
+          {/* Rechte Seite / Steps – nur ab md sichtbar, mobil haben wir nur Text + CTA */}
+          <div className="hidden text-xs text-slate-100 md:block md:text-sm">
             <p className="font-medium">So funktioniert&apos;s:</p>
             <ul className="mt-1 list-inside list-disc space-y-0.5">
               <li>Persönlichen Empfehlungslink aus Ihrem Profil kopieren</li>
@@ -466,16 +456,13 @@ export default function DashboardClient({
           )}
         </div>
 
-        {/* Support mit deinem Bild */}
+        {/* Support */}
         <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
             Ihr persönlicher Kundenberater
           </p>
 
-          {/* Bild oben, Text unten – mobil schön zentriert */}
           <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-start">
-
-
             <div className="flex-1 space-y-1">
               <p className="text-sm font-semibold text-slate-900">
                 {contacts.name}

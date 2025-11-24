@@ -3,10 +3,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
-import {
-  UserCircleIcon,
-  UserPlusIcon,
-} from '@heroicons/react/24/outline'
+import { UserCircleIcon, UserPlusIcon } from '@heroicons/react/24/outline'
 
 const shellBg =
   'min-h-[100dvh] px-4 sm:px-6 lg:px-8 py-6 sm:py-10 text-slate-800 ' +
@@ -144,10 +141,9 @@ export default function PartnerRequestsPage() {
       >
         <div
           aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-3xl
-          bg-[radial-gradient(900px_260px_at_-10%_-40%,rgba(15,23,42,0.05),transparent_70%),radial-gradient(900px_260px_at_110%_140%,rgba(15,23,42,0.07),transparent_70%)]"
+          className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(900px_260px_at_-10%_-40%,rgba(15,23,42,0.05),transparent_70%),radial-gradient(900px_260px_at_110%_140%,rgba(15,23,42,0.07),transparent_70%)]"
         />
-        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1 text-[10px] font-medium text-slate-900 ring-1 ring-white/80 backdrop-blur">
               <span>GLENO Markt</span>
@@ -171,7 +167,7 @@ export default function PartnerRequestsPage() {
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+          <div className="flex flex-wrap gap-2 justify-start md:justify-end">
             <button onClick={() => fetchList()} className={btnGhost}>
               Aktualisieren
             </button>
@@ -204,8 +200,7 @@ export default function PartnerRequestsPage() {
         </section>
       )}
 
-      {/* FILTER + LISTE – nur anzeigen, wenn ein Partnerprofil existiert
-          (also NICHT bei no_partner_found) */}
+      {/* FILTER + LISTE */}
       {!isNoPartnerError && (
         <section className={`${cardBase} pt-4 pb-5 px-4 sm:px-5`}>
           {/* Branchen-Filter */}
@@ -275,7 +270,7 @@ export default function PartnerRequestsPage() {
                     'hover:shadow-[0_10px_26px_rgba(15,23,42,0.10)] hover:bg-white transition'
                   }
                 >
-                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
                         <h2 className="text-sm sm:text-base font-semibold text-slate-900 truncate">
@@ -313,7 +308,7 @@ export default function PartnerRequestsPage() {
                       </div>
                     </div>
 
-                    <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+                    <div className="flex flex-wrap gap-2 justify-start md:justify-end">
                       <Link
                         href={`/dashboard/markt/anfragen/${it.id}${
                           partnerId

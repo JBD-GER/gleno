@@ -1,4 +1,3 @@
-// src/app/(app)/dashboard/buchhaltung/rechnung/AutomationOverview.tsx
 'use client'
 
 import { useEffect, useState, useCallback } from 'react'
@@ -34,10 +33,6 @@ type InvoiceDb = {
   } | null
 }
 
-/**
- * So kommt es typischerweise aus Supabase:
- * customers: Objekt ODER Array von Objekten ODER null
- */
 type InvoiceDbFromDb = {
   id: string
   invoice_number: string
@@ -111,8 +106,7 @@ export default function AutomationOverview() {
   const [selectedInvoiceNumber, setSelectedInvoiceNumber] =
     useState<string | null>(null)
 
-  // Filter-States
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active') // Default: Aktiv
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>('active')
   const [searchTerm, setSearchTerm] = useState('')
 
   const load = useCallback(async () => {
@@ -121,8 +115,6 @@ export default function AutomationOverview() {
       setError(null)
 
       const sb = supabaseClient()
-
-      // User holen
       const {
         data: { user },
       } = await sb.auth.getUser()
@@ -133,7 +125,6 @@ export default function AutomationOverview() {
         return
       }
 
-      // 1) Alle Automatisierungen des Users
       const { data: automations, error: aErr } = await sb
         .from('invoice_automations')
         .select(
@@ -155,7 +146,6 @@ export default function AutomationOverview() {
         new Set(list.map((a) => a.source_invoice_id).filter(Boolean))
       ) as string[]
 
-      // 2) Passende Rechnungen + Kunden holen
       const { data: invoices, error: iErr } = await sb
         .from('invoices')
         .select(
@@ -166,9 +156,8 @@ export default function AutomationOverview() {
       if (iErr) throw iErr
 
       const invoicesArr = (invoices ?? []) as InvoiceDbFromDb[]
-
-      // Kunden-Relation normalisieren: aus Array → erstes Element
       const invoiceMap = new Map<string, InvoiceDb>()
+
       invoicesArr.forEach((raw) => {
         const normalized: InvoiceDb = {
           id: raw.id,
@@ -225,16 +214,13 @@ export default function AutomationOverview() {
     setModalOpen(true)
   }
 
-  // Wenn gar keine Automatisierungen existieren, gar nichts anzeigen
   if (!loading && rows.length === 0) {
     return null
   }
 
-  // Filter anwenden (Status + Kunde)
   const filteredRows = rows.filter((row) => {
     const matchesStatus =
       statusFilter === 'active' ? row.active === true : row.active === false
-
     if (!matchesStatus) return false
 
     const s = searchTerm.trim().toLowerCase()
@@ -262,7 +248,6 @@ export default function AutomationOverview() {
           </p>
         </div>
 
-        {/* Filterbereich */}
         <div className="flex flex-wrap items-center gap-2">
           {/* Status-Toggle */}
           <div className="inline-flex rounded-full border border-slate-200 bg-white/80 p-0.5 text-[11px] shadow-sm">
@@ -322,7 +307,7 @@ export default function AutomationOverview() {
         </div>
       ) : (
         <>
-          {/* Desktop-Tabelle */}
+          {/* Desktop-Tabelle (ab md) */}
           <div className="hidden md:block">
             <div className="overflow-x-auto">
               <table className="min-w-[900px] w-full text-left text-xs">
@@ -475,7 +460,6 @@ export default function AutomationOverview() {
         </>
       )}
 
-      {/* Modal zum Bearbeiten – nutzt die gleiche Logik wie beim Aktionen-Menü */}
       {selectedInvoiceNumber && (
         <AutomationModal
           invoiceNumber={selectedInvoiceNumber}
@@ -483,7 +467,7 @@ export default function AutomationOverview() {
           onClose={() => setModalOpen(false)}
           onChanged={async () => {
             setModalOpen(false)
-            await load() // ⬅️ direkt neu laden statt window.location.reload()
+            await load()
           }}
         />
       )}

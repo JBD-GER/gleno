@@ -412,7 +412,7 @@ export default function EventDetailModal({
   return (
     <Transition.Root show={isOpen} as={Fragment}>
       <Dialog as="div" className="relative z-[200]" onClose={onClose}>
-        {/* Overlay: deutlich heller */}
+        {/* Overlay */}
         <Transition.Child
           as={Fragment}
           enter="ease-out duration-200"
@@ -441,15 +441,18 @@ export default function EventDetailModal({
                 style={{
                   backgroundImage:
                     'radial-gradient(1100px 600px at 110% -35%, rgba(15,23,42,0.06), transparent)',
+                  maxHeight: '90vh',
                 }}
               >
-                {/* Kopf */}
+                {/* farbiger Streifen */}
                 <div
                   className="h-1 w-full"
                   style={{
                     background: `linear-gradient(90deg, ${NAVY}, ${NAVY_SOFT})`,
                   }}
                 />
+
+                {/* Kopf */}
                 <div className="flex items-start justify-between gap-3 px-4 pt-4 sm:px-6">
                   <Dialog.Title className="min-w-0 flex-1 break-words text-lg font-semibold text-slate-900 sm:text-xl">
                     {event.title}
@@ -498,376 +501,387 @@ export default function EventDetailModal({
                   )}
                 </div>
 
-                {/* READ-Ansicht */}
-                {tab === 'info' && !edit && (
-                  <div className="pb-6 px-4 sm:px-6">
-                    <div className="mb-3 text-sm text-slate-600 sm:hidden">
-                      {event.start.toLocaleString('de-DE', {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })}{' '}
-                      –{' '}
-                      {event.end.toLocaleString('de-DE', {
-                        dateStyle: 'short',
-                        timeStyle: 'short',
-                      })}
-                    </div>
-
-                    <dl className="space-y-4 text-slate-700">
-                      <InfoRow
-                        icon={
-                          <ClockIcon className="h-5 w-5 text-slate-400" />
-                        }
-                      >
-                        <dt className="text-sm font-medium">Wann</dt>
-                        <dd className="text-sm">
-                          {event.start.toLocaleString('de-DE', {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          })}{' '}
-                          –{' '}
-                          {event.end.toLocaleString('de-DE', {
-                            dateStyle: 'short',
-                            timeStyle: 'short',
-                          })}
-                        </dd>
-                      </InfoRow>
-
-                      {(event.location || event.customerName) && (
-                        <InfoRow
-                          icon={
-                            <MapPinIcon className="h-5 w-5 text-slate-400" />
-                          }
-                        >
-                          <dt className="text-sm font-medium">
-                            Ort / Kunde
-                          </dt>
-                          <dd className="text-sm break-words">
-                            {event.location ?? '—'}
-                            {event.customerName
-                              ? ` – ${event.customerName}`
-                              : ''}
-                          </dd>
-                        </InfoRow>
-                      )}
-
-                      {event.notiz && (
-                        <InfoRow
-                          icon={
-                            <div
-                              className="mt-1 h-2 w-2 rounded-full"
-                              style={{ backgroundColor: accent }}
-                            />
-                          }
-                        >
-                          <dt className="text-sm font-medium">
-                            Hinweis
-                          </dt>
-                          <dd className="whitespace-pre-wrap text-sm">
-                            {event.notiz}
-                          </dd>
-                        </InfoRow>
-                      )}
-
-                      {chips.length > 0 && (
-                        <InfoRow
-                          icon={
-                            <UserGroupIcon className="h-5 w-5 text-slate-400" />
-                          }
-                        >
-                          <dt className="text-sm font-medium">
-                            Mitarbeiter
-                          </dt>
-                          <dd className="mt-1 flex flex-wrap gap-2">
-                            {chips.map((c, i) => (
-                              <span
-                                key={`${c}-${i}`}
-                                className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-800"
-                              >
-                                {c}
-                              </span>
-                            ))}
-                          </dd>
-                        </InfoRow>
-                      )}
-                    </dl>
-                  </div>
-                )}
-
-                {/* EDIT-Ansicht */}
-                {tab === 'info' && edit && (
-                  <div className="pb-6 px-4 sm:px-6">
-                    <h3 className="mb-3 text-base font-semibold text-slate-900">
-                      Termin bearbeiten
-                    </h3>
-
-                    {prefillLoading ? (
-                      <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-4 text-sm text-slate-600">
-                        Lade Termindaten …
+                {/* Body – scrollt bei kleinen Viewports */}
+                <div className="max-h-[calc(90vh-96px)] overflow-y-auto pb-4">
+                  {/* READ-Ansicht */}
+                  {tab === 'info' && !edit && (
+                    <div className="px-4 pb-4 sm:px-6">
+                      <div className="mb-3 text-sm text-slate-600 sm:hidden">
+                        {event.start.toLocaleString('de-DE', {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        })}{' '}
+                        –{' '}
+                        {event.end.toLocaleString('de-DE', {
+                          dateStyle: 'short',
+                          timeStyle: 'short',
+                        })}
                       </div>
-                    ) : (
-                      <form
-                        onSubmit={(e) => {
-                          e.preventDefault()
-                          save()
-                        }}
-                        className="grid grid-cols-1 gap-3 md:grid-cols-2"
-                      >
-                        {/* Titel */}
-                        <label className="md:col-span-2">
-                          <span className="mb-1 block text-xs font-medium text-slate-600">
-                            Titel *
-                          </span>
-                          <input
-                            value={title}
-                            onChange={(e) => setTitle(e.target.value)}
-                            required
-                            placeholder="z. B. Erstgespräch"
-                            className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
-                          />
-                        </label>
 
-                        {/* Start */}
-                        <label>
-                          <span className="mb-1 block text-xs font-medium text-slate-600">
-                            Start
-                          </span>
-                          <input
-                            type="datetime-local"
-                            value={start}
-                            onChange={(e) => setStart(e.target.value)}
-                            required
-                            className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
-                          />
-                        </label>
+                      <dl className="space-y-4 text-slate-700">
+                        <InfoRow
+                          icon={
+                            <ClockIcon className="h-5 w-5 text-slate-400" />
+                          }
+                        >
+                          <dt className="text-sm font-medium">Wann</dt>
+                          <dd className="text-sm">
+                            {event.start.toLocaleString('de-DE', {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                            })}{' '}
+                            –{' '}
+                            {event.end.toLocaleString('de-DE', {
+                              dateStyle: 'short',
+                              timeStyle: 'short',
+                            })}
+                          </dd>
+                        </InfoRow>
 
-                        {/* Ende */}
-                        <label>
-                          <span className="mb-1 block text-xs font-medium text-slate-600">
-                            Ende
-                          </span>
-                          <input
-                            type="datetime-local"
-                            value={end}
-                            onChange={(e) => setEnd(e.target.value)}
-                            required
-                            className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
-                          />
-                        </label>
-
-                        {/* Kunde */}
-                        <div className="md:col-span-2">
-                          <span className="mb-1 block text-xs font-medium text-slate-600">
-                            Kunde
-                          </span>
-                          <Combobox
-                            value={selectedCustomer}
-                            onChange={setSelectedCustomer}
-                            nullable
+                        {(event.location || event.customerName) && (
+                          <InfoRow
+                            icon={
+                              <MapPinIcon className="h-5 w-5 text-slate-400" />
+                            }
                           >
-                            <div className="relative">
-                              <Combobox.Input
-                                className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
-                                displayValue={(p: Person) => fullName(p)}
-                                placeholder="Kunden suchen…"
-                                onChange={(e) =>
-                                  setCustomerQuery(e.target.value)
-                                }
+                            <dt className="text-sm font-medium">
+                              Ort / Kunde
+                            </dt>
+                            <dd className="text-sm break-words">
+                              {event.location ?? '—'}
+                              {event.customerName
+                                ? ` – ${event.customerName}`
+                                : ''}
+                            </dd>
+                          </InfoRow>
+                        )}
+
+                        {event.notiz && (
+                          <InfoRow
+                            icon={
+                              <div
+                                className="mt-1 h-2 w-2 rounded-full"
+                                style={{ backgroundColor: accent }}
                               />
-                              <Transition
-                                as={Fragment}
-                                leave="transition ease-in duration-100"
-                                leaveFrom="opacity-100"
-                                leaveTo="opacity-0"
-                              >
-                                <Combobox.Options className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-100 bg-white/98 py-1 text-sm shadow-xl backdrop-blur">
-                                  {customerSearching && (
-                                    <div className="px-3 py-2 text-slate-500">
-                                      Suche …
-                                    </div>
-                                  )}
-                                  {!customerSearching &&
-                                    customers.length === 0 && (
+                            }
+                          >
+                            <dt className="text-sm font-medium">
+                              Hinweis
+                            </dt>
+                            <dd className="whitespace-pre-wrap text-sm">
+                              {event.notiz}
+                            </dd>
+                          </InfoRow>
+                        )}
+
+                        {chips.length > 0 && (
+                          <InfoRow
+                            icon={
+                              <UserGroupIcon className="h-5 w-5 text-slate-400" />
+                            }
+                          >
+                            <dt className="text-sm font-medium">
+                              Mitarbeiter
+                            </dt>
+                            <dd className="mt-1 flex flex-wrap gap-2">
+                              {chips.map((c, i) => (
+                                <span
+                                  key={`${c}-${i}`}
+                                  className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-800"
+                                >
+                                  {c}
+                                </span>
+                              ))}
+                            </dd>
+                          </InfoRow>
+                        )}
+                      </dl>
+                    </div>
+                  )}
+
+                  {/* EDIT-Ansicht */}
+                  {tab === 'info' && edit && (
+                    <div className="px-4 pb-4 sm:px-6">
+                      <h3 className="mb-3 text-base font-semibold text-slate-900">
+                        Termin bearbeiten
+                      </h3>
+
+                      {prefillLoading ? (
+                        <div className="rounded-lg border border-slate-100 bg-slate-50/80 p-4 text-sm text-slate-600">
+                          Lade Termindaten …
+                        </div>
+                      ) : (
+                        <form
+                          onSubmit={(e) => {
+                            e.preventDefault()
+                            save()
+                          }}
+                          className="grid grid-cols-1 gap-3 md:grid-cols-2"
+                        >
+                          {/* Titel */}
+                          <label className="md:col-span-2">
+                            <span className="mb-1 block text-xs font-medium text-slate-600">
+                              Titel *
+                            </span>
+                            <input
+                              value={title}
+                              onChange={(e) =>
+                                setTitle(e.target.value)
+                              }
+                              required
+                              placeholder="z. B. Erstgespräch"
+                              className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
+                            />
+                          </label>
+
+                          {/* Start */}
+                          <label>
+                            <span className="mb-1 block text-xs font-medium text-slate-600">
+                              Start
+                            </span>
+                            <input
+                              type="datetime-local"
+                              value={start}
+                              onChange={(e) =>
+                                setStart(e.target.value)
+                              }
+                              required
+                              className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
+                            />
+                          </label>
+
+                          {/* Ende */}
+                          <label>
+                            <span className="mb-1 block text-xs font-medium text-slate-600">
+                              Ende
+                            </span>
+                            <input
+                              type="datetime-local"
+                              value={end}
+                              onChange={(e) => setEnd(e.target.value)}
+                              required
+                              className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
+                            />
+                          </label>
+
+                          {/* Kunde */}
+                          <div className="md:col-span-2">
+                            <span className="mb-1 block text-xs font-medium text-slate-600">
+                              Kunde
+                            </span>
+                            <Combobox
+                              value={selectedCustomer}
+                              onChange={setSelectedCustomer}
+                              nullable
+                            >
+                              <div className="relative">
+                                <Combobox.Input
+                                  className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
+                                  displayValue={(p: Person) =>
+                                    fullName(p)
+                                  }
+                                  placeholder="Kunden suchen…"
+                                  onChange={(e) =>
+                                    setCustomerQuery(e.target.value)
+                                  }
+                                />
+                                <Transition
+                                  as={Fragment}
+                                  leave="transition ease-in duration-100"
+                                  leaveFrom="opacity-100"
+                                  leaveTo="opacity-0"
+                                >
+                                  <Combobox.Options className="absolute z-10 mt-1 max-h-56 w-full overflow-auto rounded-lg border border-slate-100 bg-white/98 py-1 text-sm shadow-xl backdrop-blur">
+                                    {customerSearching && (
                                       <div className="px-3 py-2 text-slate-500">
-                                        Keine Treffer
+                                        Suche …
                                       </div>
                                     )}
-                                  {customers.map((c) => (
-                                    <Combobox.Option
-                                      key={c.id}
-                                      value={c}
-                                      className={({ active }) =>
-                                        [
-                                          'cursor-pointer px-3 py-2',
-                                          active
-                                            ? 'bg-slate-100 text-slate-900'
-                                            : 'text-slate-800',
-                                        ].join(' ')
-                                      }
-                                    >
-                                      <div className="font-medium">
-                                        {fullName(c)}
-                                      </div>
-                                      {c.email && (
-                                        <div className="text-xs text-slate-500">
-                                          {c.email}
+                                    {!customerSearching &&
+                                      customers.length === 0 && (
+                                        <div className="px-3 py-2 text-slate-500">
+                                          Keine Treffer
                                         </div>
                                       )}
-                                    </Combobox.Option>
-                                  ))}
-                                </Combobox.Options>
-                              </Transition>
-                            </div>
-                          </Combobox>
-                        </div>
+                                    {customers.map((c) => (
+                                      <Combobox.Option
+                                        key={c.id}
+                                        value={c}
+                                        className={({ active }) =>
+                                          [
+                                            'cursor-pointer px-3 py-2',
+                                            active
+                                              ? 'bg-slate-100 text-slate-900'
+                                              : 'text-slate-800',
+                                          ].join(' ')
+                                        }
+                                      >
+                                        <div className="font-medium">
+                                          {fullName(c)}
+                                        </div>
+                                        {c.email && (
+                                          <div className="text-xs text-slate-500">
+                                            {c.email}
+                                          </div>
+                                        )}
+                                      </Combobox.Option>
+                                    ))}
+                                  </Combobox.Options>
+                                </Transition>
+                              </div>
+                            </Combobox>
+                          </div>
 
-                        {/* Mitarbeiter (multi) */}
-                        <div className="md:col-span-2">
-                          <span className="mb-1 block text-xs font-medium text-slate-600">
-                            Mitarbeiter
-                          </span>
-                          <Listbox
-                            value={selectedEmployees}
-                            onChange={setSelectedEmployees}
-                            multiple
-                          >
-                            <div className="relative">
-                              <Listbox.Button className="inline-flex w-full items-center justify-between rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-left text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4">
-                                <span className="truncate">
-                                  {selectedEmployees.length === 0
-                                    ? 'Mitarbeiter wählen…'
-                                    : `${selectedEmployees.length} ausgewählt`}
-                                </span>
-                                <ChevronUpDownIcon className="h-4 w-4 text-slate-500" />
-                              </Listbox.Button>
-                              <Transition
-                                as={Fragment}
-                                leave="transition ease-in duration-100"
-                                leaveFrom="opacity-100"
-                                leaveTo="opacity-0"
-                              >
-                                <Listbox.Options className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-100 bg-white/98 py-1 text-sm shadow-xl backdrop-blur">
-                                  {employees.length === 0 && (
-                                    <div className="px-3 py-2 text-slate-500">
-                                      Keine Mitarbeiter
-                                    </div>
-                                  )}
-                                  {employees.map((emp) => (
-                                    <Listbox.Option
-                                      key={emp.id}
-                                      value={emp}
-                                      className={({ active, selected }) =>
-                                        [
-                                          'flex cursor-pointer select-none items-center gap-2 px-3 py-2',
-                                          active
-                                            ? 'bg-slate-100 text-slate-900'
-                                            : 'text-slate-800',
-                                          selected ? 'font-medium' : '',
-                                        ].join(' ')
-                                      }
-                                    >
-                                      {({ selected }) => (
-                                        <>
-                                          <span
-                                            className={`grid h-4 w-4 place-content-center rounded border ${
-                                              selected
-                                                ? 'border-slate-900 bg-slate-900 text-white'
-                                                : 'border-slate-300 text-transparent'
-                                            }`}
-                                          >
-                                            <CheckIcon className="h-3 w-3" />
-                                          </span>
-                                          <span className="truncate">
-                                            {fullName(emp)}
-                                          </span>
-                                        </>
-                                      )}
-                                    </Listbox.Option>
-                                  ))}
-                                </Listbox.Options>
-                              </Transition>
-                            </div>
-                          </Listbox>
-                        </div>
+                          {/* Mitarbeiter (multi) */}
+                          <div className="md:col-span-2">
+                            <span className="mb-1 block text-xs font-medium text-slate-600">
+                              Mitarbeiter
+                            </span>
+                            <Listbox
+                              value={selectedEmployees}
+                              onChange={setSelectedEmployees}
+                              multiple
+                            >
+                              <div className="relative">
+                                <Listbox.Button className="inline-flex w-full items-center justify-between rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-left text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4">
+                                  <span className="truncate">
+                                    {selectedEmployees.length === 0
+                                      ? 'Mitarbeiter wählen…'
+                                      : `${selectedEmployees.length} ausgewählt`}
+                                  </span>
+                                  <ChevronUpDownIcon className="h-4 w-4 text-slate-500" />
+                                </Listbox.Button>
+                                <Transition
+                                  as={Fragment}
+                                  leave="transition ease-in duration-100"
+                                  leaveFrom="opacity-100"
+                                  leaveTo="opacity-0"
+                                >
+                                  <Listbox.Options className="absolute z-10 mt-1 max-h-64 w-full overflow-auto rounded-lg border border-slate-100 bg-white/98 py-1 text-sm shadow-xl backdrop-blur">
+                                    {employees.length === 0 && (
+                                      <div className="px-3 py-2 text-slate-500">
+                                        Keine Mitarbeiter
+                                      </div>
+                                    )}
+                                    {employees.map((emp) => (
+                                      <Listbox.Option
+                                        key={emp.id}
+                                        value={emp}
+                                        className={({ active, selected }) =>
+                                          [
+                                            'flex cursor-pointer select-none items-center gap-2 px-3 py-2',
+                                            active
+                                              ? 'bg-slate-100 text-slate-900'
+                                              : 'text-slate-800',
+                                            selected ? 'font-medium' : '',
+                                          ].join(' ')
+                                        }
+                                      >
+                                        {({ selected }) => (
+                                          <>
+                                            <span
+                                              className={`grid h-4 w-4 place-content-center rounded border ${
+                                                selected
+                                                  ? 'border-slate-900 bg-slate-900 text-white'
+                                                  : 'border-slate-300 text-transparent'
+                                              }`}
+                                            >
+                                              <CheckIcon className="h-3 w-3" />
+                                            </span>
+                                            <span className="truncate">
+                                              {fullName(emp)}
+                                            </span>
+                                          </>
+                                        )}
+                                      </Listbox.Option>
+                                    ))}
+                                  </Listbox.Options>
+                                </Transition>
+                              </div>
+                            </Listbox>
+                          </div>
 
-                        {/* Adresse */}
-                        <label className="md:col-span-2">
-                          <span className="mb-1 block text-xs font-medium text-slate-600">
-                            Ort / Adresse
-                          </span>
-                          <input
-                            value={address}
-                            onChange={(e) =>
-                              setAddress(e.target.value)
-                            }
-                            placeholder="z. B. Musterstraße 12, Berlin"
-                            className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
-                          />
-                        </label>
+                          {/* Adresse */}
+                          <label className="md:col-span-2">
+                            <span className="mb-1 block text-xs font-medium text-slate-600">
+                              Ort / Adresse
+                            </span>
+                            <input
+                              value={address}
+                              onChange={(e) =>
+                                setAddress(e.target.value)
+                              }
+                              placeholder="z. B. Musterstraße 12, Berlin"
+                              className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
+                            />
+                          </label>
 
-                        {/* Hinweis */}
-                        <label className="md:col-span-2">
-                          <span className="mb-1 block text-xs font-medium text-slate-600">
-                            Hinweis
-                          </span>
-                          <textarea
-                            rows={3}
-                            value={hint}
-                            onChange={(e) => setHint(e.target.value)}
-                            placeholder="Details, Ansprechpartner, Besonderheiten …"
-                            className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
-                          />
-                        </label>
+                          {/* Hinweis */}
+                          <label className="md:col-span-2">
+                            <span className="mb-1 block text-xs font-medium text-slate-600">
+                              Hinweis
+                            </span>
+                            <textarea
+                              rows={3}
+                              value={hint}
+                              onChange={(e) =>
+                                setHint(e.target.value)
+                              }
+                              placeholder="Details, Ansprechpartner, Besonderheiten …"
+                              className="w-full rounded-lg border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-100 backdrop-blur focus:ring-4"
+                            />
+                          </label>
 
-                        {/* Actions */}
-                        <div className="mt-1 flex flex-wrap items-center justify-between gap-2 md:col-span-2">
-                          <button
-                            type="button"
-                            onClick={remove}
-                            disabled={deleting}
-                            className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 shadow-sm hover:bg-rose-100 disabled:opacity-60"
-                          >
-                            <TrashIcon className="h-4 w-4" />
-                            {deleting ? 'Lösche…' : 'Löschen'}
-                          </button>
-
-                          <div className="ml-auto flex items-center gap-2">
+                          {/* Actions */}
+                          <div className="mt-1 flex flex-wrap items-center justify-between gap-2 md:col-span-2">
                             <button
                               type="button"
-                              onClick={() => setEdit(false)}
-                              className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50"
+                              onClick={remove}
+                              disabled={deleting}
+                              className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 shadow-sm hover:bg-rose-100 disabled:opacity-60"
                             >
-                              Abbrechen
+                              <TrashIcon className="h-4 w-4" />
+                              {deleting ? 'Lösche…' : 'Löschen'}
                             </button>
-                            <button
-                              type="submit"
-                              disabled={saving}
-                              className="rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-60"
-                            >
-                              {saving ? 'Speichere…' : 'Speichern'}
-                            </button>
+
+                            <div className="ml-auto flex items-center gap-2">
+                              <button
+                                type="button"
+                                onClick={() => setEdit(false)}
+                                className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50"
+                              >
+                                Abbrechen
+                              </button>
+                              <button
+                                type="submit"
+                                disabled={saving}
+                                className="rounded-lg border border-slate-900 bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:brightness-95 disabled:opacity-60"
+                              >
+                                {saving ? 'Speichere…' : 'Speichern'}
+                              </button>
+                            </div>
                           </div>
-                        </div>
-                      </form>
-                    )}
-                  </div>
-                )}
+                        </form>
+                      )}
+                    </div>
+                  )}
 
-                {/* Dokumente / Notizen */}
-                {tab === 'docs' && (
-                  <div className="pb-6 px-4 sm:px-6">
-                    <AppointmentDocuments appointmentId={eventId} />
-                  </div>
-                )}
-                {tab === 'notes' && (
-                  <div className="pb-6 px-4 sm:px-6">
-                    <AppointmentNotes appointmentId={eventId} />
-                  </div>
-                )}
+                  {/* Dokumente / Notizen */}
+                  {tab === 'docs' && (
+                    <div className="px-4 pb-4 sm:px-6">
+                      <AppointmentDocuments appointmentId={eventId} />
+                    </div>
+                  )}
+                  {tab === 'notes' && (
+                    <div className="px-4 pb-4 sm:px-6">
+                      <AppointmentNotes appointmentId={eventId} />
+                    </div>
+                  )}
+                </div>
 
-                {/* Mobile Bearbeiten-Button */}
+                {/* Mobile Bearbeiten-Button (unten, immer sichtbar) */}
                 {tab === 'info' && !edit && (
-                  <div className="sticky bottom-0 z-10 border-t border-slate-100 bg-white/92 p-3 backdrop-blur sm:hidden">
+                  <div className="border-t border-slate-100 bg-white/92 p-3 backdrop-blur sm:hidden">
                     <button
                       onClick={() => setEdit(true)}
                       className="inline-flex w-full items-center justify-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-900 shadow-sm hover:bg-slate-50"

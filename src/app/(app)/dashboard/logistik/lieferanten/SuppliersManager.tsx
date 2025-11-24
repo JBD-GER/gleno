@@ -46,11 +46,19 @@ export default function SuppliersManager() {
     setItems(Array.isArray(data) ? data : [])
     setLoading(false)
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => {
+    load()
+  }, [])
 
   function openCreate() {
     setEditing(null)
-    setForm({ name: '', contact_email: '', contact_phone: '', address: '', notes: '' })
+    setForm({
+      name: '',
+      contact_email: '',
+      contact_phone: '',
+      address: '',
+      notes: '',
+    })
     setOpen(true)
   }
 
@@ -106,16 +114,26 @@ export default function SuppliersManager() {
   // Gefiltert + sortiert
   const visible = useMemo(() => {
     const q = query.trim().toLowerCase()
-    let list = items.filter((s) =>
-      !q ||
-      [s.name, s.contact_email, s.contact_phone, s.address, s.notes]
-        .filter(Boolean)
-        .some(v => String(v).toLowerCase().includes(q))
+    let list = items.filter(
+      (s) =>
+        !q ||
+        [s.name, s.contact_email, s.contact_phone, s.address, s.notes]
+          .filter(Boolean)
+          .some((v) => String(v).toLowerCase().includes(q)),
     )
     list = list.sort((a, b) => {
-      if (sort === 'new') return new Date(b.created_at ?? 0).getTime() - new Date(a.created_at ?? 0).getTime()
-      if (sort === 'old') return new Date(a.created_at ?? 0).getTime() - new Date(b.created_at ?? 0).getTime()
-      if (sort === 'az')  return a.name.localeCompare(b.name, 'de', { sensitivity: 'base' })
+      if (sort === 'new')
+        return (
+          new Date(b.created_at ?? 0).getTime() -
+          new Date(a.created_at ?? 0).getTime()
+        )
+      if (sort === 'old')
+        return (
+          new Date(a.created_at ?? 0).getTime() -
+          new Date(b.created_at ?? 0).getTime()
+        )
+      if (sort === 'az')
+        return a.name.localeCompare(b.name, 'de', { sensitivity: 'base' })
       return b.name.localeCompare(a.name, 'de', { sensitivity: 'base' }) // 'za'
     })
     return list
@@ -129,8 +147,8 @@ export default function SuppliersManager() {
 
   return (
     <div className="space-y-5">
-      {/* Toolbar: jetzt in weißer Glas-Box */}
-      <section className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/80 shadow-[0_10px_30px_rgba(2,6,23,0.08)] backdrop-blur-xl">
+      {/* Toolbar: weiße Glas-Box mit Count-Chip */}
+      <section className="relative overflow-hidden rounded-3xl border border-white/60 bg-white/85 shadow-[0_10px_30px_rgba(2,6,23,0.12)] backdrop-blur-2xl">
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(900px_260px_at_110%_-20%,rgba(15,23,42,0.08),transparent)]" />
         <div className="relative p-4 sm:p-5">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -143,16 +161,22 @@ export default function SuppliersManager() {
                   placeholder="Suche in Firma, Name, E-Mail, Telefon, Adresse…"
                   className={input + ' pr-8'}
                 />
-                <svg className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                     viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>
+                <svg
+                  className="pointer-events-none absolute right-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                >
+                  <circle cx="11" cy="11" r="7" />
+                  <path d="m20 20-3.5-3.5" />
                 </svg>
               </div>
 
               {/* Sortierung */}
               <select
                 value={sort}
-                onChange={(e)=>setSort(e.target.value as SortKey)}
+                onChange={(e) => setSort(e.target.value as SortKey)}
                 className={input + ' sm:w-48'}
                 title="Sortierung"
               >
@@ -161,6 +185,11 @@ export default function SuppliersManager() {
                 <option value="new">Neueste zuerst</option>
                 <option value="old">Älteste zuerst</option>
               </select>
+
+              {/* Count */}
+              <span className="inline-flex items-center rounded-full border border-white/70 bg-white/80 px-2.5 py-1 text-xs font-medium text-slate-700 backdrop-blur">
+                Lieferanten: {visible.length}
+              </span>
             </div>
 
             {/* Neuer Eintrag */}
@@ -178,9 +207,16 @@ export default function SuppliersManager() {
       {loading ? (
         <div className="text-slate-600">Lade…</div>
       ) : visible.length === 0 ? (
-        <div className="rounded-2xl border border-dashed border-slate-300 bg-white/60 p-10 text-center backdrop-blur">
+        <div className="rounded-2xl border border-dashed border-slate-300 bg-white/70 p-10 text-center backdrop-blur">
           <p className="text-sm text-slate-600">
-            Keine Einträge gefunden. <button onClick={openCreate} className="underline decoration-slate-300 underline-offset-2 hover:text-slate-900">Jetzt anlegen</button>.
+            Keine Einträge gefunden.{' '}
+            <button
+              onClick={openCreate}
+              className="underline decoration-slate-300 underline-offset-2 hover:text-slate-900"
+            >
+              Jetzt anlegen
+            </button>
+            .
           </p>
         </div>
       ) : (
@@ -188,14 +224,26 @@ export default function SuppliersManager() {
           {visible.map((s) => (
             <article
               key={s.id}
-              className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/80 p-5 shadow-[0_10px_30px_rgba(2,6,23,0.08)] backdrop-blur-xl"
+              className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/85 p-5 shadow-[0_10px_30px_rgba(2,6,23,0.12)] backdrop-blur-xl"
             >
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(800px_300px_at_120%_-20%,rgba(15,23,42,0.08),transparent)]" />
               <div className="relative">
-                <div className="mb-2 flex items-start justify-between gap-3">
-                  <h3 className="min-w-0 truncate text-lg font-semibold text-slate-900" title={s.name}>
-                    {s.name}
-                  </h3>
+                {/* Header */}
+                <div className="mb-3 flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="mb-1 inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-2.5 py-1 text-[11px] font-medium text-slate-700 backdrop-blur">
+                      <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-slate-900 text-[10px] font-semibold text-white">
+                        {s.name?.[0]?.toUpperCase() ?? 'L'}
+                      </span>
+                      Lieferant
+                    </div>
+                    <h3
+                      className="truncate text-lg font-semibold text-slate-900"
+                      title={s.name}
+                    >
+                      {s.name}
+                    </h3>
+                  </div>
                   <div className="shrink-0">
                     <div className="flex gap-2">
                       <IconButton
@@ -213,11 +261,14 @@ export default function SuppliersManager() {
                   </div>
                 </div>
 
+                {/* Inhalt */}
                 <div className="grid grid-cols-1 gap-2 text-sm text-slate-800">
-                  <Row label="E-Mail"   value={s.contact_email || '—'} />
+                  <Row label="E-Mail" value={s.contact_email || '—'} />
                   <Row label="Telefon" value={s.contact_phone || '—'} />
                   <Row label="Adresse" value={s.address || '—'} />
-                  {s.notes ? <Row label="Notizen" value={s.notes} multiline /> : null}
+                  {s.notes ? (
+                    <Row label="Notizen" value={s.notes} multiline />
+                  ) : null}
                 </div>
               </div>
             </article>
@@ -229,7 +280,10 @@ export default function SuppliersManager() {
       <PortalModal
         open={open}
         title={isEdit ? 'Lieferant bearbeiten' : 'Neuen Lieferanten hinzufügen'}
-        onClose={() => { setOpen(false); setEditing(null) }}
+        onClose={() => {
+          setOpen(false)
+          setEditing(null)
+        }}
       >
         <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 sm:gap-4">
           <Field label="Name *">
@@ -242,12 +296,14 @@ export default function SuppliersManager() {
             />
           </Field>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
             <Field label="E-Mail">
               <input
                 type="email"
                 value={form.contact_email}
-                onChange={(e) => setForm({ ...form, contact_email: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, contact_email: e.target.value })
+                }
                 placeholder="kontakt@lieferant.de"
                 className={input}
               />
@@ -255,7 +311,9 @@ export default function SuppliersManager() {
             <Field label="Telefon">
               <input
                 value={form.contact_phone}
-                onChange={(e) => setForm({ ...form, contact_phone: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, contact_phone: e.target.value })
+                }
                 placeholder="+49 511 123456"
                 className={input}
               />
@@ -265,7 +323,9 @@ export default function SuppliersManager() {
           <Field label="Adresse">
             <input
               value={form.address}
-              onChange={(e) => setForm({ ...form, address: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, address: e.target.value })
+              }
               placeholder="Straße Nr., PLZ Ort"
               className={input}
             />
@@ -275,7 +335,9 @@ export default function SuppliersManager() {
             <textarea
               rows={3}
               value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, notes: e.target.value })
+              }
               placeholder="z. B. Zahlungsbedingungen, Ansprechpartner, Rabatte …"
               className={input}
             />
@@ -284,7 +346,10 @@ export default function SuppliersManager() {
           <div className="mt-2 flex items-center justify-end gap-2">
             <button
               type="button"
-              onClick={() => { setOpen(false); setEditing(null) }}
+              onClick={() => {
+                setOpen(false)
+                setEditing(null)
+              }}
               className="rounded-lg border border-white/60 bg-white/80 px-4 py-2 text-sm font-medium text-slate-900 shadow-sm backdrop-blur hover:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-200"
             >
               Abbrechen
@@ -303,43 +368,89 @@ export default function SuppliersManager() {
 }
 
 /* ---------- UI-Helfer ---------- */
-function Row({ label, value, multiline }: { label: string; value: string; multiline?: boolean }) {
+function Row({
+  label,
+  value,
+  multiline,
+}: {
+  label: string
+  value: string
+  multiline?: boolean
+}) {
   return (
     <div className="rounded-lg border border-white/60 bg-white/70 px-3 py-2 backdrop-blur">
-      <div className="text-[11px] uppercase tracking-wide text-slate-500">{label}</div>
-      <div className={`text-slate-900 ${multiline ? '' : 'truncate'}`}>{value}</div>
+      <div className="text-[11px] uppercase tracking-wide text-slate-500">
+        {label}
+      </div>
+      <div className={`text-slate-900 ${multiline ? '' : 'truncate'}`}>
+        {value}
+      </div>
     </div>
   )
 }
 
 function IconButton({
-  icon, label, onClick, tone = 'default',
-}: { icon: React.ReactNode; label: string; onClick: () => void; tone?: 'default' | 'danger' }) {
-  const base = 'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition border backdrop-blur'
-  const styles = tone === 'danger'
-    ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
-    : 'border-white/60 bg-white/80 text-slate-900 hover:bg-white'
+  icon,
+  label,
+  onClick,
+  tone = 'default',
+}: {
+  icon: React.ReactNode
+  label: string
+  onClick: () => void
+  tone?: 'default' | 'danger'
+}) {
+  const base =
+    'inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-medium transition border backdrop-blur'
+  const styles =
+    tone === 'danger'
+      ? 'border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100'
+      : 'border-white/60 bg-white/80 text-slate-900 hover:bg-white'
   return (
-    <button onClick={onClick} className={`${base} ${styles}`} aria-label={label} title={label}>
+    <button
+      onClick={onClick}
+      className={`${base} ${styles}`}
+      aria-label={label}
+      title={label}
+    >
       {icon} <span className="hidden sm:inline">{label}</span>
     </button>
   )
 }
 
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
-  return (<div className="group"><label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>{children}</div>)
+  return (
+    <div className="group">
+      <label className="mb-1 block text-xs font-medium text-slate-600">
+        {label}
+      </label>
+      {children}
+    </div>
+  )
 }
 
 /* ---------- Portal-Modal ---------- */
 function PortalModal({
-  open, title, onClose, children,
-}: { open: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
+  open,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean
+  title: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
   const overlayRef = useRef<HTMLDivElement | null>(null)
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => { setMounted(true) }, [])
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    setMounted(true)
+  }, [])
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
     if (open) document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
@@ -365,6 +476,6 @@ function PortalModal({
         <div className="px-5 py-4">{children}</div>
       </div>
     </div>,
-    document.body
+    document.body,
   )
 }

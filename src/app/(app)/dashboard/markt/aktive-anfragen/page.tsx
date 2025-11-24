@@ -106,7 +106,7 @@ export default async function AktiveAnfragenPage() {
           aria-hidden
           className="pointer-events-none absolute inset-0 rounded-3xl bg-[radial-gradient(900px_260px_at_-10%_-40%,rgba(15,23,42,0.05),transparent_70%),radial-gradient(900px_260px_at_110%_140%,rgba(15,23,42,0.07),transparent_70%)]"
         />
-        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
           <div className="space-y-1.5">
             <div className="inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1 text-[10px] font-medium text-slate-900 ring-1 ring-white/80 backdrop-blur">
               <ChatBubbleOvalLeftEllipsisIcon className="h-3.5 w-3.5 text-slate-900" />
@@ -121,7 +121,7 @@ export default async function AktiveAnfragenPage() {
               Alle Markt-Anfragen mit akzeptierter Bewerbung auf einen Blick.
             </p>
           </div>
-          <div className="flex flex-wrap gap-2 justify-start sm:justify-end">
+          <div className="flex flex-wrap gap-2 justify-start md:justify-end mt-2 md:mt-0">
             <Link href="/dashboard/markt/anfragen" className={btnGhost}>
               <ArrowUturnLeftIcon className="h-4 w-4" />
               <span>Zu offenen Anfragen</span>
@@ -133,7 +133,9 @@ export default async function AktiveAnfragenPage() {
       <main className="space-y-4">
         {!ok && (
           <section className={`${cardBase} border-rose-100/80 bg-rose-50/95 text-rose-800 ring-rose-100`}>
-            <div className="text-sm font-medium">Beim Laden der aktiven Anfragen ist ein Fehler aufgetreten.</div>
+            <div className="text-sm font-medium">
+              Beim Laden der aktiven Anfragen ist ein Fehler aufgetreten.
+            </div>
             <div className="mt-1 text-xs text-rose-700">
               {error || 'Bitte versuchen Sie es erneut oder kontaktieren Sie den Support.'}
             </div>
@@ -159,7 +161,7 @@ export default async function AktiveAnfragenPage() {
         )}
 
         {ok && items.length > 0 && (
-          <section className="grid gap-4 lg:grid-cols-2">
+          <section className="grid grid-cols-1 gap-4 lg:grid-cols-2">
             {items.map((item) => {
               const r = item.request
               const title =
@@ -179,7 +181,7 @@ export default async function AktiveAnfragenPage() {
 
               return (
                 <article key={item.application_id} className={cardBase}>
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div className="min-w-0">
                       <div className="mb-1 flex flex-wrap items-baseline gap-2 text-[10px] text-slate-400">
                         <span className="uppercase tracking-[0.14em] text-slate-500">
@@ -231,8 +233,8 @@ export default async function AktiveAnfragenPage() {
                       </div>
                     </div>
 
-                    {/* Chat-Link statt toter Button */}
-                    <div className="flex flex-col items-end">
+                    {/* Chat-Link */}
+                    <div className="mt-1 md:mt-0 flex justify-start md:justify-end">
                       {chatHref ? (
                         <Link
                           href={chatHref}

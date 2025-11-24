@@ -1,9 +1,10 @@
-// src/components/OfferReviewModal.tsx
+// src/components/offers/OfferReviewModal.tsx
 'use client'
 
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { supabaseClient } from '@/lib/supabase-client'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 
 function cls(...arr: Array<string | false | null | undefined>) {
   return arr.filter(Boolean).join(' ')
@@ -107,8 +108,7 @@ export default function OfferReviewModal({ open, onClose, offerId, role }: Props
           .eq('offer_id', id)
           .order('uploaded_at', { ascending: false })
 
-        if (fileErr)
-          throw new Error(fileErr.message || 'Dateien laden fehlgeschlagen')
+        if (fileErr) throw new Error(fileErr.message || 'Dateien laden fehlgeschlagen')
 
         const urls =
           (files || []).length === 0
@@ -218,25 +218,30 @@ export default function OfferReviewModal({ open, onClose, offerId, role }: Props
           'relative z-10 mt-8 w-full max-w-2xl',
           'max-h-[92vh] overflow-y-auto',
           'rounded-3xl border border-white/60 bg-white/90 backdrop-blur-xl',
-          'p-6 shadow-[0_10px_34px_rgba(2,6,23,0.12)] ring-1 ring-white/60',
+          'p-4 sm:p-6 shadow-[0_10px_34px_rgba(2,6,23,0.12)] ring-1 ring-white/60',
         )}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-medium text-slate-900">Angebot</h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Prüfe die Angebotsdetails und Anhänge. Eine Zusage ist rechtlich
-              verbindlich.
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="pr-4">
+            <h3 className="text-base sm:text-lg font-medium text-slate-900">
+              Angebot
+            </h3>
+            <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
+              Prüfe die Angebotsdetails und Anhänge. Eine Zusage ist rechtlich verbindlich.
             </p>
           </div>
+
+          {/* X oben rechts */}
           <button
             type="button"
             disabled={busy}
             onClick={() => !busy && onClose()}
-            className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm disabled:opacity-60"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/95 shadow-sm
+                       hover:bg-slate-50 disabled:opacity-60 shrink-0"
+            aria-label="Schließen"
           >
-            Schließen
+            <XMarkIcon className="h-4 w-4 text-slate-500" />
           </button>
         </div>
 
@@ -276,7 +281,7 @@ export default function OfferReviewModal({ open, onClose, offerId, role }: Props
               </div>
             </div>
 
-            {/* Beträge */}
+            {/* Beträge als "table" für mobil/tablet */}
             <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 text-sm">
               <div className="rounded-2xl border border-white/60 bg-white/80 px-3 py-2">
                 <div className="text-[10px] uppercase tracking-wide text-slate-500">
@@ -294,7 +299,7 @@ export default function OfferReviewModal({ open, onClose, offerId, role }: Props
                   {data.tax_rate}%
                 </div>
               </div>
-              <div className="rounded-2xl border border-white/60 bg-white/80 px-3 py-2">
+              <div className="rounded-2xl border border-white/60 bg-white/80 px-3 py-2 sm:col-span-1">
                 <div className="text-[10px] uppercase tracking-wide text-slate-500">
                   Rabatt
                 </div>
@@ -307,7 +312,7 @@ export default function OfferReviewModal({ open, onClose, offerId, role }: Props
                   </span>
                 </div>
               </div>
-              <div className="rounded-2xl border border-slate-900/10 bg-slate-900 text-white px-3 py-2">
+              <div className="rounded-2xl border border-slate-900/10 bg-slate-900 text-white px-3 py-2 sm:col-span-1">
                 <div className="text-[10px] uppercase tracking-wide text-white/70">
                   Brutto Gesamtsumme
                 </div>
@@ -327,11 +332,11 @@ export default function OfferReviewModal({ open, onClose, offerId, role }: Props
                   Keine Dateien vorhanden.
                 </div>
               ) : (
-                <ul className="space-y-1 text-sm">
+                <ul className="space-y-1 text-xs sm:text-sm">
                   {data.files.map(f => (
                     <li
                       key={f.id}
-                      className="flex items-center justify-between gap-2 rounded-xl bg-white/70 px-3 py-1.5 text-xs border border-white/50"
+                      className="flex items-center justify-between gap-2 rounded-xl bg-white/70 px-3 py-1.5 border border-white/50"
                     >
                       <span className="truncate">
                         {f.name || 'Datei'}
@@ -357,7 +362,7 @@ export default function OfferReviewModal({ open, onClose, offerId, role }: Props
             </div>
 
             {/* Aktionen */}
-            <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+            <div className="mt-6 flex flex-col-reverse sm:flex-row sm:flex-wrap sm:items-center sm:justify-end gap-2">
               {/* Nur Konsument, nur bei Status "created" */}
               {role === 'konsument' && data.status === 'created' && (
                 <>
@@ -365,7 +370,7 @@ export default function OfferReviewModal({ open, onClose, offerId, role }: Props
                     type="button"
                     disabled={busy}
                     onClick={decline}
-                    className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm
+                    className="w-full sm:w-auto rounded-xl border border-white/60 bg-white px-3 py-2 text-sm
                                hover:shadow-sm disabled:opacity-60"
                   >
                     Ablehnen
@@ -374,15 +379,13 @@ export default function OfferReviewModal({ open, onClose, offerId, role }: Props
                     type="button"
                     disabled={busy}
                     onClick={accept}
-                    className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm text-white
+                    className="w-full sm:w-auto rounded-xl bg-slate-900 px-3 py-2 text-sm text-white
                                hover:opacity-90 disabled:opacity-60"
                   >
                     Angebot annehmen
                   </button>
                 </>
               )}
-
-              {/* Wenn keine Aktion möglich: nur Close (oben vorhanden) */}
             </div>
           </>
         )}

@@ -1,3 +1,4 @@
+// src/app/(app)/dashboard/buchhaltung/angebot/angebot-erstellen/OfferWizard.tsx
 'use client'
 
 import React, { useState } from 'react'
@@ -24,7 +25,7 @@ export interface OfferWizardProps {
 
 function Inner() {
   const { isEdit } = useAngebot()
-  // ✨ KEIN Auto-Advance mehr – Create startet bei 0, Edit startet bei 1
+  // KEIN Auto-Advance mehr – Create startet bei 0, Edit startet bei 1
   const [step, setStep] = useState<number>(isEdit ? 1 : 0)
 
   return (
@@ -51,7 +52,7 @@ export default function OfferWizard({
       initialData={initialData}
       isEdit={isEdit}
     >
-      <div className="mx-auto max-w-4xl p-6 space-y-6">
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-3 py-4 sm:px-4 sm:py-6 lg:px-6 lg:py-8">
         <Inner />
       </div>
     </AngebotProvider>

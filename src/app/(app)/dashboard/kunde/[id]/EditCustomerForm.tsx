@@ -46,13 +46,26 @@ type IconInputProps = {
 }
 
 const inputGlassBase =
-  'w-full rounded-lg border border-slate-200 bg-white/80 px-10 py-2 text-sm text-slate-900 ' +
-  'outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200'
+  'w-full rounded-lg border border-slate-200 bg-white/80 px-10 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200'
 
 const IconInput: React.FC<IconInputProps> = React.memo(
-  ({ name, type = 'text', value, onChange, label, Icon, placeholder, className, inputClassName, autoComplete = 'off' }) => (
+  ({
+    name,
+    type = 'text',
+    value,
+    onChange,
+    label,
+    Icon,
+    placeholder,
+    className,
+    inputClassName,
+    autoComplete = 'off',
+  }) => (
     <div className={className}>
-      <label htmlFor={name} className="mb-1 block text-sm font-medium text-slate-700">
+      <label
+        htmlFor={name}
+        className="mb-1 block text-sm font-medium text-slate-700"
+      >
         {label}
       </label>
       <div className="relative">
@@ -69,7 +82,7 @@ const IconInput: React.FC<IconInputProps> = React.memo(
         />
       </div>
     </div>
-  )
+  ),
 )
 IconInput.displayName = 'IconInput'
 
@@ -84,7 +97,6 @@ export default function EditCustomerForm({
   const router = useRouter()
   const searchParams = useSearchParams()
 
-  // Abgeleiteter, stabiler Wert des URL-Params
   const editParam = searchParams?.get('edit') ?? null
   const initialOpen = Boolean(startEditing ?? (editParam === '1'))
 
@@ -92,7 +104,6 @@ export default function EditCustomerForm({
   const [form, setForm] = useState<Customer>({ ...customer })
   const [loading, setLoading] = useState(false)
 
-  // Nur reagieren, wenn sich der tatsächliche Wert von ?edit= ändert (nicht das Objekt)
   useEffect(() => {
     setEditing(Boolean(startEditing ?? (editParam === '1')))
   }, [startEditing, editParam])
@@ -100,17 +111,16 @@ export default function EditCustomerForm({
   const onChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [e.target.name]: e.target.value } as Customer))
 
-  // Styles
   const btnWhite =
-    'rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 ' +
-    'shadow-sm hover:bg-white/90 disabled:opacity-50 transition-colors'
+    'rounded-lg border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm hover:bg-white/90 disabled:opacity-50 transition-colors'
 
   const closeEditing = () => {
-    // ?edit=1 aus der URL entfernen
     try {
       const url = new URL(window.location.href)
       url.searchParams.delete('edit')
-      router.replace(url.pathname + (url.search ? url.search : '') + (url.hash || ''))
+      router.replace(
+        url.pathname + (url.search ? url.search : '') + (url.hash || ''),
+      )
     } catch {
       router.replace(window.location.pathname)
     }
@@ -148,10 +158,10 @@ export default function EditCustomerForm({
   return (
     <div
       id="edit"
-      className="mt-4 space-y-5 rounded-2xl border border-slate-200 bg-white p-5 shadow-[0_10px_30px_rgba(2,6,23,0.08)]"
+      className="mt-4 space-y-5 rounded-2xl border border-white/70 bg-white/95 p-4 shadow-[0_10px_30px_rgba(2,6,23,0.08)] backdrop-blur-xl sm:p-5"
     >
       {/* Grid-Layout */}
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 gap-3 sm:gap-4 md:grid-cols-2">
         {/* Unternehmen (volle Breite) */}
         <div className="md:col-span-2">
           <IconInput

@@ -1,22 +1,28 @@
+// src/app/dashboard/mitarbeiter/[id]/OpenTimeModalButton.tsx
 'use client'
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
 import { ClockIcon } from '@heroicons/react/24/outline'
 
-const TimeEntriesModal = dynamic(() => import('./TimeEntriesModal'), { ssr: false })
+const TimeEntriesModal = dynamic(() => import('./TimeEntriesModal'), {
+  ssr: false,
+})
 
 export default function OpenTimeModalButton({
   employeeId,
   employeeName,
-}: { employeeId: string; employeeName: string }) {
+}: {
+  employeeId: string
+  employeeName: string
+}) {
   const [open, setOpen] = useState(false)
 
   return (
     <>
       <button
         onClick={() => setOpen(true)}
-        className="inline-flex items-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow hover:bg-black"
+        className="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 px-3 py-2 text-sm font-medium text-white shadow hover:bg-black sm:w-auto"
       >
         <ClockIcon className="h-4 w-4" />
         Zeiteinträge

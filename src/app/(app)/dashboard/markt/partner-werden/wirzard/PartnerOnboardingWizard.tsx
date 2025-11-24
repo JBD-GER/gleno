@@ -137,7 +137,7 @@ function useDebounced<T extends (...args: any[]) => void>(fn: T, delay = 220) {
         fnRef.current(...args)
       }, delay)
     },
-    [delay]
+    [delay],
   )
 
   return debounced as T
@@ -153,13 +153,13 @@ function Chip({
   onRemove?: () => void
 }) {
   return (
-    <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border text-xs sm:text-sm bg-slate-900 text-white border-slate-900">
+    <span className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-900 px-3 py-1.5 text-xs text-white sm:text-sm">
       {children}
       {onRemove && (
         <button
           type="button"
           onClick={onRemove}
-          className="rounded-full w-4 h-4 flex items-center justify-center bg-white/20 hover:bg-white/30 text-[11px] leading-none"
+          className="flex h-4 w-4 items-center justify-center rounded-full bg-white/20 text-[11px] leading-none hover:bg-white/30"
           aria-label="Entfernen"
           title="Entfernen"
         >
@@ -174,7 +174,7 @@ function Chip({
 
 const SocialIcon = ({ kind }: { kind?: string }) => {
   const k = (kind || '').toLowerCase()
-  const base = 'w-4 h-4 sm:w-5 sm:h-5 shrink-0'
+  const base = 'h-4 w-4 shrink-0 sm:h-5 sm:w-5'
   if (k === 'instagram')
     return (
       <svg className={base} viewBox="0 0 24 24" aria-hidden="true">
@@ -271,37 +271,27 @@ export default function PartnerOnboardingWizard() {
       const low = input.toLowerCase().trim()
       const sl = slugify(input)
 
-      const exact = branchRows.find(
-        (b) => b.name.toLowerCase() === low
-      )
+      const exact = branchRows.find((b) => b.name.toLowerCase() === low)
       if (exact) return exact.name
 
       const bySlug = branchRows.find((b) => b.slug === sl)
       if (bySlug) return bySlug.name
 
-      const starts = branchRows.find((b) =>
-        b.name.toLowerCase().startsWith(low)
-      )
+      const starts = branchRows.find((b) => b.name.toLowerCase().startsWith(low))
       if (starts) return starts.name
 
-      const contains = branchRows.find((b) =>
-        b.name.toLowerCase().includes(low)
-      )
+      const contains = branchRows.find((b) => b.name.toLowerCase().includes(low))
       if (contains) return contains.name
 
-      const startsSlug = branchRows.find((b) =>
-        b.slug.startsWith(sl)
-      )
+      const startsSlug = branchRows.find((b) => b.slug.startsWith(sl))
       if (startsSlug) return startsSlug.name
 
-      const containsSlug = branchRows.find((b) =>
-        b.slug.includes(sl)
-      )
+      const containsSlug = branchRows.find((b) => b.slug.includes(sl))
       if (containsSlug) return containsSlug.name
 
       return null
     },
-    [branchRows]
+    [branchRows],
   )
 
   /* ========== Load Branches ========== */
@@ -320,27 +310,20 @@ export default function PartnerOnboardingWizard() {
         } catch {
           /* ignore */
         }
-        if (!res.ok)
-          throw new Error(
-            data?.error || `HTTP ${res.status} – ${text || 'no body'}`
-          )
+        if (!res.ok) throw new Error(data?.error || `HTTP ${res.status} – ${text || 'no body'}`)
         if (cancelled) return
-        const rows: BranchRow[] = (data?.branches || []).map(
-          (b: any) => ({
-            id: String(b.id),
-            name: String(b.name),
-            slug: String(b.slug),
-          })
-        )
+        const rows: BranchRow[] = (data?.branches || []).map((b: any) => ({
+          id: String(b.id),
+          name: String(b.name),
+          slug: String(b.slug),
+        }))
         const names = rows.map((r) => r.name)
         setBranchRows(rows)
         setBranchOptions(names)
         setBranchSuggest(names.slice(0, 12))
       } catch (e: any) {
         if (!cancelled)
-          setBranchError(
-            e?.message || 'Unbekannter Fehler beim Laden der Branchen.'
-          )
+          setBranchError(e?.message || 'Unbekannter Fehler beim Laden der Branchen.')
       } finally {
         if (!cancelled) setBranchLoading(false)
       }
@@ -352,36 +335,29 @@ export default function PartnerOnboardingWizard() {
 
   /* ========== Debounced Branch Search ========== */
 
-  const debouncedSearchBranches = useDebounced(
-    (q: string) => {
-      ;(async () => {
-        if (!q.trim()) {
-          setBranchSuggest(branchOptions.slice(0, 12))
-          return
-        }
-        try {
-          const res = await fetch(
-            `/api/partners/partner-branches?q=${encodeURIComponent(
-              q
-            )}&limit=50`
-          )
-          if (!res.ok) return
-          const data = await res.json().catch(() => ({}))
-          const rows: BranchRow[] = (data?.branches || []).map(
-            (b: any) => ({
-              id: String(b.id),
-              name: String(b.name),
-              slug: String(b.slug),
-            })
-          )
-          setBranchSuggest(rows.map((r) => r.name).slice(0, 12))
-        } catch {
-          /* silent */
-        }
-      })()
-    },
-    220
-  )
+  const debouncedSearchBranches = useDebounced((q: string) => {
+    ;(async () => {
+      if (!q.trim()) {
+        setBranchSuggest(branchOptions.slice(0, 12))
+        return
+      }
+      try {
+        const res = await fetch(
+          `/api/partners/partner-branches?q=${encodeURIComponent(q)}&limit=50`,
+        )
+        if (!res.ok) return
+        const data = await res.json().catch(() => ({}))
+        const rows: BranchRow[] = (data?.branches || []).map((b: any) => ({
+          id: String(b.id),
+          name: String(b.name),
+          slug: String(b.slug),
+        }))
+        setBranchSuggest(rows.map((r) => r.name).slice(0, 12))
+      } catch {
+        /* silent */
+      }
+    })()
+  }, 220)
 
   useEffect(() => {
     debouncedSearchBranches(branchInput)
@@ -389,47 +365,38 @@ export default function PartnerOnboardingWizard() {
 
   /* ========== Load Categories (Base) ========== */
 
-  const loadCategories = useCallback(
-    async (branchName: string, q: string) => {
-      if (!branchName) {
-        // Nur resetten, wenn wirklich was drin ist → sonst Loop
-        setCategoryRows((prev) => (prev.length ? [] : prev))
-        setCategoryOptions((prev) => (prev.length ? [] : prev))
-        setCategorySuggest((prev) => (prev.length ? [] : prev))
-        return
-      }
-      setCategoryLoading(true)
-      try {
-        const url = `/api/partners/partner-categories?branch=${encodeURIComponent(
-          branchName
-        )}&q=${encodeURIComponent(q)}&limit=500`
-        const res = await fetch(url)
-        if (!res.ok) return
-        const data = await res.json().catch(() => ({}))
-        const rows: CategoryRow[] = (data?.categories || []).map(
-          (c: any) => ({
-            id: String(c.id),
-            name: String(c.name),
-            slug: String(c.slug),
-          })
-        )
-        const names = rows.map((r) => r.name)
-        setCategoryRows(rows)
-        setCategoryOptions(names)
-        setCategorySuggest(names.slice(0, 12))
-      } finally {
-        setCategoryLoading(false)
-      }
-    },
-    []
-  )
+  const loadCategories = useCallback(async (branchName: string, q: string) => {
+    if (!branchName) {
+      setCategoryRows((prev) => (prev.length ? [] : prev))
+      setCategoryOptions((prev) => (prev.length ? [] : prev))
+      setCategorySuggest((prev) => (prev.length ? [] : prev))
+      return
+    }
+    setCategoryLoading(true)
+    try {
+      const url = `/api/partners/partner-categories?branch=${encodeURIComponent(
+        branchName,
+      )}&q=${encodeURIComponent(q)}&limit=500`
+      const res = await fetch(url)
+      if (!res.ok) return
+      const data = await res.json().catch(() => ({}))
+      const rows: CategoryRow[] = (data?.categories || []).map((c: any) => ({
+        id: String(c.id),
+        name: String(c.name),
+        slug: String(c.slug),
+      }))
+      const names = rows.map((r) => r.name)
+      setCategoryRows(rows)
+      setCategoryOptions(names)
+      setCategorySuggest(names.slice(0, 12))
+    } finally {
+      setCategoryLoading(false)
+    }
+  }, [])
 
-  const debouncedLoadCategories = useDebounced(
-    (branchName: string, q: string) => {
-      loadCategories(branchName, q)
-    },
-    220
-  )
+  const debouncedLoadCategories = useDebounced((branchName: string, q: string) => {
+    loadCategories(branchName, q)
+  }, 220)
 
   /* ========== Initial Profile Load ========== */
 
@@ -438,42 +405,22 @@ export default function PartnerOnboardingWizard() {
       setLoadingMe(true)
       try {
         const res = await fetch('/api/users', { method: 'GET' })
-        if (!res.ok)
-          throw new Error('Profil konnte nicht geladen werden')
+        if (!res.ok) throw new Error('Profil konnte nicht geladen werden')
         const data: ProfilePayload = await res.json()
         setMe(data)
         setForm((prev) => ({
           ...prev,
-          company_name:
-            data.profile.company_name ?? prev.company_name ?? '',
-          first_name:
-            data.profile.first_name ?? prev.first_name ?? '',
-          last_name:
-            data.profile.last_name ?? prev.last_name ?? '',
+          company_name: data.profile.company_name ?? prev.company_name ?? '',
+          first_name: data.profile.first_name ?? prev.first_name ?? '',
+          last_name: data.profile.last_name ?? prev.last_name ?? '',
           address: {
-            street:
-              data.profile.street ??
-              prev.address?.street ??
-              '',
-            house_number:
-              data.profile.house_number ??
-              prev.address?.house_number ??
-              '',
-            postal_code:
-              data.profile.postal_code ??
-              prev.address?.postal_code ??
-              '',
-            city:
-              data.profile.city ??
-              prev.address?.city ??
-              '',
-            country:
-              data.profile.country ??
-              prev.address?.country ??
-              'Deutschland',
+            street: data.profile.street ?? prev.address?.street ?? '',
+            house_number: data.profile.house_number ?? prev.address?.house_number ?? '',
+            postal_code: data.profile.postal_code ?? prev.address?.postal_code ?? '',
+            city: data.profile.city ?? prev.address?.city ?? '',
+            country: data.profile.country ?? prev.address?.country ?? 'Deutschland',
           },
-          website:
-            data.profile.website ?? prev.website ?? '',
+          website: data.profile.website ?? prev.website ?? '',
           email: prev.email ?? '',
           phone: prev.phone ?? '',
         }))
@@ -558,22 +505,12 @@ export default function PartnerOnboardingWizard() {
     setLoading(true)
     setAnalyzeLogs(['Starte Analyse …'])
     try {
-      const pushLog = (msg: string) =>
-        setAnalyzeLogs((prev) => [...prev, msg])
+      const pushLog = (msg: string) => setAnalyzeLogs((prev) => [...prev, msg])
 
       setTimeout(() => pushLog('🔎 Crawle Seite & erkenne Struktur …'), 250)
-      setTimeout(
-        () => pushLog('🧠 Extrahiere Kontaktdaten, Leistungen & Inhalte …'),
-        650
-      )
-      setTimeout(
-        () => pushLog('🗂️ Ermittele Branchen & Kategorien …'),
-        1050
-      )
-      setTimeout(
-        () => pushLog('🧩 Erzeuge Service-Prioritäten …'),
-        1450
-      )
+      setTimeout(() => pushLog('🧠 Extrahiere Kontaktdaten, Leistungen & Inhalte …'), 650)
+      setTimeout(() => pushLog('🗂️ Ermittele Branchen & Kategorien …'), 1050)
+      setTimeout(() => pushLog('🧩 Erzeuge Service-Prioritäten …'), 1450)
 
       const res = await fetch('/api/partners/analyze', {
         method: 'POST',
@@ -581,19 +518,16 @@ export default function PartnerOnboardingWizard() {
         body: JSON.stringify({ freeText, links }),
       })
       const data = await res.json()
-      if (!data.ok)
-        throw new Error(data.error || 'Analyse fehlgeschlagen')
+      if (!data.ok) throw new Error(data.error || 'Analyse fehlgeschlagen')
 
       const x = data.extracted as Extracted
       setExtracted(x)
       setModel(data.model)
 
-      const services = (Array.isArray(x.services) ? x.services : []).map(
-        (s) => ({
-          name: s.name,
-          priority_percent: clampInt(s.priority_percent ?? 0),
-        })
-      )
+      const services = (Array.isArray(x.services) ? x.services : []).map((s) => ({
+        name: s.name,
+        priority_percent: clampInt(s.priority_percent ?? 0),
+      }))
 
       const autoCats = uniqueNormalized([
         x.category_name,
@@ -610,35 +544,14 @@ export default function PartnerOnboardingWizard() {
           '',
         email: x.email ?? prev.email ?? '',
         phone: x.phone ?? prev.phone ?? '',
-        website:
-          x.website ??
-          prev.website ??
-          links[0] ??
-          me?.profile.website ??
-          '',
-        description:
-          x.description ?? prev.description ?? freeText,
+        website: x.website ?? prev.website ?? links[0] ?? me?.profile.website ?? '',
+        description: x.description ?? prev.description ?? freeText,
         address: {
-          street:
-            x.address?.street ??
-            prev.address?.street ??
-            '',
-          house_number:
-            x.address?.house_number ??
-            prev.address?.house_number ??
-            '',
-          postal_code:
-            x.address?.postal_code ??
-            prev.address?.postal_code ??
-            '',
-          city:
-            x.address?.city ??
-            prev.address?.city ??
-            '',
-          country:
-            x.address?.country ??
-            prev.address?.country ??
-            'Deutschland',
+          street: x.address?.street ?? prev.address?.street ?? '',
+          house_number: x.address?.house_number ?? prev.address?.house_number ?? '',
+          postal_code: x.address?.postal_code ?? prev.address?.postal_code ?? '',
+          city: x.address?.city ?? prev.address?.city ?? '',
+          country: x.address?.country ?? prev.address?.country ?? 'Deutschland',
         },
         links:
           Array.isArray(x.links) && x.links.length
@@ -653,10 +566,7 @@ export default function PartnerOnboardingWizard() {
 
       setSelectedCategories(autoCats)
 
-      setTimeout(
-        () => setAnalyzeLogs((prev) => [...prev, '✅ Fertig']),
-        1750
-      )
+      setTimeout(() => setAnalyzeLogs((prev) => [...prev, '✅ Fertig']), 1750)
       setTimeout(() => setStep(2), 2100)
     } catch (e: any) {
       setAnalyzeLogs((prev) => [
@@ -683,10 +593,7 @@ export default function PartnerOnboardingWizard() {
       .map((b) => (b ? canonicalBranchName(b) : null))
       .filter((x): x is string => !!x)
 
-    const auto = dedupeCaseInsensitivePreserve(mapped).slice(
-      0,
-      MAX_BRANCHES
-    )
+    const auto = dedupeCaseInsensitivePreserve(mapped).slice(0, MAX_BRANCHES)
 
     if (auto.length) {
       setSelectedBranches(auto)
@@ -704,28 +611,23 @@ export default function PartnerOnboardingWizard() {
   const servicesTotal = useMemo(() => {
     const sum =
       form.services?.reduce(
-        (acc, s) =>
-          acc + (Number(s.priority_percent) || 0),
-        0
+        (acc, s) => acc + (Number(s.priority_percent) || 0),
+        0,
       ) ?? 0
     return clampInt(sum)
   }, [form.services])
 
   function onServiceChange(
     idx: number,
-    patch: Partial<
-      NonNullable<Extracted['services']>[number]
-    >
+    patch: Partial<NonNullable<Extracted['services']>[number]>,
   ) {
     const arr = [...(form.services || [])]
     const cur = arr[idx]
-    const otherSum = arr.reduce(
-      (acc, s, i) =>
-        i === idx
-          ? acc
-          : acc + (Number(s.priority_percent) || 0),
-      0
-    )
+    const otherSum =
+      arr.reduce(
+        (acc, s, i) => (i === idx ? acc : acc + (Number(s.priority_percent) || 0)),
+        0,
+      ) ?? 0
     const remaining = Math.max(0, 100 - otherSum)
     let next = patch.priority_percent ?? cur.priority_percent ?? 0
     next = clampInt(next, 0, remaining)
@@ -741,10 +643,7 @@ export default function PartnerOnboardingWizard() {
     if (servicesTotal >= 100) return
     setForm((prev) => ({
       ...prev,
-      services: [
-        ...(prev.services || []),
-        { name: '', priority_percent: 0 },
-      ],
+      services: [...(prev.services || []), { name: '', priority_percent: 0 }],
     }))
   }
 
@@ -752,20 +651,19 @@ export default function PartnerOnboardingWizard() {
 
   const addBranchDirect = useCallback(
     (label: string) => {
-      const canon =
-        canonicalBranchName(label) || normalizeLabel(label)
+      const canon = canonicalBranchName(label) || normalizeLabel(label)
       if (!canon) return
-      const next = dedupeCaseInsensitivePreserve([
-        ...selectedBranches,
-        canon,
-      ]).slice(0, MAX_BRANCHES)
+      const next = dedupeCaseInsensitivePreserve([...selectedBranches, canon]).slice(
+        0,
+        MAX_BRANCHES,
+      )
       if (!next.length) return
       setSelectedBranches(next)
       setBranchInput('')
       setBranchSuggest([])
       if (next[0]) loadCategories(next[0], '')
     },
-    [canonicalBranchName, selectedBranches, loadCategories]
+    [canonicalBranchName, selectedBranches, loadCategories],
   )
 
   function addBranchFromInput() {
@@ -773,9 +671,7 @@ export default function PartnerOnboardingWizard() {
     if (!n) return
     const canon = canonicalBranchName(n)
     if (!canon) {
-      alert(
-        'Diese Branche ist nicht verfügbar. Bitte eine vorhandene Branche wählen.'
-      )
+      alert('Diese Branche ist nicht verfügbar. Bitte eine vorhandene Branche wählen.')
       return
     }
     addBranchDirect(canon)
@@ -784,7 +680,7 @@ export default function PartnerOnboardingWizard() {
   const removeBranch = useCallback(
     (val: string) => {
       const next = selectedBranches.filter(
-        (b) => b.toLowerCase() !== val.toLowerCase()
+        (b) => b.toLowerCase() !== val.toLowerCase(),
       )
       setSelectedBranches(next)
       if (!next.length) {
@@ -795,12 +691,12 @@ export default function PartnerOnboardingWizard() {
         loadCategories(next[0], '')
       }
     },
-    [selectedBranches, loadCategories]
+    [selectedBranches, loadCategories],
   )
 
   function toggleBranchInAll(name: string) {
     const isSelected = selectedBranches.some(
-      (b) => b.toLowerCase() === name.toLowerCase()
+      (b) => b.toLowerCase() === name.toLowerCase(),
     )
     if (isSelected) {
       removeBranch(name)
@@ -815,10 +711,7 @@ export default function PartnerOnboardingWizard() {
     const n = normalizeLabel(name)
     if (!n) return
     setSelectedCategories((prev) =>
-      uniqueNormalized([...prev, n]).slice(
-        0,
-        MAX_CATEGORIES
-      )
+      uniqueNormalized([...prev, n]).slice(0, MAX_CATEGORIES),
     )
     setCategoryInput('')
     setCategorySuggest([])
@@ -831,15 +724,13 @@ export default function PartnerOnboardingWizard() {
 
   function removeCategory(val: string) {
     setSelectedCategories((prev) =>
-      prev.filter(
-        (c) => c.toLowerCase() !== val.toLowerCase()
-      )
+      prev.filter((c) => c.toLowerCase() !== val.toLowerCase()),
     )
   }
 
   function toggleCategoryInAll(name: string) {
     const isSelected = selectedCategories.some(
-      (c) => c.toLowerCase() === name.toLowerCase()
+      (c) => c.toLowerCase() === name.toLowerCase(),
     )
     if (isSelected) {
       removeCategory(name)
@@ -854,7 +745,6 @@ export default function PartnerOnboardingWizard() {
 
   useEffect(() => {
     if (!primaryBranch) {
-      // Nur resetten wenn nötig
       setCategoryRows((prev) => (prev.length ? [] : prev))
       setCategoryOptions((prev) => (prev.length ? [] : prev))
       setCategorySuggest((prev) => (prev.length ? [] : prev))
@@ -866,19 +756,14 @@ export default function PartnerOnboardingWizard() {
     } else {
       debouncedLoadCategories(primaryBranch, categoryInput)
     }
-  }, [
-    primaryBranch,
-    categoryInput,
-    loadCategories,
-    debouncedLoadCategories,
-  ])
+  }, [primaryBranch, categoryInput, loadCategories, debouncedLoadCategories])
 
   /* ========== Save / Create Partner ========== */
 
   async function handleCreate() {
     if (servicesTotal !== 100) {
       alert(
-        `Bitte die Service-Prioritäten auf insgesamt 100% setzen (aktuell ${servicesTotal}%).`
+        `Bitte die Service-Prioritäten auf insgesamt 100% setzen (aktuell ${servicesTotal}%).`,
       )
       return
     }
@@ -886,34 +771,22 @@ export default function PartnerOnboardingWizard() {
     const cleanBranches = Array.from(
       new Set(
         selectedBranches
-          .map(
-            (b) =>
-              canonicalBranchName(b) ||
-              normalizeLabel(b)
-          )
-          .filter(Boolean) as string[]
-      )
+          .map((b) => canonicalBranchName(b) || normalizeLabel(b))
+          .filter(Boolean) as string[],
+      ),
     ).slice(0, MAX_BRANCHES)
 
-    const cleanCategories = uniqueNormalized(
-      selectedCategories
-    ).slice(0, MAX_CATEGORIES)
+    const cleanCategories = uniqueNormalized(selectedCategories).slice(
+      0,
+      MAX_CATEGORIES,
+    )
 
     try {
       const payload: any = {
         ...form,
-        company_name:
-          me?.profile.company_name ??
-          form.company_name ??
-          null,
-        first_name:
-          me?.profile.first_name ??
-          form.first_name ??
-          null,
-        last_name:
-          me?.profile.last_name ??
-          form.last_name ??
-          null,
+        company_name: me?.profile.company_name ?? form.company_name ?? null,
+        first_name: me?.profile.first_name ?? form.first_name ?? null,
+        last_name: me?.profile.last_name ?? form.last_name ?? null,
         branch_name: cleanBranches[0] || null,
         branches_selected: cleanBranches,
         category_name: cleanCategories[0] || null,
@@ -931,16 +804,12 @@ export default function PartnerOnboardingWizard() {
 
       if (!res.ok) {
         if (data?.error === 'branch_not_found') {
-          const suggestions: BranchRow[] = Array.isArray(
-            data?.suggestions
-          )
+          const suggestions: BranchRow[] = Array.isArray(data?.suggestions)
             ? data.suggestions
             : []
           setBranchSuggestions(suggestions)
           setShowBranchSuggestions(true)
-          alert(
-            'Die gewählte Branche wurde nicht gefunden. Siehe Vorschläge unten.'
-          )
+          alert('Die gewählte Branche wurde nicht gefunden. Siehe Vorschläge unten.')
           return
         }
         if (data?.error === 'branch_required') {
@@ -949,10 +818,7 @@ export default function PartnerOnboardingWizard() {
         }
         throw new Error(data?.error || 'Speichern fehlgeschlagen')
       }
-      if (!data.ok)
-        throw new Error(
-          data.error || 'Speichern fehlgeschlagen'
-        )
+      if (!data.ok) throw new Error(data.error || 'Speichern fehlgeschlagen')
 
       const partnerId = data.partner_id as string
 
@@ -966,9 +832,7 @@ export default function PartnerOnboardingWizard() {
         })
         const upJs = await up.json().catch(() => ({}))
         if (!up.ok || !upJs?.ok)
-          throw new Error(
-            upJs?.error || 'Logo-Upload fehlgeschlagen'
-          )
+          throw new Error(upJs?.error || 'Logo-Upload fehlgeschlagen')
       }
 
       setStep(4)
@@ -979,21 +843,18 @@ export default function PartnerOnboardingWizard() {
 
   /* ================= Render ================= */
 
-  const shellBg =
-    'min-h-[100dvh] px-4 sm:px-6 lg:px-8 py-6 sm:py-10 text-slate-800 ' +
-    'bg-[radial-gradient(1200px_350px_at_-10%_-30%,rgba(15,23,42,0.05),transparent_60%),' +
-    'radial-gradient(1200px_350px_at_110%_130%,rgba(15,23,42,0.06),transparent_60%),#f3f4f7]'
+  const shellCls = 'space-y-6'
 
   return (
-    <div className={shellBg}>
+    <div className={shellCls}>
       {/* Stepper */}
-      <nav className="mb-5 sticky top-3 z-30 flex flex-wrap items-center gap-2 text-[10px] sm:text-xs rounded-full backdrop-blur-xl bg-white/80 shadow-lg ring-1 ring-black/5 px-3 py-2">
+      <nav className="sticky top-3 z-30 mb-5 flex flex-wrap items-center gap-2 rounded-full bg-white/90 px-3 py-2 text-[10px] text-slate-600 shadow-lg ring-1 ring-black/5 backdrop-blur-xl sm:text-xs">
         <span className={step >= 1 ? 'font-semibold text-slate-900' : 'text-slate-500'}>
           1. Eingabe
         </span>
         <span className="opacity-40">›</span>
         <span className={step >= 2 ? 'font-semibold text-slate-900' : 'text-slate-500'}>
-          2. Prüfung & Auswahl
+          2. Prüfung &amp; Auswahl
         </span>
         <span className="opacity-40">›</span>
         <span className={step >= 3 ? 'font-semibold text-slate-900' : 'text-slate-500'}>
@@ -1007,10 +868,10 @@ export default function PartnerOnboardingWizard() {
 
       {/* Header (nur Step 1 & 2) */}
       {(step === 1 || step === 2) && (
-        <section className="mb-6 flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+        <section className="mb-2 flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
           <div className="flex items-center gap-4">
             <div
-              className={`relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-white flex items-center justify-center ring-1 ring-black/10 shadow-sm ${
+              className={`relative flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl bg-white ring-1 ring-black/10 shadow-sm sm:h-24 sm:w-24 ${
                 linkPulsing ? 'animate-pulse' : ''
               }`}
             >
@@ -1018,43 +879,41 @@ export default function PartnerOnboardingWizard() {
                 <img
                   src={logoPreview}
                   alt="Logo"
-                  className="w-full h-full object-contain p-2"
+                  className="h-full w-full object-contain p-2"
                   loading="lazy"
                   decoding="async"
                 />
               ) : (
-                <span className="text-[10px] sm:text-xs text-slate-400">
-                  Kein Logo
-                </span>
+                <span className="text-[10px] text-slate-400 sm:text-xs">Kein Logo</span>
               )}
             </div>
             <div className="min-w-0">
-              <div className="text-base sm:text-lg font-semibold text-slate-900 truncate">
+              <div className="truncate text-base font-semibold text-slate-900 sm:text-lg">
                 {me?.profile.company_name || 'Dein Unternehmen'}
               </div>
-              <div className="text-[10px] sm:text-xs text-slate-600">
+              <div className="text-[10px] text-slate-600 sm:text-xs">
                 {loadingMe
                   ? 'Profil wird geladen…'
                   : (me?.profile.first_name || me?.profile.last_name)
-                  ? `${me?.profile.first_name || ''} ${me?.profile.last_name || ''}`.trim()
+                  ? `${me?.profile.first_name || ''} ${
+                      me?.profile.last_name || ''
+                    }`.trim()
                   : 'Inhaber'}
               </div>
               <div className="mt-2 flex flex-wrap gap-2">
-                <label className="inline-flex items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm shadow-sm hover:border-slate-900 cursor-pointer">
+                <label className="inline-flex cursor-pointer items-center rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-900 shadow-sm hover:border-slate-900 sm:text-sm">
                   Logo wählen
                   <input
                     type="file"
                     accept="image/*"
                     className="hidden"
-                    onChange={(e) =>
-                      setLogoFile(e.target.files?.[0] || null)
-                    }
+                    onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
                   />
                 </label>
                 {logoPreview && (
                   <button
                     type="button"
-                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm shadow-sm hover:border-slate-900"
+                    className="rounded-xl border border-slate-200 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-sm hover:border-slate-900 sm:text-sm"
                     onClick={() => {
                       setLogoFile(null)
                       setLogoPreview(null)
@@ -1067,29 +926,29 @@ export default function PartnerOnboardingWizard() {
             </div>
           </div>
 
-          <div className="w-full md:w-80 rounded-3xl border border-white/70 bg-white/92 backdrop-blur-2xl p-4 shadow-lg">
-            <div className="text-xs sm:text-sm font-semibold text-slate-900 mb-1">
+          <div className="w-full rounded-2xl border border-white/70 bg-white/92 p-4 text-[10px] text-slate-600 shadow-lg backdrop-blur-2xl md:w-80 sm:text-xs">
+            <div className="mb-1 text-xs font-semibold text-slate-900 sm:text-sm">
               Auto-Übernahme aktiv
             </div>
-            <p className="text-[10px] sm:text-xs text-slate-600">
-              Wir lesen deine Website & Angaben aus und schlagen Branchen, Kategorien und Services vor.
-              Du kannst alles vor dem Speichern anpassen.
+            <p>
+              Wir lesen Ihre Website &amp; Angaben aus und schlagen Branchen, Kategorien und
+              Services vor. Sie können alles vor dem Speichern anpassen.
             </p>
-            <div className="mt-3 flex flex-wrap gap-2 items-center">
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[9px] sm:text-[10px] ring-1 ring-emerald-200">
-                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-50 px-2 py-0.5 text-[9px] text-emerald-700 ring-1 ring-emerald-200 sm:text-[10px]">
+                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
                 Modell: {model || 'n/a'}
               </span>
-              <span className="px-2 py-0.5 rounded-full bg-slate-50 text-slate-700 text-[9px] sm:text-[10px] ring-1 ring-slate-200">
+              <span className="rounded-full bg-slate-50 px-2 py-0.5 text-[9px] text-slate-700 ring-1 ring-slate-200 sm:text-[10px]">
                 Confidence: {(extracted?.confidence ?? 0).toFixed(2)}
               </span>
             </div>
             {form.links && form.links.length > 0 && (
               <div className="mt-3">
-                <div className="text-[10px] sm:text-xs font-medium text-slate-900">
+                <div className="text-[10px] font-medium text-slate-900 sm:text-xs">
                   Erkannte Links
                 </div>
-                <ul className="mt-1 space-y-0.5 text-[9px] sm:text-[10px] text-slate-600">
+                <ul className="mt-1 space-y-0.5 text-[9px] text-slate-600 sm:text-[10px]">
                   {(form.links || []).map((l: any, i: number) => (
                     <li key={i}>{l.url}</li>
                   ))}
@@ -1104,38 +963,38 @@ export default function PartnerOnboardingWizard() {
       {step === 1 && (
         <section className="space-y-6">
           <div className="flex items-center justify-between">
-            <h2 className="text-sm sm:text-base font-semibold text-slate-900">
+            <h2 className="text-sm font-semibold text-slate-900 sm:text-base">
               1. Eingabe
             </h2>
             <button
               type="button"
               onClick={resetAll}
-              className="text-[10px] sm:text-xs rounded-xl border border-white/70 bg-white/92 backdrop-blur-2xl px-3 py-1.5 shadow-sm hover:border-slate-900"
+              className="rounded-xl border border-white/70 bg-white/92 px-3 py-1.5 text-[10px] shadow-sm hover:border-slate-900 backdrop-blur-2xl sm:text-xs"
             >
               Zurücksetzen
             </button>
           </div>
 
-          <div className="rounded-3xl border border-white/70 bg-white/92 backdrop-blur-2xl p-4 shadow-sm">
-            <label className="block text-xs sm:text-sm font-medium mb-1">
+          <div className="rounded-2xl border border-white/70 bg-white/92 p-4 text-xs text-slate-700 shadow-sm backdrop-blur-2xl sm:p-5 sm:text-sm">
+            <label className="mb-1 block text-[10px] font-medium sm:text-xs">
               Kurze Beschreibung (optional)
             </label>
             <textarea
-              className="w-full rounded-2xl border border-slate-200/70 bg-white/98 px-3 py-2 text-xs sm:text-sm shadow-inner"
+              className="w-full rounded-2xl border border-slate-200/70 bg-white/98 px-3 py-2 text-xs shadow-inner sm:text-sm"
               rows={4}
               value={freeText}
               onChange={(e) => setFreeText(e.target.value)}
-              placeholder="Beschreibe Leistungen, Spezialisierungen, Regionen, besondere Stärken …"
+              placeholder="Beschreiben Sie Leistungen, Spezialisierungen, Regionen, besondere Stärken …"
             />
           </div>
 
-          <div className="rounded-3xl border border-white/70 bg-white/92 backdrop-blur-2xl p-4 shadow-sm space-y-2">
-            <label className="block text-xs sm:text-sm font-medium">
+          <div className="space-y-2 rounded-2xl border border-white/70 bg-white/92 p-4 text-xs text-slate-700 shadow-sm backdrop-blur-2xl sm:p-5 sm:text-sm">
+            <label className="block text-[10px] font-medium sm:text-xs">
               Website oder Social-Link
             </label>
-            <div className="flex flex-col sm:flex-row gap-2">
+            <div className="flex flex-col gap-2 sm:flex-row">
               <input
-                className={`flex-1 rounded-2xl border px-3 py-2 text-xs sm:text-sm bg-white/98 shadow-inner ${
+                className={`flex-1 rounded-2xl border px-3 py-2 text-xs shadow-inner sm:text-sm ${
                   linkError ? 'border-rose-400' : 'border-slate-200'
                 } ${linkPulsing ? 'animate-pulse' : ''}`}
                 placeholder="https://…"
@@ -1150,7 +1009,7 @@ export default function PartnerOnboardingWizard() {
               {links.length === 0 ? (
                 <button
                   type="button"
-                  className="rounded-2xl bg-slate-900 text-white px-4 py-2 text-xs sm:text-sm shadow hover:opacity-90"
+                  className="rounded-2xl bg-slate-900 px-4 py-2 text-xs font-semibold text-white shadow hover:opacity-90 sm:text-sm"
                   onClick={addLink}
                 >
                   Übernehmen
@@ -1158,7 +1017,7 @@ export default function PartnerOnboardingWizard() {
               ) : (
                 <button
                   type="button"
-                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs sm:text-sm shadow hover:border-slate-900"
+                  className="rounded-2xl border border-slate-200 bg-white px-4 py-2 text-xs text-slate-900 shadow hover:border-slate-900 sm:text-sm"
                   onClick={() => {
                     setLinks([])
                     setLinkInput('')
@@ -1169,31 +1028,28 @@ export default function PartnerOnboardingWizard() {
               )}
             </div>
             {linkError && (
-              <p className="text-[10px] text-rose-600">
-                {linkError}
-              </p>
+              <p className="text-[10px] text-rose-600">{linkError}</p>
             )}
             {links.length > 0 && (
-              <p className="text-[10px] sm:text-xs text-slate-600">
+              <p className="text-[10px] text-slate-600 sm:text-xs">
                 Verwendeter Link:{' '}
-                <span className="underline decoration-dotted">
-                  {links[0]}
-                </span>
+                <span className="underline decoration-dotted">{links[0]}</span>
               </p>
             )}
           </div>
 
           {/* Analyse-Karte */}
-          <div className="rounded-3xl bg-gradient-to-tr from-slate-900 to-slate-800 text-white p-5 shadow-2xl relative overflow-hidden">
+          <div className="relative overflow-hidden rounded-2xl bg-gradient-to-tr from-slate-900 to-slate-800 p-5 text-xs text-white shadow-2xl sm:text-sm">
             <div className="relative z-10 grid gap-4 sm:grid-cols-3 sm:items-center">
               <div className="sm:col-span-2">
-                <div className="text-base sm:text-lg font-semibold">
+                <div className="text-base font-semibold sm:text-lg">
                   KI-Analyse starten
                 </div>
-                <p className="text-xs sm:text-sm text-white/80 mt-1">
-                  Wir lesen deinen Link & Text, erkennen Branche, Kategorien, Services & Kontaktdaten. Du prüfst anschließend alles.
+                <p className="mt-1 text-[11px] text-white/80 sm:text-xs">
+                  Wir lesen Ihren Link &amp; Text, erkennen Branche, Kategorien, Services &amp;
+                  Kontaktdaten. Sie prüfen anschließend alles in Ruhe.
                 </p>
-                <div className="mt-3 h-2 w-full rounded-full bg-white/15 overflow-hidden ring-1 ring-white/20">
+                <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-white/15 ring-1 ring-white/20">
                   <div
                     className={
                       'h-full bg-white transition-all ' +
@@ -1218,27 +1074,22 @@ export default function PartnerOnboardingWizard() {
                   }
                 `}</style>
               </div>
-              <div className="flex sm:justify-end">
+              <div className="flex justify-start sm:justify-end">
                 <button
                   disabled={loading}
                   onClick={handleAnalyze}
-                  className="inline-flex items-center gap-2 rounded-2xl bg-white text-slate-900 px-4 py-2 text-xs sm:text-sm font-semibold shadow-lg hover:shadow-xl disabled:opacity-50"
+                  className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2 text-xs font-semibold text-slate-900 shadow-lg hover:shadow-xl disabled:opacity-50 sm:text-sm"
                 >
                   {loading ? 'Analysiere …' : '🚀 Analyse starten'}
                 </button>
               </div>
             </div>
             {analyzeLogs.length > 0 && (
-              <div className="relative z-10 mt-3 rounded-2xl bg-black/30 ring-1 ring-white/10 p-3 text-[9px] sm:text-[10px]">
-                <div className="font-medium mb-1">
-                  System-Log
-                </div>
+              <div className="relative z-10 mt-3 rounded-2xl bg-black/30 p-3 text-[9px] ring-1 ring-white/10 sm:text-[10px]">
+                <div className="mb-1 font-medium">System-Log</div>
                 <ul className="space-y-0.5">
                   {analyzeLogs.map((l, i) => (
-                    <li
-                      key={i}
-                      className="flex items-center gap-1.5"
-                    >
+                    <li key={i} className="flex items-center gap-1.5">
                       <span className="h-1.5 w-1.5 rounded-full bg-white/80" />
                       <span>{l}</span>
                     </li>
@@ -1254,55 +1105,43 @@ export default function PartnerOnboardingWizard() {
       {step === 2 && (
         <section className="space-y-6">
           {/* Profil-Basis */}
-          <div className="rounded-3xl border border-white/70 bg-white/92 backdrop-blur-2xl p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 gap-3 rounded-2xl border border-white/70 bg-white/92 p-4 text-xs text-slate-700 shadow-sm backdrop-blur-2xl sm:grid-cols-2 sm:p-5 sm:text-sm">
             <div className="sm:col-span-2">
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Firmenname (aus Profil)
               </label>
               <input
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm"
-                value={
-                  me?.profile.company_name ??
-                  form.company_name ??
-                  ''
-                }
+                value={me?.profile.company_name ?? form.company_name ?? ''}
                 readOnly
               />
             </div>
             <div>
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Vorname
               </label>
               <input
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm"
-                value={
-                  me?.profile.first_name ??
-                  form.first_name ??
-                  ''
-                }
+                value={me?.profile.first_name ?? form.first_name ?? ''}
                 readOnly
               />
             </div>
             <div>
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Nachname
               </label>
               <input
                 className="w-full rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs sm:text-sm"
-                value={
-                  me?.profile.last_name ??
-                  form.last_name ??
-                  ''
-                }
+                value={me?.profile.last_name ?? form.last_name ?? ''}
                 readOnly
               />
             </div>
           </div>
 
           {/* Kontakt & Beschreibung */}
-          <div className="rounded-3xl border border-white/70 bg-white/92 backdrop-blur-2xl p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 gap-4 rounded-2xl border border-white/70 bg-white/92 p-4 text-xs text-slate-700 shadow-sm backdrop-blur-2xl sm:grid-cols-2 sm:p-5 sm:text-sm">
             <div className="sm:col-span-2">
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Anzeigename
               </label>
               <input
@@ -1317,7 +1156,7 @@ export default function PartnerOnboardingWizard() {
               />
             </div>
             <div>
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 E-Mail
               </label>
               <input
@@ -1332,7 +1171,7 @@ export default function PartnerOnboardingWizard() {
               />
             </div>
             <div>
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Telefon
               </label>
               <input
@@ -1347,7 +1186,7 @@ export default function PartnerOnboardingWizard() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Website
               </label>
               <input
@@ -1362,7 +1201,7 @@ export default function PartnerOnboardingWizard() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Beschreibung
               </label>
               <textarea
@@ -1380,9 +1219,9 @@ export default function PartnerOnboardingWizard() {
           </div>
 
           {/* Adresse */}
-          <div className="rounded-3xl border border-white/70 bg-white/92 backdrop-blur-2xl p-4 shadow-sm grid grid-cols-1 sm:grid-cols-5 gap-3">
+          <div className="grid grid-cols-1 gap-3 rounded-2xl border border-white/70 bg-white/92 p-4 text-xs text-slate-700 shadow-sm backdrop-blur-2xl sm:grid-cols-5 sm:p-5 sm:text-sm">
             <div className="sm:col-span-2">
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Straße
               </label>
               <input
@@ -1400,7 +1239,7 @@ export default function PartnerOnboardingWizard() {
               />
             </div>
             <div>
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Nr.
               </label>
               <input
@@ -1418,7 +1257,7 @@ export default function PartnerOnboardingWizard() {
               />
             </div>
             <div>
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 PLZ
               </label>
               <input
@@ -1436,7 +1275,7 @@ export default function PartnerOnboardingWizard() {
               />
             </div>
             <div>
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Ort
               </label>
               <input
@@ -1454,7 +1293,7 @@ export default function PartnerOnboardingWizard() {
               />
             </div>
             <div className="sm:col-span-2">
-              <label className="block text-[10px] sm:text-xs font-medium mb-1">
+              <label className="mb-1 block text-[10px] font-medium sm:text-xs">
                 Land
               </label>
               <input
@@ -1473,71 +1312,60 @@ export default function PartnerOnboardingWizard() {
             </div>
           </div>
 
-          {/* Branchen */}
-          <div className="relative rounded-3xl border border-white/70 bg-white/92 backdrop-blur-2xl p-4 shadow-sm space-y-2">
-            <div className="text-xs sm:text-sm font-semibold text-slate-900">
+          {/* Branchen – DROPDOWN FIX */}
+          <div className="relative z-30 space-y-2 overflow-visible rounded-2xl border border-white/70 bg-white/92 p-4 text-xs text-slate-700 shadow-sm backdrop-blur-2xl sm:p-5 sm:text-sm">
+            <div className="text-xs font-semibold text-slate-900 sm:text-sm">
               Branchen (max. {MAX_BRANCHES})
             </div>
             <div className="flex flex-wrap gap-2">
               {selectedBranches.length ? (
                 selectedBranches.map((b) => (
-                  <Chip
-                    key={b}
-                    onRemove={() => removeBranch(b)}
-                  >
+                  <Chip key={b} onRemove={() => removeBranch(b)}>
                     {b}
                   </Chip>
                 ))
               ) : (
-                <span className="text-[10px] sm:text-xs text-slate-500">
+                <span className="text-[10px] text-slate-500 sm:text-xs">
                   Noch keine Branche gewählt.
                 </span>
               )}
             </div>
 
-            <div className="mt-2 flex flex-col sm:flex-row gap-2 items-start">
-              <div className="relative flex-1">
+<div className="mt-2 flex flex-col items-stretch gap-2 lg:flex-row">
+  <div className="relative flex-1 w-full">
                 <input
                   className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-xs sm:text-sm"
                   placeholder="Branche suchen …"
                   value={branchInput}
-                  onChange={(e) =>
-                    setBranchInput(e.target.value)
-                  }
-                  disabled={
-                    selectedBranches.length >= MAX_BRANCHES
-                  }
+                  onChange={(e) => setBranchInput(e.target.value)}
+                  disabled={selectedBranches.length >= MAX_BRANCHES}
                 />
-                {branchSuggest.length > 0 &&
-                  branchInput.trim() && (
-                    <div className="absolute z-40 mt-1 w-full rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-56 overflow-auto">
-                      <ul>
-                        {branchSuggest.map((opt) => (
-                          <li key={opt}>
-                            <button
-                              type="button"
-                              className="w-full text-left px-3 py-2 text-xs sm:text-sm hover:bg-slate-50"
-                              onClick={() =>
-                                addBranchDirect(opt)
-                              }
-                            >
-                              {opt}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                {branchSuggest.length > 0 && branchInput.trim() && (
+                  <div className="absolute left-0 right-0 top-full z-[300] mt-1 max-h-56 w-full overflow-auto rounded-2xl border border-slate-200 bg-white/98 shadow-2xl backdrop-blur-xl">
+                    <ul>
+                      {branchSuggest.map((opt) => (
+                        <li key={opt}>
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-slate-50 sm:text-sm"
+                            onClick={() => addBranchDirect(opt)}
+                          >
+                            {opt}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <button
                   type="button"
-                  className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm hover:border-slate-900 disabled:opacity-50"
+                  className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs hover:border-slate-900 disabled:opacity-50 sm:text-sm"
                   onClick={addBranchFromInput}
                   disabled={
                     !branchInput.trim() ||
-                    selectedBranches.length >=
-                      MAX_BRANCHES ||
+                    selectedBranches.length >= MAX_BRANCHES ||
                     branchLoading
                   }
                 >
@@ -1545,10 +1373,8 @@ export default function PartnerOnboardingWizard() {
                 </button>
                 <button
                   type="button"
-                  className="text-[9px] sm:text-xs text-slate-600 underline decoration-slate-300 hover:text-slate-900"
-                  onClick={() =>
-                    setShowAllBranches((s) => !s)
-                  }
+                  className="text-[9px] text-slate-600 underline decoration-slate-300 hover:text-slate-900 sm:text-xs"
+                  onClick={() => setShowAllBranches((s) => !s)}
                 >
                   Alle anzeigen
                 </button>
@@ -1556,34 +1382,59 @@ export default function PartnerOnboardingWizard() {
             </div>
 
             {showAllBranches && (
-              <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-2 max-h-56 overflow-auto">
-                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+              <div className="mt-2 max-h-56 overflow-auto rounded-2xl border border-slate-200 bg-white p-2">
+                <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
                   {branchOptions.map((name) => {
-                    const checked =
-                      selectedBranches.some(
-                        (b) =>
-                          b.toLowerCase() ===
-                          name.toLowerCase()
-                      )
+                    const checked = selectedBranches.some(
+                      (b) => b.toLowerCase() === name.toLowerCase(),
+                    )
                     const disabled =
-                      !checked &&
-                      selectedBranches.length >=
-                        MAX_BRANCHES
+                      !checked && selectedBranches.length >= MAX_BRANCHES
                     return (
                       <li
                         key={name}
-                        className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-50"
+                        className="flex items-center gap-2 rounded px-2 py-1 hover:bg-slate-50"
                       >
                         <input
                           type="checkbox"
                           checked={checked}
                           disabled={disabled}
-                          onChange={() =>
-                            toggleBranchInAll(name)
-                          }
+                          onChange={() => toggleBranchInAll(name)}
                         />
-                        <span className="text-[10px] sm:text-xs">
-                          {name}
+                        <span className="text-[10px] sm:text-xs">{name}</span>
+                      </li>
+                    )
+                  })}
+                </ul>
+              </div>
+            )}
+
+            {showBranchSuggestions && branchSuggestions.length > 0 && (
+              <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-3">
+                <div className="mb-1 text-[10px] font-semibold sm:text-xs">
+                  Vorschläge vom Server
+                </div>
+                <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2">
+                  {branchSuggestions.map((s) => {
+                    const checked = selectedBranches.some(
+                      (b) => b.toLowerCase() === s.name.toLowerCase(),
+                    )
+                    const disabled =
+                      !checked && selectedBranches.length >= MAX_BRANCHES
+                    return (
+                      <li
+                        key={s.id}
+                        className="flex items-center gap-2 rounded px-2 py-1 hover:bg-amber-100"
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          disabled={disabled}
+                          onChange={() => toggleBranchInAll(s.name)}
+                        />
+                        <span className="text-[10px] sm:text-xs">{s.name}</span>
+                        <span className="ml-auto text-[8px] text-slate-500">
+                          {s.slug}
                         </span>
                       </li>
                     )
@@ -1592,131 +1443,73 @@ export default function PartnerOnboardingWizard() {
               </div>
             )}
 
-            {showBranchSuggestions &&
-              branchSuggestions.length > 0 && (
-                <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-3">
-                  <div className="text-[10px] sm:text-xs font-semibold mb-1">
-                    Vorschläge vom Server
-                  </div>
-                  <ul className="grid grid-cols-1 sm:grid-cols-2 gap-1">
-                    {branchSuggestions.map((s) => {
-                      const checked =
-                        selectedBranches.some(
-                          (b) =>
-                            b.toLowerCase() ===
-                            s.name.toLowerCase()
-                        )
-                      const disabled =
-                        !checked &&
-                        selectedBranches.length >=
-                          MAX_BRANCHES
-                      return (
-                        <li
-                          key={s.id}
-                          className="flex items-center gap-2 px-2 py-1 rounded hover:bg-amber-100"
-                        >
-                          <input
-                            type="checkbox"
-                            checked={checked}
-                            disabled={disabled}
-                            onChange={() =>
-                              toggleBranchInAll(s.name)
-                            }
-                          />
-                          <span className="text-[10px] sm:text-xs">
-                            {s.name}
-                          </span>
-                          <span className="ml-auto text-[8px] text-slate-500">
-                            {s.slug}
-                          </span>
-                        </li>
-                      )
-                    })}
-                  </ul>
-                </div>
-              )}
-
-            {(branchError ||
-              (!branchLoading &&
-                branchOptions.length === 0)) && (
+            {(branchError || (!branchLoading && branchOptions.length === 0)) && (
               <p className="mt-2 text-[9px] text-rose-600">
-                Branchen konnten nicht geladen werden. Prüfe
-                /api/partners/partner-branches & RLS.
+                Branchen konnten nicht geladen werden. Prüfe /api/partners/partner-branches &amp;
+                RLS.
               </p>
             )}
           </div>
 
-          {/* Kategorien */}
-          <div className="relative rounded-3xl border border-white/70 bg-white/92 backdrop-blur-2xl p-4 shadow-sm space-y-2">
-            <div className="text-xs sm:text-sm font-semibold text-slate-900">
+          {/* Kategorien – DROPDOWN FIX */}
+          <div className="relative z-20 space-y-2 overflow-visible rounded-2xl border border-white/70 bg-white/92 p-4 text-xs text-slate-700 shadow-sm backdrop-blur-2xl sm:p-5 sm:text-sm">
+            <div className="text-xs font-semibold text-slate-900 sm:text-sm">
               Kategorien (max. {MAX_CATEGORIES})
             </div>
             <div className="flex flex-wrap gap-2">
               {selectedCategories.length ? (
                 selectedCategories.map((c) => (
-                  <Chip
-                    key={c}
-                    onRemove={() => removeCategory(c)}
-                  >
+                  <Chip key={c} onRemove={() => removeCategory(c)}>
                     {c}
                   </Chip>
                 ))
               ) : (
-                <span className="text-[10px] sm:text-xs text-slate-500">
+                <span className="text-[10px] text-slate-500 sm:text-xs">
                   Noch keine Kategorie gewählt.
                 </span>
               )}
             </div>
 
-            <div className="mt-2 flex flex-col sm:flex-row gap-2 items-start">
-              <div className="relative flex-1">
+<div className="mt-2 flex flex-col items-stretch gap-2 lg:flex-row">
+  <div className="relative flex-1 w-full">
+
                 <input
                   className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-xs sm:text-sm"
                   placeholder={
                     primaryBranch
-                      ? 'Kategorie in deiner Branche suchen …'
+                      ? 'Kategorie in Ihrer Branche suchen …'
                       : 'Bitte zuerst eine Branche wählen'
                   }
                   value={categoryInput}
-                  onChange={(e) =>
-                    setCategoryInput(e.target.value)
-                  }
-                  disabled={
-                    !primaryBranch ||
-                    selectedCategories.length >=
-                      MAX_CATEGORIES
-                  }
+                  onChange={(e) => setCategoryInput(e.target.value)}
+                  disabled={!primaryBranch || selectedCategories.length >= MAX_CATEGORIES}
                 />
-                {categorySuggest.length > 0 &&
-                  categoryInput.trim() && (
-                    <div className="absolute z-40 mt-1 w-full rounded-2xl border border-slate-200 bg-white shadow-2xl max-h-56 overflow-auto">
-                      <ul>
-                        {categorySuggest.map((opt) => (
-                          <li key={opt}>
-                            <button
-                              type="button"
-                              className="w-full text-left px-3 py-2 text-xs sm:text-sm hover:bg-slate-50"
-                              onClick={() =>
-                                addCategoryDirect(opt)
-                              }
-                            >
-                              {opt}
-                            </button>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
+                {categorySuggest.length > 0 && categoryInput.trim() && (
+                  <div className="absolute left-0 right-0 top-full z-[300] mt-1 max-h-56 w-full overflow-auto rounded-2xl border border-slate-200 bg-white/98 shadow-2xl backdrop-blur-xl">
+                    <ul>
+                      {categorySuggest.map((opt) => (
+                        <li key={opt}>
+                          <button
+                            type="button"
+                            className="w-full px-3 py-2 text-left text-xs hover:bg-slate-50 sm:text-sm"
+                            onClick={() => addCategoryDirect(opt)}
+                          >
+                            {opt}
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
               </div>
               <div className="flex flex-col gap-1">
                 <button
                   type="button"
-                  className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm hover:border-slate-900 disabled:opacity-50"
+                  className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs hover:border-slate-900 disabled:opacity-50 sm:text-sm"
                   onClick={addCategoryFromInput}
                   disabled={
                     !categoryInput.trim() ||
-                    selectedCategories.length >=
-                      MAX_CATEGORIES ||
+                    selectedCategories.length >= MAX_CATEGORIES ||
                     categoryLoading
                   }
                 >
@@ -1724,10 +1517,8 @@ export default function PartnerOnboardingWizard() {
                 </button>
                 <button
                   type="button"
-                  className="text-[9px] sm:text-xs text-slate-600 underline decoration-slate-300 hover:text-slate-900"
-                  onClick={() =>
-                    setShowAllCategories((s) => !s)
-                  }
+                  className="text-[9px] text-slate-600 underline decoration-slate-300 hover:text-slate-900 sm:text-xs"
+                  onClick={() => setShowAllCategories((s) => !s)}
                   disabled={!primaryBranch}
                 >
                   Alle anzeigen
@@ -1736,35 +1527,26 @@ export default function PartnerOnboardingWizard() {
             </div>
 
             {showAllCategories && (
-              <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-2 max-h-56 overflow-auto">
-                <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-1">
+              <div className="mt-2 max-h-56 overflow-auto rounded-2xl border border-slate-200 bg-white p-2">
+                <ul className="grid grid-cols-1 gap-1 sm:grid-cols-2 lg:grid-cols-3">
                   {categoryOptions.map((name) => {
-                    const checked =
-                      selectedCategories.some(
-                        (c) =>
-                          c.toLowerCase() ===
-                          name.toLowerCase()
-                      )
+                    const checked = selectedCategories.some(
+                      (c) => c.toLowerCase() === name.toLowerCase(),
+                    )
                     const disabled =
-                      !checked &&
-                      selectedCategories.length >=
-                        MAX_CATEGORIES
+                      !checked && selectedCategories.length >= MAX_CATEGORIES
                     return (
                       <li
                         key={name}
-                        className="flex items-center gap-2 px-2 py-1 rounded hover:bg-slate-50"
+                        className="flex items-center gap-2 rounded px-2 py-1 hover:bg-slate-50"
                       >
                         <input
                           type="checkbox"
                           checked={checked}
                           disabled={disabled}
-                          onChange={() =>
-                            toggleCategoryInAll(name)
-                          }
+                          onChange={() => toggleCategoryInAll(name)}
                         />
-                        <span className="text-[10px] sm:text-xs">
-                          {name}
-                        </span>
+                        <span className="text-[10px] sm:text-xs">{name}</span>
                       </li>
                     )
                   })}
@@ -1774,17 +1556,15 @@ export default function PartnerOnboardingWizard() {
           </div>
 
           {/* Services */}
-          <div className="rounded-3xl border border-white/70 bg-white/92 backdrop-blur-2xl p-4 shadow-sm">
-            <div className="flex items-baseline justify-between mb-2">
-              <div className="text-xs sm:text-sm font-semibold text-slate-900">
+          <div className="rounded-2xl border border-white/70 bg-white/92 p-4 text-xs text-slate-700 shadow-sm backdrop-blur-2xl sm:p-5 sm:text-sm">
+            <div className="mb-2 flex items-baseline justify-between">
+              <div className="text-xs font-semibold text-slate-900 sm:text-sm">
                 Services (Summe = 100%)
               </div>
               <div
                 className={
                   'text-[10px] sm:text-xs ' +
-                  (servicesTotal === 100
-                    ? 'text-emerald-600'
-                    : 'text-amber-600')
+                  (servicesTotal === 100 ? 'text-emerald-600' : 'text-amber-600')
                 }
               >
                 Summe: {servicesTotal}%
@@ -1796,31 +1576,18 @@ export default function PartnerOnboardingWizard() {
                 const otherSum =
                   form.services?.reduce(
                     (acc, x, i) =>
-                      i === idx
-                        ? acc
-                        : acc +
-                          (Number(
-                            x.priority_percent
-                          ) || 0),
-                    0
+                      i === idx ? acc : acc + (Number(x.priority_percent) || 0),
+                    0,
                   ) ?? 0
-                const remaining = Math.max(
-                  0,
-                  100 - otherSum
-                )
+                const remaining = Math.max(0, 100 - otherSum)
                 return (
-                  <div
-                    key={idx}
-                    className="grid grid-cols-12 gap-2"
-                  >
+                  <div key={idx} className="grid grid-cols-12 gap-2">
                     <input
-                      className="col-span-8 sm:col-span-9 rounded-2xl border border-slate-200 px-3 py-2 text-xs sm:text-sm"
+                      className="col-span-8 rounded-2xl border border-slate-200 px-3 py-2 text-xs sm:col-span-9 sm:text-sm"
                       placeholder="Service-Name"
                       value={s.name}
                       onChange={(e) => {
-                        const arr = [
-                          ...(form.services || []),
-                        ]
+                        const arr = [...(form.services || [])]
                         arr[idx] = {
                           ...arr[idx],
                           name: e.target.value,
@@ -1831,38 +1598,27 @@ export default function PartnerOnboardingWizard() {
                         }))
                       }}
                     />
-                    <div className="col-span-4 sm:col-span-3 flex items-center gap-1">
+                    <div className="col-span-4 flex items-center gap-1 sm:col-span-3">
                       <input
                         className="w-full rounded-2xl border border-slate-200 px-2 py-2 text-xs sm:text-sm"
                         type="number"
                         min={0}
                         max={remaining}
-                        value={
-                          s.priority_percent ?? 0
-                        }
+                        value={s.priority_percent ?? 0}
                         onChange={(e) =>
                           onServiceChange(idx, {
-                            priority_percent:
-                              Number(
-                                e.target.value ||
-                                  0
-                              ),
+                            priority_percent: Number(e.target.value || 0),
                           })
                         }
                       />
-                      <span className="text-[10px] sm:text-xs">
-                        %
-                      </span>
+                      <span className="text-[10px] sm:text-xs">%</span>
                     </div>
                     <div className="col-span-12">
                       <button
                         type="button"
-                        className="text-[9px] sm:text-xs text-slate-500 hover:text-rose-600"
+                        className="text-[9px] text-slate-500 hover:text-rose-600 sm:text-xs"
                         onClick={() => {
-                          const arr = [
-                            ...(form.services ||
-                              []),
-                          ]
+                          const arr = [...(form.services || [])]
                           arr.splice(idx, 1)
                           setForm((prev) => ({
                             ...prev,
@@ -1881,7 +1637,7 @@ export default function PartnerOnboardingWizard() {
             <div className="mt-3">
               <button
                 type="button"
-                className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs sm:text-sm hover:border-slate-900 disabled:opacity-50"
+                className="rounded-2xl border border-slate-200 bg-white px-3 py-1.5 text-xs hover:border-slate-900 disabled:opacity-50 sm:text-sm"
                 onClick={addService}
                 disabled={servicesTotal >= 100}
               >
@@ -1893,13 +1649,13 @@ export default function PartnerOnboardingWizard() {
           {/* Navigation */}
           <div className="flex items-center justify-between gap-2">
             <button
-              className="rounded-2xl border border-white/70 bg-white/92 backdrop-blur-2xl px-4 py-2 text-xs sm:text-sm shadow-sm hover:border-slate-900"
+              className="rounded-2xl border border-white/70 bg-white/92 px-4 py-2 text-xs text-slate-900 shadow-sm hover:border-slate-900 backdrop-blur-2xl sm:text-sm"
               onClick={() => setStep(1)}
             >
               Zurück
             </button>
             <button
-              className="rounded-2xl bg-slate-900 text-white px-4 py-2 text-xs sm:text-sm shadow hover:opacity-90 disabled:opacity-50"
+              className="rounded-2xl bg-slate-900 px-4 py-2 text-xs text-white shadow hover:opacity-90 disabled:opacity-50 sm:text-sm"
               onClick={() => setStep(3)}
               disabled={servicesTotal !== 100}
             >
@@ -1912,28 +1668,28 @@ export default function PartnerOnboardingWizard() {
       {/* STEP 3 – Vorschau */}
       {step === 3 && (
         <section className="space-y-6">
-          <div className="rounded-3xl border border-white/70 bg-white/96 backdrop-blur-2xl p-5 shadow-xl">
-            <div className="flex flex-col sm:flex-row gap-4">
-              <div className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl overflow-hidden bg-white ring-1 ring-black/5 shadow-sm">
+          <div className="rounded-2xl border border-white/70 bg-white/96 p-5 text-xs text-slate-700 shadow-xl backdrop-blur-2xl sm:text-sm">
+            <div className="flex flex-col gap-4 sm:flex-row">
+              <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-white ring-1 ring-black/5 shadow-sm sm:h-24 sm:w-24">
                 {logoPreview ? (
                   <img
                     src={logoPreview}
                     alt="Logo"
-                    className="w-full h-full object-contain p-2"
+                    className="h-full w-full object-contain p-2"
                   />
                 ) : (
-                  <span className="absolute inset-0 grid place-items-center text-[10px] sm:text-xs text-slate-400">
+                  <span className="absolute inset-0 grid place-items-center text-[10px] text-slate-400 sm:text-xs">
                     Kein Logo
                   </span>
                 )}
               </div>
               <div className="min-w-0">
-                <h2 className="text-lg sm:text-xl font-semibold text-slate-900">
+                <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">
                   {form.display_name ||
                     me?.profile.company_name ||
-                    'Dein Profil'}
+                    'Ihr Profil'}
                 </h2>
-                <p className="mt-1 text-xs sm:text-sm text-slate-600">
+                <p className="mt-1 text-xs text-slate-600 sm:text-sm">
                   {form.description || 'Ohne Beschreibung.'}
                 </p>
                 <div className="mt-2 flex flex-wrap gap-1.5">
@@ -1944,7 +1700,7 @@ export default function PartnerOnboardingWizard() {
                     <Chip key={c}>{c}</Chip>
                   ))}
                   {selectedCategories.length > 6 && (
-                    <span className="text-[9px] sm:text-[10px] text-slate-500">
+                    <span className="text-[9px] text-slate-500 sm:text-[10px]">
                       +{selectedCategories.length - 6} weitere
                     </span>
                   )}
@@ -1953,10 +1709,8 @@ export default function PartnerOnboardingWizard() {
             </div>
 
             <div className="mt-5 grid gap-5 sm:grid-cols-3">
-              <div className="sm:col-span-1 space-y-2 text-xs sm:text-sm text-slate-700">
-                <h3 className="font-semibold text-slate-900">
-                  Kontakt
-                </h3>
+              <div className="space-y-2 text-xs text-slate-700 sm:col-span-1 sm:text-sm">
+                <h3 className="font-semibold text-slate-900">Kontakt</h3>
                 <p>E-Mail: {form.email || '—'}</p>
                 <p>Telefon: {form.phone || '—'}</p>
                 <p>Website: {form.website || '—'}</p>
@@ -1975,10 +1729,10 @@ export default function PartnerOnboardingWizard() {
 
                 {form.links && form.links.length > 0 && (
                   <>
-                    <h4 className="mt-3 font-semibold text-slate-900 text-xs">
+                    <h4 className="mt-3 text-xs font-semibold text-slate-900">
                       Social Media
                     </h4>
-                    <div className="flex flex-wrap gap-1.5 mt-1">
+                    <div className="mt-1 flex flex-wrap gap-1.5">
                       {form.links.map(
                         (l: any, i: number) =>
                           l.url && (
@@ -1987,26 +1741,26 @@ export default function PartnerOnboardingWizard() {
                               href={l.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="inline-flex items-center justify-center rounded-full bg-white ring-1 ring-slate-200 px-2 py-1 shadow-sm hover:bg-slate-50"
+                              className="inline-flex items-center justify-center rounded-full bg-white px-2 py-1 ring-1 ring-slate-200 shadow-sm hover:bg-slate-50"
                             >
                               <SocialIcon kind={l.kind} />
                             </a>
-                          )
+                          ),
                       )}
                     </div>
                   </>
                 )}
               </div>
 
-              <div className="sm:col-span-2 space-y-2">
-                <h3 className="text-xs sm:text-sm font-semibold text-slate-900">
-                  Leistungen & Prioritäten
+              <div className="space-y-2 sm:col-span-2">
+                <h3 className="text-xs font-semibold text-slate-900 sm:text-sm">
+                  Leistungen &amp; Prioritäten
                 </h3>
                 <ul className="space-y-1.5">
                   {(form.services || []).map((s, i) => (
                     <li
                       key={i}
-                      className="flex items-center justify-between rounded-2xl bg-white/96 px-3 py-1.5 text-[10px] sm:text-xs text-slate-800 ring-1 ring-slate-200"
+                      className="flex items-center justify-between rounded-2xl bg-white/96 px-3 py-1.5 text-[10px] text-slate-800 ring-1 ring-slate-200 sm:text-xs"
                     >
                       <span className="truncate">
                         {s.name || 'Service'}
@@ -2017,7 +1771,7 @@ export default function PartnerOnboardingWizard() {
                     </li>
                   ))}
                   {(!form.services || form.services.length === 0) && (
-                    <li className="text-[10px] sm:text-xs text-slate-500">
+                    <li className="text-[10px] text-slate-500 sm:text-xs">
                       Keine Services definiert.
                     </li>
                   )}
@@ -2028,13 +1782,13 @@ export default function PartnerOnboardingWizard() {
 
           <div className="flex items-center justify-between gap-2">
             <button
-              className="rounded-2xl border border-white/70 bg-white/92 backdrop-blur-2xl px-4 py-2 text-xs sm:text-sm shadow-sm hover:border-slate-900"
+              className="rounded-2xl border border-white/70 bg-white/92 px-4 py-2 text-xs text-slate-900 shadow-sm hover:border-slate-900 backdrop-blur-2xl sm:text-sm"
               onClick={() => setStep(2)}
             >
               Zurück
             </button>
             <button
-              className="rounded-2xl bg-slate-900 text-white px-4 py-2 text-xs sm:text-sm shadow hover:opacity-90"
+              className="rounded-2xl bg-slate-900 px-4 py-2 text-xs text-white shadow hover:opacity-90 sm:text-sm"
               onClick={handleCreate}
             >
               Partner speichern
@@ -2045,16 +1799,16 @@ export default function PartnerOnboardingWizard() {
 
       {/* STEP 4 – Abschluss */}
       {step === 4 && (
-        <section className="mt-10 flex flex-col items-center text-center gap-3">
+        <section className="mt-10 flex flex-col items-center gap-3 text-center">
           <div className="inline-flex h-12 w-12 items-center justify-center rounded-full bg-emerald-500 text-white shadow-lg">
             ✓
           </div>
-          <div className="text-lg sm:text-2xl font-semibold text-slate-900">
-            Geschafft! Dein Partnerprofil ist angelegt.
+          <div className="text-lg font-semibold text-slate-900 sm:text-2xl">
+            Geschafft! Ihr Partnerprofil ist angelegt.
           </div>
-          <p className="text-xs sm:text-sm text-slate-600 max-w-md">
-            Du kannst dein Profil nun im Markt verwenden, dich auf Anfragen
-            bewerben und dein Profil jederzeit im Dashboard weiter optimieren.
+          <p className="max-w-md text-xs text-slate-600 sm:text-sm">
+            Sie können Ihr Profil nun im Markt verwenden, sich auf Anfragen bewerben und Ihr
+            Profil jederzeit im Dashboard weiter optimieren.
           </p>
         </section>
       )}

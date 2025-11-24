@@ -345,14 +345,15 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
         onClick={onClose}
       />
       <div className="relative z-10 w-full max-w-2xl rounded-3xl border border-white/60 bg-white/90 p-5 shadow-[0_10px_34px_rgba(2,6,23,0.12)]">
-        <div className="flex items-start justify-between gap-4">
+        {/* Header mit X oben rechts */}
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
           <h3 className="text-lg font-medium">Personendaten</h3>
           <div className="flex items-center gap-2">
             {/* Bearbeiten nur wenn Daten vorhanden + Owner */}
             {row && canEdit && !edit && (
               <button
                 onClick={() => setEdit(true)}
-                className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm"
+                className="hidden sm:inline-flex rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm"
               >
                 Bearbeiten
               </button>
@@ -360,16 +361,17 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
             {edit && (
               <button
                 onClick={() => setEdit(false)}
-                className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm"
+                className="hidden sm:inline-flex rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm"
               >
                 Abbrechen
               </button>
             )}
             <button
               onClick={onClose}
-              className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm"
+              aria-label="Schließen"
+              className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white text-slate-600 text-lg leading-none hover:shadow-sm"
             >
-              Schließen
+              &times;
             </button>
           </div>
         </div>
@@ -388,6 +390,42 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
 
             {!loading && row && (
               <div className="mt-4 space-y-6">
+                {/* Lead oben anzeigen (nur Partner, nicht Owner) */}
+                {!canEdit && canCreateLead && (
+                  <section className="rounded-2xl border border-slate-100 bg-slate-50/80 px-4 py-3 text-xs sm:text-sm text-slate-700">
+                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        Du kannst diese Kontaktdaten direkt als{' '}
+                        <span className="font-medium">Lead</span> in deinem
+                        Kundenbereich speichern.
+                      </div>
+                      <div className="flex flex-col items-start gap-1 sm:items-end">
+                        <button
+                          onClick={handleCreateLead}
+                          disabled={leadBusy || leadDone}
+                          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-[0_8px_24px_rgba(15,23,42,0.35)] hover:bg-slate-950 disabled:opacity-50 disabled:shadow-none"
+                        >
+                          {leadDone
+                            ? 'Gespeichert'
+                            : leadBusy
+                            ? 'Lege Lead an…'
+                            : 'Speichern'}
+                        </button>
+                        {leadError && (
+                          <div className="text-[11px] text-rose-600">
+                            {leadError}
+                          </div>
+                        )}
+                        {leadDone && !leadError && (
+                          <div className="text-[11px] text-emerald-600">
+                            Lead wurde erfolgreich in deinen Kunden angelegt.
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </section>
+                )}
+
                 <section>
                   <div className="text-sm font-medium text-slate-900">
                     Rechnungsadresse
@@ -443,42 +481,6 @@ export default function PersonalDataViewer({ open, onClose, requestId }: Props) 
                     </dl>
                   )}
                 </section>
-
-                {/* Lead anlegen – nur für Partner (nicht Owner) */}
-                {!canEdit && canCreateLead && (
-                  <section className="mt-4 border-t border-slate-100 pt-4">
-                    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div className="text-sm text-slate-700">
-                        Du kannst diese Kontaktdaten direkt als{' '}
-                        <span className="font-medium">Lead</span> in deinem
-                        Kundenbereich speichern.
-                      </div>
-                      <div className="flex flex-col items-start gap-1 sm:items-end">
-                        <button
-                          onClick={handleCreateLead}
-                          disabled={leadBusy || leadDone}
-                          className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-[0_8px_24px_rgba(15,23,42,0.35)] hover:bg-slate-950 disabled:opacity-50 disabled:shadow-none"
-                        >
-                          {leadDone
-                            ? 'Lead angelegt'
-                            : leadBusy
-                            ? 'Lege Lead an…'
-                            : 'Lead anlegen'}
-                        </button>
-                        {leadError && (
-                          <div className="text-[11px] text-rose-600">
-                            {leadError}
-                          </div>
-                        )}
-                        {leadDone && !leadError && (
-                          <div className="text-[11px] text-emerald-600">
-                            Lead wurde erfolgreich in deinen Kunden angelegt.
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </section>
-                )}
               </div>
             )}
           </>

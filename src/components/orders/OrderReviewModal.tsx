@@ -4,6 +4,7 @@
 import * as React from 'react'
 import { createPortal } from 'react-dom'
 import { supabaseClient } from '@/lib/supabase-client'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 
 function money(n: number) {
   const num = Number(n || 0)
@@ -31,64 +32,49 @@ function cls(...arr: Array<string | false | null | undefined>) {
   return arr.filter(Boolean).join(' ')
 }
 
-function statusToLabel(
-  status: OrderStatus | string | null | undefined,
-) {
+function statusToLabel(status: OrderStatus | string | null | undefined) {
   const v = String(status || '').toLowerCase() as OrderStatus
   switch (v) {
     case 'created':
       return {
         label: 'Erstellt',
-        badge:
-          'bg-slate-100 text-slate-800 ring-slate-200',
+        badge: 'bg-slate-100 text-slate-800 ring-slate-200',
       }
     case 'accepted':
       return {
         label: 'Angenommen',
-        badge:
-          'bg-emerald-50 text-emerald-800 ring-emerald-200',
+        badge: 'bg-emerald-50 text-emerald-800 ring-emerald-200',
       }
     case 'completed':
       return {
         label: 'Abgeschlossen',
-        badge:
-          'bg-indigo-50 text-indigo-800 ring-indigo-200',
+        badge: 'bg-indigo-50 text-indigo-800 ring-indigo-200',
       }
     case 'declined':
       return {
         label: 'Abgelehnt',
-        badge:
-          'bg-rose-50 text-rose-800 ring-rose-200',
+        badge: 'bg-rose-50 text-rose-800 ring-rose-200',
       }
     case 'canceled':
       return {
         label: 'Storniert',
-        badge:
-          'bg-rose-50 text-rose-800 ring-rose-200',
+        badge: 'bg-rose-50 text-rose-800 ring-rose-200',
       }
     default:
       return {
         label: status || '—',
-        badge:
-          'bg-slate-100 text-slate-800 ring-slate-200',
+        badge: 'bg-slate-100 text-slate-800 ring-slate-200',
       }
   }
 }
 
-export default function OrderReviewModal({
-  open,
-  onClose,
-  orderId,
-  role,
-}: Props) {
+export default function OrderReviewModal({ open, onClose, orderId, role }: Props) {
   const sb = supabaseClient()
   const [busy, setBusy] = React.useState(false)
   const [loading, setLoading] = React.useState(true)
   const [error, setError] = React.useState<string | null>(null)
-  const [notice, setNotice] =
-    React.useState<string | null>(null)
-  const [conversationId, setConversationId] =
-    React.useState<string | null>(null)
+  const [notice, setNotice] = React.useState<string | null>(null)
+  const [conversationId, setConversationId] = React.useState<string | null>(null)
 
   const [data, setData] = React.useState<null | {
     id: string
@@ -148,9 +134,7 @@ export default function OrderReviewModal({
         if (cancelled) return
 
         if (oErr || !order) {
-          setError(
-            oErr?.message || 'Auftrag nicht gefunden',
-          )
+          setError(oErr?.message || 'Auftrag nicht gefunden')
           setLoading(false)
           return
         }
@@ -175,22 +159,13 @@ export default function OrderReviewModal({
 
         if (cancelled) return
         if (fErr) {
-          setError(
-            fErr.message ||
-              'Dateien konnten nicht geladen werden.',
-          )
+          setError(fErr.message || 'Dateien konnten nicht geladen werden.')
         }
 
         const urls = await Promise.all(
           (files || []).map(async f => {
             try {
-              const { data: u } =
-                await sb.storage
-                  .from('markt')
-                  .createSignedUrl(
-                    f.path,
-                    60 * 10,
-                  )
+              const { data: u } = await sb.storage.from('markt').createSignedUrl(f.path, 60 * 10)
               return {
                 id: f.id,
                 name: f.name,
@@ -217,24 +192,16 @@ export default function OrderReviewModal({
           net_total: Number(order.net_total),
           tax_rate: Number(order.tax_rate),
           discount_type: order.discount_type,
-          discount_value: Number(
-            order.discount_value,
-          ),
-          discount_label: String(
-            order.discount_label,
-          ),
+          discount_value: Number(order.discount_value),
+          discount_label: String(order.discount_label),
           gross_total: Number(order.gross_total),
-          status: String(
-            order.status,
-          ) as OrderStatus,
+          status: String(order.status) as OrderStatus,
           created_at: String(order.created_at),
           files: urls,
         })
       } catch (e: any) {
         if (!cancelled) {
-          setError(
-            e?.message || 'Fehler beim Laden',
-          )
+          setError(e?.message || 'Fehler beim Laden')
         }
       } finally {
         if (!cancelled) setLoading(false)
@@ -248,35 +215,24 @@ export default function OrderReviewModal({
 
   const withinWithdrawal = React.useMemo(() => {
     if (!data?.created_at) return false
-    const created = new Date(
-      data.created_at,
-    ).getTime()
+    const created = new Date(data.created_at).getTime()
     const now = Date.now()
-    const diffDays = Math.floor(
-      (now - created) / DAY_MS,
-    )
+    const diffDays = Math.floor((now - created) / DAY_MS)
     return diffDays <= WITHDRAWAL_DAYS
   }, [data?.created_at])
 
   const canCancel = React.useMemo(() => {
     if (!data) return false
-    if (
-      data.status === 'canceled' ||
-      data.status === 'completed' ||
-      data.status === 'declined'
-    )
+    if (data.status === 'canceled' || data.status === 'completed' || data.status === 'declined')
       return false
     return withinWithdrawal
   }, [data, withinWithdrawal])
 
   // Systemmessage idempotent
-  async function postSystemMessage(
-    markerText: string,
-  ) {
+  async function postSystemMessage(markerText: string) {
     try {
       if (!conversationId) return
-      const { data: sess } =
-        await sb.auth.getSession()
+      const { data: sess } = await sb.auth.getSession()
       const uid = sess?.session?.user?.id
       if (!uid) return
 
@@ -297,10 +253,7 @@ export default function OrderReviewModal({
         body_text: markerText,
       })
     } catch (e) {
-      console.warn(
-        'postSystemMessage failed',
-        e,
-      )
+      console.warn('postSystemMessage failed', e)
     }
   }
 
@@ -311,27 +264,14 @@ export default function OrderReviewModal({
     setError(null)
     setNotice(null)
     try {
-      const res = await fetch(
-        `/api/konsument/orders/${data.id}/accept`,
-        { method: 'POST' },
-      )
-      const j = await res
-        .json()
-        .catch(() => ({}))
-      if (!res.ok || !j.ok)
-        throw new Error(
-          j?.error || res.statusText,
-        )
+      const res = await fetch(`/api/konsument/orders/${data.id}/accept`, { method: 'POST' })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.ok) throw new Error(j?.error || res.statusText)
 
-      await postSystemMessage(
-        `ORDER:ACCEPTED:${data.id}`,
-      )
+      await postSystemMessage(`ORDER:ACCEPTED:${data.id}`)
       onClose()
     } catch (e: any) {
-      setError(
-        e.message ||
-          'Fehler beim Annehmen',
-      )
+      setError(e.message || 'Fehler beim Annehmen')
     } finally {
       setBusy(false)
     }
@@ -343,27 +283,14 @@ export default function OrderReviewModal({
     setError(null)
     setNotice(null)
     try {
-      const res = await fetch(
-        `/api/konsument/orders/${data.id}/decline`,
-        { method: 'POST' },
-      )
-      const j = await res
-        .json()
-        .catch(() => ({}))
-      if (!res.ok || !j.ok)
-        throw new Error(
-          j?.error || res.statusText,
-        )
+      const res = await fetch(`/api/konsument/orders/${data.id}/decline`, { method: 'POST' })
+      const j = await res.json().catch(() => ({}))
+      if (!res.ok || !j.ok) throw new Error(j?.error || res.statusText)
 
-      await postSystemMessage(
-        `ORDER:DECLINED:${data.id}`,
-      )
+      await postSystemMessage(`ORDER:DECLINED:${data.id}`)
       onClose()
     } catch (e: any) {
-      setError(
-        e.message ||
-          'Fehler beim Ablehnen',
-      )
+      setError(e.message || 'Fehler beim Ablehnen')
     } finally {
       setBusy(false)
     }
@@ -375,40 +302,24 @@ export default function OrderReviewModal({
     setError(null)
     setNotice(null)
     try {
-      const res = await fetch(
-        `/api/konsument/orders/${data.id}/cancel`,
-        { method: 'POST' },
-      )
-      const j = await res
-        .json()
-        .catch(() => ({}))
+      const res = await fetch(`/api/konsument/orders/${data.id}/cancel`, { method: 'POST' })
+      const j = await res.json().catch(() => ({}))
 
       if (!res.ok || !j.ok) {
-        if (
-          j?.error ===
-          'withdrawal_period_exceeded'
-        ) {
+        if (j?.error === 'withdrawal_period_exceeded') {
           setNotice(
             'Die gesetzliche Widerrufsfrist (14 Tage) ist überschritten. Eine Stornierung ist nicht mehr möglich.',
           )
         } else {
-          throw new Error(
-            j?.error ||
-              res.statusText,
-          )
+          throw new Error(j?.error || res.statusText)
         }
         return
       }
 
-      await postSystemMessage(
-        `ORDER:CANCELED:${data.id}`,
-      )
+      await postSystemMessage(`ORDER:CANCELED:${data.id}`)
       onClose()
     } catch (e: any) {
-      setError(
-        e.message ||
-          'Fehler beim Stornieren',
-      )
+      setError(e.message || 'Fehler beim Stornieren')
     } finally {
       setBusy(false)
     }
@@ -417,7 +328,7 @@ export default function OrderReviewModal({
   if (!open) return null
 
   const modal = (
-    <div className="fixed inset-0 z-[100000] flex items-start justify-center p-4">
+    <div className="fixed inset-0 z-[100000] flex items-start justify-center p-3 sm:p-4">
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-slate-900/20 backdrop-blur-xl"
@@ -426,94 +337,63 @@ export default function OrderReviewModal({
 
       {/* Card */}
       <div
-        className="relative z-10 mt-8 w-full max-w-2xl max-h-[92vh] overflow-y-auto
-                   rounded-3xl border border-white/60 bg-white/80 backdrop-blur-xl p-5
+        className="relative z-10 mt-6 sm:mt-10 w-full max-w-2xl max-h-[92vh] overflow-y-auto
+                   rounded-3xl border border-white/60 bg-white/80 backdrop-blur-xl p-4 sm:p-6
                    shadow-[0_10px_34px_rgba(2,6,23,0.12)] ring-1 ring-white/60"
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-base font-medium text-slate-900">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <h3 className="text-sm sm:text-base font-medium text-slate-900 truncate">
               Auftrag
             </h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Details zum Auftrag, Konditionen und
-              hinterlegte Dokumente.
+            <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
+              Details zum Auftrag, Konditionen und hinterlegte Dokumente.
             </p>
           </div>
           <button
             type="button"
             disabled={busy}
             onClick={() => !busy && onClose()}
-            className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-xs sm:text-sm hover:shadow-sm disabled:opacity-60"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/90 text-slate-500 hover:text-slate-700 hover:bg-white shadow-sm disabled:opacity-60"
+            aria-label="Schließen"
           >
-            Schließen
+            <XMarkIcon className="h-4 w-4" />
           </button>
         </div>
 
         {/* Content */}
         {loading ? (
-          <div className="mt-4 text-sm text-slate-600">
-            Lade…
-          </div>
+          <div className="mt-4 text-sm text-slate-600">Lade…</div>
         ) : error ? (
-          <div className="mt-4 text-xs text-rose-600">
-            {error}
-          </div>
+          <div className="mt-4 text-xs text-rose-600">{error}</div>
         ) : !data ? (
-          <div className="mt-4 text-sm text-slate-600">
-            Keine Daten gefunden.
-          </div>
+          <div className="mt-4 text-sm text-slate-600">Keine Daten gefunden.</div>
         ) : (
           <>
             {/* Status-Hinweise */}
             {data.status === 'canceled' && (
               <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-                Dieser Auftrag wurde{' '}
-                <strong>
-                  storniert
-                </strong>
-                .
+                Dieser Auftrag wurde <strong>storniert</strong>.
               </div>
             )}
             {data.status === 'declined' && (
               <div className="mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
-                Dieser Auftrag wurde{' '}
-                <strong>
-                  abgelehnt
-                </strong>
-                .
+                Dieser Auftrag wurde <strong>abgelehnt</strong>.
               </div>
             )}
 
-            {(role === 'admin' ||
-              role === 'partner') &&
-              data.status ===
-                'canceled' && (
-                <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
-                  <strong>
-                    Hinweis:
-                  </strong>{' '}
-                  Bitte zuerst ein{' '}
-                  <strong>
-                    neues Angebot
-                  </strong>{' '}
-                  an den Konsumenten
-                  senden, danach kann ein
-                  neuer Auftrag erstellt
-                  werden.
-                </div>
-              )}
+            {(role === 'admin' || role === 'partner') && data.status === 'canceled' && (
+              <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-900">
+                <strong>Hinweis:</strong> Bitte zuerst ein <strong>neues Angebot</strong> an den
+                Konsumenten senden, danach kann ein neuer Auftrag erstellt werden.
+              </div>
+            )}
 
             {/* Status + Meta */}
             <div className="mt-3 flex flex-wrap items-center gap-2">
               {(() => {
-                const {
-                  label,
-                  badge,
-                } = statusToLabel(
-                  data.status,
-                )
+                const { label, badge } = statusToLabel(data.status)
                 return (
                   <span
                     className={cls(
@@ -525,95 +405,62 @@ export default function OrderReviewModal({
                   </span>
                 )
               })()}
-              <div className="text-xs text-slate-500">
+              <div className="text-[11px] sm:text-xs text-slate-500">
                 Erstellt am:{' '}
-                {new Date(
-                  data.created_at,
-                ).toLocaleString()}
+                {new Date(data.created_at).toLocaleString('de-DE', {
+                  dateStyle: 'short',
+                  timeStyle: 'short',
+                })}
               </div>
             </div>
 
             {/* Beträge */}
-            <div className="mt-3">
-              <div className="text-sm font-medium text-slate-900">
+            <div className="mt-4">
+              <div className="text-sm sm:text-base font-medium text-slate-900">
                 {data.title}
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-3 text-sm">
+              <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
                 <div>
-                  <span className="text-slate-500">
-                    Netto:
-                  </span>{' '}
-                  {money(
-                    data.net_total,
-                  )}
+                  <span className="text-slate-500">Netto:</span> {money(data.net_total)}
                 </div>
                 <div>
-                  <span className="text-slate-500">
-                    MwSt:
-                  </span>{' '}
-                  {data.tax_rate}
-                  %
+                  <span className="text-slate-500">MwSt:</span> {data.tax_rate}%
                 </div>
                 <div>
-                  <span className="text-slate-500">
-                    Rabatt:
-                  </span>{' '}
-                  {data.discount_type ===
-                  'percent'
+                  <span className="text-slate-500">Rabatt:</span>{' '}
+                  {data.discount_type === 'percent'
                     ? `${data.discount_value}%`
-                    : `${money(
-                        data.discount_value,
-                      )}`}{' '}
+                    : `${money(data.discount_value)}`}{' '}
                   ({data.discount_label})
                 </div>
                 <div>
-                  <span className="text-slate-500">
-                    Brutto:
-                  </span>{' '}
-                  {money(
-                    data.gross_total,
-                  )}
+                  <span className="text-slate-500">Brutto:</span> {money(data.gross_total)}
                 </div>
               </div>
 
               {/* Dateien */}
               <div className="mt-4">
-                <div className="mb-1 text-xs text-slate-600">
-                  Anhänge
-                </div>
-                {data.files.length ===
-                0 ? (
-                  <div className="text-xs text-slate-500">
-                    Keine Dateien
-                    vorhanden.
-                  </div>
+                <div className="mb-1 text-xs text-slate-600">Anhänge</div>
+                {data.files.length === 0 ? (
+                  <div className="text-xs text-slate-500">Keine Dateien vorhanden.</div>
                 ) : (
                   <ul className="space-y-1 text-sm">
-                    {data.files.map(
-                      f => (
-                        <li
-                          key={f.id}
-                          className="truncate"
-                        >
-                          {f.url ? (
-                            <a
-                              href={
-                                f.url
-                              }
-                              target="_blank"
-                              rel="noreferrer"
-                              className="underline"
-                            >
-                              {f.name ||
-                                'Datei'}
-                            </a>
-                          ) : (
-                            f.name ||
-                            'Datei'
-                          )}
-                        </li>
-                      ),
-                    )}
+                    {data.files.map(f => (
+                      <li key={f.id} className="truncate">
+                        {f.url ? (
+                          <a
+                            href={f.url}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="underline"
+                          >
+                            {f.name || 'Datei'}
+                          </a>
+                        ) : (
+                          f.name || 'Datei'
+                        )}
+                      </li>
+                    ))}
                   </ul>
                 )}
               </div>
@@ -626,58 +473,43 @@ export default function OrderReviewModal({
             )}
 
             {/* Actions */}
-            <div className="mt-5 flex flex-wrap items-center justify-end gap-2">
+            <div className="mt-5 flex flex-col-reverse sm:flex-row sm:justify-end items-stretch sm:items-center gap-2 sm:gap-3">
               {/* Konsument: Annehmen/Ablehnen bei created */}
-              {role ===
-                'konsument' &&
-                data.status ===
-                  'created' && (
-                  <>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={
-                        declineOrder
-                      }
-                      className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm disabled:opacity-60"
-                    >
-                      Ablehnen
-                    </button>
-                    <button
-                      type="button"
-                      disabled={busy}
-                      onClick={
-                        acceptOrder
-                      }
-                      className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm text-white hover:opacity-90 disabled:opacity-50"
-                    >
-                      Annehmen
-                    </button>
-                  </>
-                )}
+              {role === 'konsument' && data.status === 'created' && (
+                <>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={declineOrder}
+                    className="w-full sm:w-auto rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm disabled:opacity-60"
+                  >
+                    Ablehnen
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={acceptOrder}
+                    className="w-full sm:w-auto rounded-xl bg-slate-900 px-3 py-1.5 text-sm text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    Annehmen
+                  </button>
+                </>
+              )}
 
               {/* Konsument: Storno innerhalb Widerrufsfrist */}
-              {role ===
-                'konsument' && (
+              {role === 'konsument' && (
                 <button
                   type="button"
-                  disabled={
-                    busy ||
-                    !canCancel
-                  }
-                  onClick={
-                    cancelOrder
-                  }
+                  disabled={busy || !canCancel}
+                  onClick={cancelOrder}
                   title={
-                    !canCancel &&
-                    !withinWithdrawal
+                    !canCancel && !withinWithdrawal
                       ? 'Die gesetzliche Widerrufsfrist (14 Tage) ist überschritten.'
                       : undefined
                   }
-                  className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm disabled:opacity-50"
+                  className="w-full sm:w-auto rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm disabled:opacity-50"
                 >
-                  Auftrag
-                  stornieren
+                  Auftrag stornieren
                 </button>
               )}
             </div>
@@ -687,7 +519,5 @@ export default function OrderReviewModal({
     </div>
   )
 
-  return typeof document !== 'undefined'
-    ? createPortal(modal, document.body)
-    : modal
+  return typeof document !== 'undefined' ? createPortal(modal, document.body) : modal
 }

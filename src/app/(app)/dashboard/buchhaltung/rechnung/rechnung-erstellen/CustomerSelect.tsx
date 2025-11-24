@@ -35,7 +35,7 @@ export default function CustomerSelect() {
   const [highlightIdx, setHighlightIdx] = useState<number>(-1)
   const inputRef = useRef<HTMLInputElement>(null)
 
-  // Gefilterte Kunden (token-basiert, sucht Firma/Name/Email/Kundennr.)
+  // Gefilterte Kunden
   const filtered = useMemo(() => {
     const qs = tokens(query)
     if (!qs.length) return []
@@ -57,13 +57,16 @@ export default function CustomerSelect() {
   }, [query, customers])
 
   // Auswahl übernehmen
-  const pickCustomer = useCallback((c: (typeof customers)[number]) => {
-    setSelectedCustomer(c)
-    setQuery(displayNameOf(c))      // Eingabefeld mit Display-Name (Firma bevorzugt) füllen
-    setShowResults(false)
-  }, [setSelectedCustomer])
+  const pickCustomer = useCallback(
+    (c: (typeof customers)[number]) => {
+      setSelectedCustomer(c)
+      setQuery(displayNameOf(c))
+      setShowResults(false)
+    },
+    [setSelectedCustomer]
+  )
 
-  // Keyboard-Steuerung in der Liste
+  // Keyboard-Steuerung
   const onKeyDown = useCallback(
     (e: React.KeyboardEvent<HTMLInputElement>) => {
       if (!showResults || !filtered.length) return
@@ -81,41 +84,50 @@ export default function CustomerSelect() {
     [filtered, highlightIdx, pickCustomer, showResults]
   )
 
-  useEffect(() => { setHighlightIdx(-1) }, [query])
+  useEffect(() => {
+    setHighlightIdx(-1)
+  }, [query])
 
   return (
-    <div>
-      <h2 className="mb-4 text-2xl font-semibold tracking-tight text-gray-900">
+    <div className="space-y-4">
+      <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
         1. Kunde wählen
       </h2>
 
-      <div className="relative mb-6">
+      <div className="relative">
         <input
           ref={inputRef}
           type="text"
           placeholder="Firma, Vorname, Nachname, E-Mail oder Kundennummer suchen…"
           value={query}
-          onChange={(e) => { setQuery(e.target.value); setShowResults(!!e.target.value.trim()) }}
+          onChange={(e) => {
+            setQuery(e.target.value)
+            setShowResults(!!e.target.value.trim())
+          }}
           onFocus={() => setShowResults(!!query.trim())}
           onKeyDown={onKeyDown}
-          className="w-full rounded-lg border border-gray-200 bg-white px-4 py-2 pr-9 text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
+          className="w-full rounded-xl border border-white/70 bg-white/90 px-4 py-2.5 pr-9 text-sm text-slate-900 shadow-sm outline-none ring-indigo-200/70 backdrop-blur-xl focus:ring-4"
         />
         {query && (
           <button
             type="button"
             aria-label="Suche leeren"
             title="Suche leeren"
-            onClick={() => { setQuery(''); setShowResults(false); setHighlightIdx(-1) }}
-            className="absolute inset-y-0 right-0 my-1 mr-1 inline-flex h-8 w-8 items-center justify-center rounded-md text-slate-500 hover:bg-slate-100"
+            onClick={() => {
+              setQuery('')
+              setShowResults(false)
+              setHighlightIdx(-1)
+            }}
+            className="absolute inset-y-0 right-0 my-1 mr-1 inline-flex h-8 w-8 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100"
           >
             ×
           </button>
         )}
 
         {showResults && (
-          <div className="absolute z-10 mt-2 w-full rounded-lg border border-gray-200 bg-white shadow-lg">
+          <div className="absolute z-20 mt-2 w-full overflow-hidden rounded-xl border border-white/70 bg-white/95 text-sm shadow-[0_18px_45px_rgba(15,23,42,0.2)] backdrop-blur-xl">
             {filtered.length > 0 ? (
-              <ul className="max-h-60 overflow-auto">
+              <ul className="max-h-64 overflow-auto">
                 {filtered.map((c, idx) => {
                   const isActive = selectedCustomer?.id === c.id
                   const isHighlight = idx === highlightIdx
@@ -126,8 +138,10 @@ export default function CustomerSelect() {
                     <li
                       key={c.id}
                       className={[
-                        'flex cursor-pointer items-center justify-between px-3 py-2 text-sm transition-colors',
-                        isActive ? 'bg-indigo-50 text-indigo-900' : 'hover:bg-gray-50',
+                        'flex cursor-pointer items-center justify-between px-3 py-2 transition-colors',
+                        isActive
+                          ? 'bg-indigo-50 text-indigo-900'
+                          : 'hover:bg-slate-50',
                         isHighlight && !isActive ? 'bg-slate-50' : '',
                       ].join(' ')}
                       onMouseEnter={() => setHighlightIdx(idx)}
@@ -136,8 +150,10 @@ export default function CustomerSelect() {
                       title="Kunde auswählen"
                     >
                       <div className="min-w-0 flex-1">
-                        <div className="truncate font-medium text-gray-900">{name}</div>
-                        <div className="truncate text-xs text-gray-500">
+                        <div className="truncate text-[13px] font-medium text-slate-900">
+                          {name}
+                        </div>
+                        <div className="truncate text-[11px] text-slate-500">
                           {company ? person : null}
                           {company && c.email ? ' • ' : ''}
                           {c.email}
@@ -145,7 +161,7 @@ export default function CustomerSelect() {
                         </div>
                       </div>
                       {isActive && (
-                        <span className="ml-2 shrink-0 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+                        <span className="ml-2 shrink-0 inline-flex items-center rounded-full bg-indigo-100 px-2 py-0.5 text-[10px] font-medium text-indigo-700">
                           gewählt
                         </span>
                       )}
@@ -154,7 +170,7 @@ export default function CustomerSelect() {
                 })}
               </ul>
             ) : (
-              <div className="p-3 text-sm text-gray-500">Keine Kunden gefunden.</div>
+              <div className="p-3 text-sm text-slate-500">Keine Kunden gefunden.</div>
             )}
           </div>
         )}

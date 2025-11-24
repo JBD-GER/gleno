@@ -1,6 +1,12 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react'
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 
@@ -23,7 +29,7 @@ function useGlobalPosition(
   panelRef: React.RefObject<HTMLElement | null>,
   open: boolean
 ) {
-  const [style, setStyle] = useState<React.CSSProperties>({ display: 'none' })
+  const [style, setStyle] = useState<CSSProperties>({ display: 'none' })
 
   const compute = () => {
     const btn = btnRef.current
@@ -33,7 +39,6 @@ function useGlobalPosition(
       return
     }
 
-    // temporär sichtbar machen, um echte Größe zu messen
     const prevVis = panel.style.visibility
     const prevDisp = panel.style.display
     panel.style.visibility = 'hidden'
@@ -54,10 +59,12 @@ function useGlobalPosition(
     const fitsBelow = window.innerHeight - br.bottom >= pr.height + margin
     if (!fitsBelow) {
       const upTop = br.top - pr.height - margin
-      top = upTop >= margin ? upTop : Math.max(margin, window.innerHeight - pr.height - margin)
+      top =
+        upTop >= margin
+          ? upTop
+          : Math.max(margin, window.innerHeight - pr.height - margin)
     }
 
-    // Restore
     panel.style.visibility = prevVis
     panel.style.display = prevDisp
 
@@ -104,16 +111,24 @@ export default function OfferActionsMenu({
   const panelRef = useRef<HTMLDivElement | null>(null)
   const btnRef = useRef<HTMLButtonElement | null>(null)
 
-  const style = useGlobalPosition(btnRef as React.RefObject<HTMLElement | null>, panelRef as React.RefObject<HTMLElement | null>, open)
+  const style = useGlobalPosition(
+    btnRef as React.RefObject<HTMLElement | null>,
+    panelRef as React.RefObject<HTMLElement | null>,
+    open
+  )
 
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node
       if (!panelRef.current || !btnRef.current) return
-      if (!panelRef.current.contains(t) && !btnRef.current.contains(t)) setOpen(false)
+      if (!panelRef.current.contains(t) && !btnRef.current.contains(t)) {
+        setOpen(false)
+      }
     }
-    const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
+    const onEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
     document.addEventListener('mousedown', onDown)
     document.addEventListener('keydown', onEsc)
     return () => {
@@ -130,7 +145,8 @@ export default function OfferActionsMenu({
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ offerNumber, status }),
       })
-      if (!res.ok) throw new Error(await res.text().catch(() => 'Request failed'))
+      if (!res.ok)
+        throw new Error(await res.text().catch(() => 'Request failed'))
       router.refresh()
     } catch (e) {
       console.error(e)
@@ -175,8 +191,10 @@ export default function OfferActionsMenu({
     }
   }
 
-  const isErstellt = (currentStatus ?? 'Erstellt').toString().toLowerCase() === 'erstellt'
-  const isVerschickt = (currentStatus ?? '').toString().toLowerCase() === 'verschickt'
+  const isErstellt =
+    (currentStatus ?? 'Erstellt').toString().toLowerCase() === 'erstellt'
+  const isVerschickt =
+    (currentStatus ?? '').toString().toLowerCase() === 'verschickt'
 
   return (
     <div className="relative inline-block text-left">
@@ -188,28 +206,46 @@ export default function OfferActionsMenu({
         aria-expanded={open}
         className={[
           'group inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition',
-          'border border-white/60 bg-white/80 text-slate-900 shadow hover:bg-white',
-          'focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-300',
+          'border border-slate-200 bg-white/80 text-slate-800 hover:bg-white',
+          'focus:outline-none ring-offset-2 focus:ring-2 focus:ring-slate-200',
           'disabled:opacity-60 disabled:cursor-not-allowed',
-          'relative',
+          'shadow',
         ].join(' ')}
       >
-        <span
-          aria-hidden
-          className="pointer-events-none absolute -inset-0.5 -z-10 rounded-lg bg-[radial-gradient(400px_120px_at_120%_-20%,rgba(88,101,242,0.18),transparent_60%)]"
-        />
         {loading ? (
           <span className="inline-flex items-center gap-2">
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-30" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-              <path className="opacity-90" d="M12 2a10 10 0 0 1 10 10h-3" stroke="currentColor" strokeWidth="3" />
+            <svg
+              className="h-4 w-4 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="3"
+              />
+              <path
+                className="opacity-90"
+                d="M12 2a10 10 0 0 1 10 10h-3"
+                stroke="currentColor"
+                strokeWidth="3"
+              />
             </svg>
             Bitte warten…
           </span>
         ) : (
           <>
             Aktionen
-            <svg className="h-4 w-4 transition-transform data-[open=true]:rotate-180" data-open={open} viewBox="0 0 20 20" fill="currentColor">
+            <svg
+              className={`h-4 w-4 text-slate-700 transition-transform ${
+                open ? 'rotate-180' : ''
+              }`}
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
               <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" />
             </svg>
           </>
@@ -224,24 +260,37 @@ export default function OfferActionsMenu({
             aria-label="Angebot Aktionen"
             style={style}
             className={[
-              'z-[9999] mt-2 w-64 overflow-hidden rounded-2xl',
-              'border border-white/60 bg-white/90 backdrop-blur shadow-[0_20px_50px_rgba(2,6,23,0.10)]',
+              'z-[9999] w-64 overflow-hidden rounded-2xl border border-slate-200',
+              'bg-white/90 backdrop-blur shadow-[0_20px_50px_rgba(0,0,0,0.08)]',
             ].join(' ')}
           >
-            <div className="border-b border-white/60 bg-white/70 px-3 py-2 text-[11px] uppercase tracking-wide text-slate-700">
-              Angebot <span className="font-semibold text-slate-900">{offerNumber}</span>
+            <div className="border-b border-slate-200 bg-slate-50/70 px-3 py-2 text-[11px] uppercase tracking-wide text-slate-600">
+              Angebot{' '}
+              <span className="font-semibold text-slate-800">
+                {offerNumber}
+              </span>
             </div>
-            <ul className="py-1 text-sm text-slate-800">
+            <ul className="py-1 text-left text-sm text-slate-800">
               <li>
                 <a
                   href={downloadHref}
                   rel="noopener noreferrer"
                   role="menuitem"
-                  className="flex items-center gap-2 px-3 py-2 transition hover:bg-white"
+                  className="flex items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
                   onClick={() => setOpen(false)}
                 >
-                  <svg className="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none">
-                    <path d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <svg
+                    className="h-4 w-4 text-slate-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <path
+                      d="M12 3v12m0 0l-4-4m4 4l4-4M4 21h16"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                   PDF herunterladen
                 </a>
@@ -250,17 +299,26 @@ export default function OfferActionsMenu({
                 <a
                   href={editHref}
                   role="menuitem"
-                  className="flex items-center gap-2 px-3 py-2 transition hover:bg-white"
+                  className="flex items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
                   onClick={() => setOpen(false)}
                 >
-                  <svg className="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none">
-                    <path d="M4 20h4l10-10-4-4L4 16v4z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" />
+                  <svg
+                    className="h-4 w-4 text-slate-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <path
+                      d="M4 20h4l10-10-4-4L4 16v4z"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                   Bearbeiten
                 </a>
               </li>
 
-              <li className="my-1 border-t border-white/60" />
+              <li className="my-1 border-t border-slate-100" />
 
               {isErstellt && (
                 <li>
@@ -268,41 +326,69 @@ export default function OfferActionsMenu({
                     onClick={() => markStatus('Verschickt')}
                     disabled={!!loading}
                     role="menuitem"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-white disabled:opacity-60"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                   >
-                    <svg className="h-4 w-4 text-indigo-600" viewBox="0 0 24 24" fill="none">
-                      <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      className="h-4 w-4 text-indigo-600"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M5 12h14M12 5l7 7-7 7"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                     Als „Verschickt“ markieren
                   </button>
                 </li>
               )}
+
               {isVerschickt && (
                 <li>
                   <button
                     onClick={() => markStatus('Erstellt')}
                     disabled={!!loading}
                     role="menuitem"
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-white disabled:opacity-60"
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                   >
-                    <svg className="h-4 w-4 text-slate-600" viewBox="0 0 24 24" fill="none">
-                      <path d="M7 7h10v10H7z" stroke="currentColor" strokeWidth="1.8" />
+                    <svg
+                      className="h-4 w-4 text-slate-600"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M7 7h10v10H7z"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                      />
                     </svg>
                     Zurück auf „Erstellt“
                   </button>
                 </li>
               )}
 
-              <li className="my-1 border-t border-white/60" />
+              <li className="my-1 border-t border-slate-100" />
               <li>
                 <button
                   onClick={genOrderConfirmation}
                   disabled={!!loading}
                   role="menuitem"
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-white disabled:opacity-60"
+                  className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                 >
-                  <svg className="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none">
-                    <path d="M6 12h12M6 8h8M6 16h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <svg
+                    className="h-4 w-4 text-slate-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <path
+                      d="M6 12h12M6 8h8M6 16h6"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
                   </svg>
                   Auftragsbest. erzeugen
                 </button>

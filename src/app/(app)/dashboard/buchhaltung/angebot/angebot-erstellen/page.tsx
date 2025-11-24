@@ -1,3 +1,4 @@
+// src/app/(app)/dashboard/buchhaltung/angebot/angebot-erstellen/page.tsx (oder ähnlich)
 import React from 'react'
 import { redirect } from 'next/navigation'
 import { supabaseServer } from '@/lib/supabase-server'

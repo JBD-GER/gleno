@@ -4,7 +4,11 @@ import TimeTrackerPage from './TimeTrackerPage'
 
 export default async function PersonalTimePage() {
   const supabase = await supabaseServer()
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
+
   if (error || !user) redirect('/login')
 
   // Volle Breite: kein zentrierendes max-width, nur etwas Padding

@@ -12,7 +12,6 @@ import {
   DocumentTextIcon,
   CalendarDaysIcon,
   CurrencyEuroIcon,
-  MapPinIcon,
   BuildingOffice2Icon,
   UserIcon,
 } from '@heroicons/react/24/outline'
@@ -50,11 +49,11 @@ const CATEGORIES = [
 ] as const
 
 const CONDITIONS = ['Neu', 'Gut', 'Gebrauchsspuren', 'Defekt'] as const
-const STATUSES   = ['Verfügbar', 'In Nutzung', 'Wartung', 'Reserviert', 'Verloren'] as const
+const STATUSES = ['Verfügbar', 'In Nutzung', 'Wartung', 'Reserviert', 'Verloren'] as const
 
-type CategoryType  = typeof CATEGORIES[number]
-type ConditionType = typeof CONDITIONS[number]
-type StatusType    = typeof STATUSES[number]
+type CategoryType = (typeof CATEGORIES)[number]
+type ConditionType = (typeof CONDITIONS)[number]
+type StatusType = (typeof STATUSES)[number]
 
 type ToolForm = {
   name: string
@@ -82,7 +81,7 @@ const inputGlass =
 
 const btnPrimary =
   'inline-flex items-center gap-2 rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white shadow-sm ' +
-  'transition hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2'
+  'transition hover:bg-black focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-offset-2'
 
 const btnGlass =
   'inline-flex items-center gap-2 rounded-lg border border-white/60 bg-white/80 px-3 py-1.5 text-sm text-slate-900 shadow-sm ' +
@@ -100,26 +99,49 @@ function show(v: string | number | null | undefined) {
 function euro(n: number | null | undefined) {
   if (n === null || n === undefined) return '—'
   try {
-    return new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 2 }).format(n)
-  } catch { return String(n) }
+    return new Intl.NumberFormat('de-DE', {
+      style: 'currency',
+      currency: 'EUR',
+      maximumFractionDigits: 2,
+    }).format(n)
+  } catch {
+    return String(n)
+  }
 }
 
 /* ---------- Glass Tile ---------- */
 function GlassTile({
-  title, value, Icon, mono,
-}: { title: string; value?: string | number | null; Icon: any; mono?: boolean }) {
+  title,
+  value,
+  Icon,
+  mono,
+}: {
+  title: string
+  value?: string | number | null
+  Icon: any
+  mono?: boolean
+}) {
   return (
     <div
       className="relative overflow-hidden rounded-xl border border-white/60 bg-white/70 p-3 shadow-sm backdrop-blur-xl ring-1 ring-transparent"
-      style={{ backgroundImage: 'radial-gradient(400px 180px at 120% -30%, rgba(15,23,42,0.06), transparent)' }}
+      style={{
+        backgroundImage:
+          'radial-gradient(400px 180px at 120% -30%, rgba(15,23,42,0.06), transparent)',
+      }}
     >
       <div className="flex items-start gap-3">
         <div className="rounded-lg border border-white/60 bg-white/80 p-2 shadow">
           <Icon className="h-5 w-5 text-slate-700" />
         </div>
         <div className="min-w-0">
-          <p className="text-[11px] uppercase tracking-wide text-slate-500">{title}</p>
-          <p className={`truncate text-sm font-medium text-slate-900 ${mono ? 'font-mono tabular-nums' : ''}`}>
+          <p className="text-[11px] uppercase tracking-wide text-slate-500">
+            {title}
+          </p>
+          <p
+            className={`truncate text-sm font-medium text-slate-900 ${
+              mono ? 'font-mono tabular-nums' : ''
+            }`}
+          >
             {show(value)}
           </p>
         </div>
@@ -132,6 +154,9 @@ function GlassTile({
 export default function ToolsManager() {
   const [items, setItems] = useState<ToolItem[]>([])
   const [loading, setLoading] = useState(true)
+
+  // Suche
+  const [search, setSearch] = useState('')
 
   // Modal
   const [open, setOpen] = useState(false)
@@ -160,15 +185,23 @@ export default function ToolsManager() {
 
   async function load() {
     setLoading(true)
-    const res = await fetch('/api/tools', { cache: 'no-store' })
-    const data = await res.json()
-    setItems(Array.isArray(data) ? data : [])
-    setLoading(false)
+    try {
+      const res = await fetch('/api/tools', { cache: 'no-store' })
+      const data = await res.json()
+      setItems(Array.isArray(data) ? data : [])
+    } catch (e) {
+      console.error(e)
+      setItems([])
+    } finally {
+      setLoading(false)
+    }
   }
-  useEffect(() => { load() }, [])
 
-  function openCreate() {
-    setEditing(null)
+  useEffect(() => {
+    load()
+  }, [])
+
+  function resetForm() {
     setForm({
       name: '',
       category: 'Allgemein',
@@ -187,6 +220,11 @@ export default function ToolsManager() {
       last_service_date: '',
       notes: '',
     })
+  }
+
+  function openCreate() {
+    setEditing(null)
+    resetForm()
     setOpen(true)
   }
 
@@ -268,35 +306,89 @@ export default function ToolsManager() {
     setEditing(null)
   }
 
+  const visibleItems = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    if (!q) return items
+    return items.filter((t) => {
+      const haystack = [
+        t.name,
+        t.category,
+        t.manufacturer,
+        t.model,
+        t.serial_number,
+        t.status,
+        t.storage_location,
+        t.assigned_employee_label,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase()
+      return haystack.includes(q)
+    })
+  }, [items, search])
+
   return (
     <div className="space-y-5">
       {/* Toolbar */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <span className={chip}>Werkzeuge: {items.length}</span>
-        <button onClick={openCreate} className={btnGlass + ' px-4 py-2'}>
-          <PlusIcon className="h-5 w-5" />
-          Werkzeug hinzufügen
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={chip}>Werkzeuge: {items.length}</span>
+          {search && (
+            <span className="rounded-full bg-slate-900/90 px-2.5 py-1 text-[11px] font-mono text-slate-50">
+              Gefiltert: {visibleItems.length}
+            </span>
+          )}
+        </div>
+
+        <div className="flex flex-col gap-2 xs:flex-row xs:items-center xs:justify-end">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="In Werkzeugen suchen …"
+            className="w-full rounded-full border border-white/60 bg-white/80 px-3 py-1.5 text-sm text-slate-900 shadow-sm backdrop-blur focus:border-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-200 xs:w-64"
+          />
+          <button onClick={openCreate} className={btnGlass + ' px-4 py-2'}>
+            <PlusIcon className="h-5 w-5" />
+            Werkzeug hinzufügen
+          </button>
+        </div>
       </div>
 
-      {/* Liste: eine Box pro Werkzeug */}
+      {/* Liste */}
       {loading ? (
-        <div className="p-6 text-slate-600">Lade…</div>
+        <div className="grid grid-cols-1 gap-5">
+          {Array.from({ length: 3 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-40 animate-pulse rounded-2xl border border-white/60 bg-gradient-to-r from-slate-100/80 via-white/80 to-slate-100/80 shadow-[0_10px_30px_rgba(2,6,23,0.08)] backdrop-blur-xl"
+            />
+          ))}
+        </div>
       ) : items.length === 0 ? (
-        <div className="p-6 text-slate-600">
-          Noch keine Werkzeuge.{' '}
-          <button onClick={openCreate} className="text-slate-900 underline decoration-slate-300 hover:decoration-slate-500">
-            Jetzt anlegen
+        <div className="rounded-2xl border border-dashed border-slate-200 bg-slate-50/70 px-5 py-6 text-sm text-slate-600">
+          Noch keine Werkzeuge erfasst.{' '}
+          <button
+            onClick={openCreate}
+            className="font-medium text-slate-900 underline decoration-slate-300 underline-offset-2 hover:decoration-slate-500"
+          >
+            Jetzt Werkzeug anlegen
           </button>
           .
         </div>
+      ) : visibleItems.length === 0 ? (
+        <div className="rounded-2xl border border-slate-200 bg-slate-50/70 px-5 py-6 text-sm text-slate-600">
+          Keine Werkzeuge gefunden, die zu deiner Suche passen.
+        </div>
       ) : (
         <div className="grid grid-cols-1 gap-5">
-          {items.map((t) => (
+          {visibleItems.map((t) => (
             <div
               key={t.id}
-              className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/80 p-4 shadow-[0_10px_30px_rgba(2,6,23,0.08)] backdrop-blur-xl"
-              style={{ backgroundImage: 'radial-gradient(900px 360px at 120% -30%, rgba(15,23,42,0.06), transparent)' }}
+              className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/80 p-4 shadow-[0_10px_30px_rgba(2,6,23,0.10)] backdrop-blur-xl sm:p-5"
+              style={{
+                backgroundImage:
+                  'radial-gradient(900px 360px at 120% -30%, rgba(15,23,42,0.06), transparent)',
+              }}
             >
               {/* Header */}
               <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
@@ -308,23 +400,31 @@ export default function ToolsManager() {
                   <h3 className="mt-2 truncate text-lg font-semibold tracking-tight text-slate-900">
                     {t.name}
                   </h3>
-                  <p className="truncate text-sm text-slate-600 flex items-center gap-2">
+                  <p className="mt-1 flex flex-wrap items-center gap-2 text-sm text-slate-600">
                     <span className="inline-flex items-center gap-1 rounded-full border border-white/60 bg-white/80 px-2 py-0.5 text-[11px] font-medium text-slate-700 backdrop-blur">
                       <TagIcon className="h-3.5 w-3.5" />
                       {show(t.category)}
                     </span>
+                    {t.status && (
+                      <span className="inline-flex items-center rounded-full bg-slate-900/90 px-2.5 py-0.5 text-[11px] font-medium text-slate-50">
+                        {t.status}
+                      </span>
+                    )}
                   </p>
                 </div>
 
                 <div className="flex shrink-0 items-center gap-2">
-                  <span className={chip}>{show(t.status)}</span>
-                  <button onClick={() => openEdit(t)} className={btnGlass} title="Bearbeiten">
+                  <button
+                    onClick={() => openEdit(t)}
+                    className={btnGlass}
+                    title="Bearbeiten"
+                  >
                     <PencilSquareIcon className="h-5 w-5" />
                     <span className="hidden sm:inline">Bearbeiten</span>
                   </button>
                   <button
                     onClick={() => onDelete(t.id)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100"
+                    className="inline-flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm text-rose-700 shadow-sm transition hover:bg-rose-100"
                     title="Löschen"
                   >
                     <TrashIcon className="h-5 w-5" />
@@ -335,18 +435,67 @@ export default function ToolsManager() {
 
               {/* Tiles */}
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
-                <GlassTile title="Hersteller"          value={t.manufacturer}            Icon={IdentificationIcon} />
-                <GlassTile title="Modell"               value={t.model}                   Icon={IdentificationIcon} />
-                <GlassTile title="Seriennummer"         value={t.serial_number}           Icon={DocumentTextIcon} />
-                <GlassTile title="Zustand"              value={t.condition}               Icon={TagIcon} />
-                <GlassTile title="Ablageort"            value={t.storage_location}        Icon={BuildingOffice2Icon} />
-                <GlassTile title="Zugewiesen an"        value={t.assigned_employee_label} Icon={UserIcon} />
-                <GlassTile title="Kaufdatum"            value={t.purchase_date}           Icon={CalendarDaysIcon} />
-                <GlassTile title="Kaufpreis"            value={euro(t.purchase_price)}    Icon={CurrencyEuroIcon} mono />
-                <GlassTile title="Garantie bis"         value={t.warranty_expiry}         Icon={CalendarDaysIcon} />
-                <GlassTile title="Nächste Prüfung"      value={t.next_inspection_due}     Icon={CalendarDaysIcon} />
-                <GlassTile title="Letzter Service"      value={t.last_service_date}       Icon={CalendarDaysIcon} />
-                <GlassTile title="Notizen"              value={t.notes}                   Icon={DocumentTextIcon} />
+                <GlassTile
+                  title="Hersteller"
+                  value={t.manufacturer}
+                  Icon={IdentificationIcon}
+                />
+                <GlassTile
+                  title="Modell"
+                  value={t.model}
+                  Icon={IdentificationIcon}
+                />
+                <GlassTile
+                  title="Seriennummer"
+                  value={t.serial_number}
+                  Icon={DocumentTextIcon}
+                />
+                <GlassTile
+                  title="Zustand"
+                  value={t.condition}
+                  Icon={TagIcon}
+                />
+                <GlassTile
+                  title="Ablageort"
+                  value={t.storage_location}
+                  Icon={BuildingOffice2Icon}
+                />
+                <GlassTile
+                  title="Zugewiesen an"
+                  value={t.assigned_employee_label}
+                  Icon={UserIcon}
+                />
+                <GlassTile
+                  title="Kaufdatum"
+                  value={t.purchase_date}
+                  Icon={CalendarDaysIcon}
+                />
+                <GlassTile
+                  title="Kaufpreis"
+                  value={euro(t.purchase_price)}
+                  Icon={CurrencyEuroIcon}
+                  mono
+                />
+                <GlassTile
+                  title="Garantie bis"
+                  value={t.warranty_expiry}
+                  Icon={CalendarDaysIcon}
+                />
+                <GlassTile
+                  title="Nächste Prüfung"
+                  value={t.next_inspection_due}
+                  Icon={CalendarDaysIcon}
+                />
+                <GlassTile
+                  title="Letzter Service"
+                  value={t.last_service_date}
+                  Icon={CalendarDaysIcon}
+                />
+                <GlassTile
+                  title="Notizen"
+                  value={t.notes}
+                  Icon={DocumentTextIcon}
+                />
               </div>
             </div>
           ))}
@@ -357,7 +506,10 @@ export default function ToolsManager() {
       <GlassModal
         open={open}
         title={isEdit ? 'Werkzeug bearbeiten' : 'Neues Werkzeug hinzufügen'}
-        onClose={() => { setOpen(false); setEditing(null) }}
+        onClose={() => {
+          setOpen(false)
+          setEditing(null)
+        }}
       >
         <form onSubmit={onSubmit} className="grid grid-cols-1 gap-3 sm:gap-4">
           <Field label="Name *">
@@ -398,7 +550,9 @@ export default function ToolsManager() {
             <Field label="Hersteller">
               <input
                 value={form.manufacturer}
-                onChange={(e) => setForm({ ...form, manufacturer: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, manufacturer: e.target.value })
+                }
                 placeholder="z. B. Sigma"
                 className={inputGlass}
               />
@@ -406,7 +560,9 @@ export default function ToolsManager() {
             <Field label="Modell">
               <input
                 value={form.model}
-                onChange={(e) => setForm({ ...form, model: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, model: e.target.value })
+                }
                 placeholder="z. B. 3C"
                 className={inputGlass}
               />
@@ -417,7 +573,9 @@ export default function ToolsManager() {
             <Field label="Seriennummer">
               <input
                 value={form.serial_number}
-                onChange={(e) => setForm({ ...form, serial_number: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, serial_number: e.target.value })
+                }
                 placeholder="optional"
                 className={inputGlass}
               />
@@ -425,7 +583,9 @@ export default function ToolsManager() {
             <Field label="Ablageort">
               <input
                 value={form.storage_location}
-                onChange={(e) => setForm({ ...form, storage_location: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, storage_location: e.target.value })
+                }
                 placeholder="z. B. Halle A, Regal 3"
                 className={inputGlass}
               />
@@ -433,7 +593,12 @@ export default function ToolsManager() {
             <Field label="Mitarbeiter-ID (optional)">
               <input
                 value={form.assigned_employee_id}
-                onChange={(e) => setForm({ ...form, assigned_employee_id: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    assigned_employee_id: e.target.value,
+                  })
+                }
                 placeholder="UUID aus Mitarbeiterliste"
                 className={inputGlass}
               />
@@ -445,7 +610,9 @@ export default function ToolsManager() {
               <input
                 type="date"
                 value={form.purchase_date}
-                onChange={(e) => setForm({ ...form, purchase_date: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, purchase_date: e.target.value })
+                }
                 className={inputGlass}
               />
             </Field>
@@ -453,7 +620,9 @@ export default function ToolsManager() {
               <input
                 inputMode="decimal"
                 value={form.purchase_price}
-                onChange={(e) => setForm({ ...form, purchase_price: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, purchase_price: e.target.value })
+                }
                 placeholder="z. B. 299.90"
                 className={inputGlass}
               />
@@ -462,7 +631,9 @@ export default function ToolsManager() {
               <input
                 type="date"
                 value={form.warranty_expiry}
-                onChange={(e) => setForm({ ...form, warranty_expiry: e.target.value })}
+                onChange={(e) =>
+                  setForm({ ...form, warranty_expiry: e.target.value })
+                }
                 className={inputGlass}
               />
             </Field>
@@ -473,7 +644,12 @@ export default function ToolsManager() {
               <input
                 type="date"
                 value={form.next_inspection_due}
-                onChange={(e) => setForm({ ...form, next_inspection_due: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    next_inspection_due: e.target.value,
+                  })
+                }
                 className={inputGlass}
               />
             </Field>
@@ -481,7 +657,12 @@ export default function ToolsManager() {
               <input
                 type="date"
                 value={form.last_service_date}
-                onChange={(e) => setForm({ ...form, last_service_date: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    last_service_date: e.target.value,
+                  })
+                }
                 className={inputGlass}
               />
             </Field>
@@ -490,7 +671,12 @@ export default function ToolsManager() {
           <Field label="Zugewiesen an (Label)">
             <input
               value={form.assigned_employee_label}
-              onChange={(e) => setForm({ ...form, assigned_employee_label: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  assigned_employee_label: e.target.value,
+                })
+              }
               placeholder="Nur Anzeige (z. B. Max Mustermann)"
               className={inputGlass}
             />
@@ -500,14 +686,23 @@ export default function ToolsManager() {
             <textarea
               rows={3}
               value={form.notes}
-              onChange={(e) => setForm({ ...form, notes: e.target.value })}
+              onChange={(e) =>
+                setForm({ ...form, notes: e.target.value })
+              }
               placeholder="Besonderheiten, fehlende Teile, Schutzklasse, Zubehör…"
               className={inputGlass}
             />
           </Field>
 
-          <div className="mt-2 flex items-center justify-end gap-2">
-            <button type="button" onClick={() => { setOpen(false); setEditing(null) }} className={btnGlass}>
+          <div className="mt-2 flex flex-wrap items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setOpen(false)
+                setEditing(null)
+              }}
+              className={btnGlass}
+            >
               Abbrechen
             </button>
             <button type="submit" className={btnPrimary}>
@@ -524,14 +719,18 @@ export default function ToolsManager() {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="group">
-      <label className="mb-1 block text-xs font-medium text-slate-600">{label}</label>
+      <label className="mb-1 block text-xs font-medium text-slate-600">
+        {label}
+      </label>
       {children}
     </div>
   )
 }
 
 function Select<T extends string>({
-  value, options, onChange,
+  value,
+  options,
+  onChange,
 }: {
   value: T
   options: readonly T[]
@@ -543,32 +742,50 @@ function Select<T extends string>({
       onChange={(e) => onChange(e.target.value as T)}
       className={inputGlass}
     >
-      {options.map((opt) => <option key={opt} value={opt}>{opt}</option>)}
+      {options.map((opt) => (
+        <option key={opt} value={opt}>
+          {opt}
+        </option>
+      ))}
     </select>
   )
 }
 
 /* ---------- Glass Modal via Portal (mobil scroll-freundlich) ---------- */
 function GlassModal({
-  open, title, onClose, children,
-}: { open: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
+  open,
+  title,
+  onClose,
+  children,
+}: {
+  open: boolean
+  title: string
+  onClose: () => void
+  children: React.ReactNode
+}) {
   const overlayRef = useRef<HTMLDivElement | null>(null)
   const panelRef = useRef<HTMLDivElement | null>(null)
   const [mounted, setMounted] = useState(false)
 
-  useEffect(() => { setMounted(true) }, [])
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Body-Scroll sperren, solange Modal offen ist
   useEffect(() => {
     if (!open) return
     const prev = document.body.style.overflow
     document.body.style.overflow = 'hidden'
-    return () => { document.body.style.overflow = prev }
+    return () => {
+      document.body.style.overflow = prev
+    }
   }, [open])
 
   // ESC schließt
   useEffect(() => {
-    function onKey(e: KeyboardEvent) { if (e.key === 'Escape') onClose() }
+    function onKey(e: KeyboardEvent) {
+      if (e.key === 'Escape') onClose()
+    }
     if (open) document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
   }, [open, onClose])
@@ -598,27 +815,28 @@ function GlassModal({
         role="dialog"
         aria-modal="true"
         aria-labelledby="glass-modal-title"
-        className="
-          absolute inset-0 flex flex-col h-[100dvh] w-full
-          sm:inset-auto sm:left-1/2 sm:top-1/2 sm:-translate-x-1/2 sm:-translate-y-1/2
-          sm:h-auto sm:max-h-[90vh] sm:w-[min(90vw,48rem)]
-          overflow-hidden rounded-none sm:rounded-2xl
-          border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(2,6,23,0.25)] backdrop-blur-xl
-        "
-        style={{ backgroundImage: 'radial-gradient(1000px 400px at 110% -30%, rgba(30,64,175,0.08), transparent)' }}
+        className="absolute inset-0 flex h-[100dvh] w-full flex-col overflow-hidden rounded-none border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(2,6,23,0.25)] backdrop-blur-xl sm:inset-auto sm:left-1/2 sm:top-1/2 sm:h-auto sm:max-h-[90vh] sm:w-[min(90vw,48rem)] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl"
+        style={{
+          backgroundImage:
+            'radial-gradient(1000px 400px at 110% -30%, rgba(30,64,175,0.08), transparent)',
+        }}
       >
         {/* Header bleibt sichtbar beim Scrollen */}
         <div className="sticky top-0 z-10 border-b border-white/60 bg-white/80 px-5 py-4 backdrop-blur">
-          <h3 id="glass-modal-title" className="text-base font-semibold text-slate-900">{title}</h3>
+          <h3
+            id="glass-modal-title"
+            className="text-base font-semibold text-slate-900"
+          >
+            {title}
+          </h3>
         </div>
 
-        {/* Inhalt: eigener Scroll-Container (hier liegt dein langes Formular) */}
+        {/* Inhalt */}
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">
           {children}
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   )
 }
-

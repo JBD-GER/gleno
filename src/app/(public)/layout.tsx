@@ -1,5 +1,4 @@
 import type { Metadata } from 'next'
-import Script from 'next/script'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
@@ -56,60 +55,27 @@ export const metadata: Metadata = {
 
 export default function PublicLayout({ children }: { children: React.ReactNode }) {
   return (
-    <>
-      {/* Meta Pixel Code */}
-      <Script
-        id="meta-pixel"
-        strategy="afterInteractive"
-        dangerouslySetInnerHTML={{
-          __html: `
-            !function(f,b,e,v,n,t,s)
-            {if(f.fbq)return;n=f.fbq=function(){n.callMethod?
-            n.callMethod.apply(n,arguments):n.queue.push(arguments)};
-            if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';
-            n.queue=[];t=b.createElement(e);t.async=!0;
-            t.src=v;s=b.getElementsByTagName(e)[0];
-            s.parentNode.insertBefore(t,s)}(window, document,'script',
-            'https://connect.facebook.net/en_US/fbevents.js');
-            fbq('init', '24847308948271777');
-            fbq('track', 'PageView');
-          `,
-        }}
-      />
+    // globaler Wrapper verhindert horizontales Scrollen zuverlässig
+    <div className="overflow-x-hidden max-w-[100vw]">
+      {/* Header nur rendern, wenn NICHT /w/... */}
+      <MaybeChrome>
+        <Header />
+      </MaybeChrome>
 
-      {/* noscript Fallback für User ohne JS */}
-      <noscript>
-        <img
-          height="1"
-          width="1"
-          style={{ display: 'none' }}
-          src="https://www.facebook.com/tr?id=24847308948271777&ev=PageView&noscript=1"
-          alt=""
-        />
-      </noscript>
-
-      {/* eigentlicher Layout-Wrapper */}
-      <div className="overflow-x-hidden max-w-[100vw]">
-        {/* Header nur rendern, wenn NICHT /w/... */}
+      {/* Der Offset (pt-14/md:pt-16) wird automatisch nur gesetzt,
+          wenn NICHT /w/... */}
+      <MainWithOffset>
+        {children}
+        {/* Cookie-Banner nur rendern, wenn NICHT /w/... */}
         <MaybeChrome>
-          <Header />
+          <CookieBanner />
         </MaybeChrome>
+      </MainWithOffset>
 
-        {/* Der Offset (pt-14/md:pt-16) wird automatisch nur gesetzt,
-            wenn NICHT /w/... */}
-        <MainWithOffset>
-          {children}
-          {/* Cookie-Banner nur rendern, wenn NICHT /w/... */}
-          <MaybeChrome>
-            <CookieBanner />
-          </MaybeChrome>
-        </MainWithOffset>
-
-        {/* Footer nur rendern, wenn NICHT /w/... */}
-        <MaybeChrome>
-          <Footer />
-        </MaybeChrome>
-      </div>
-    </>
+      {/* Footer nur rendern, wenn NICHT /w/... */}
+      <MaybeChrome>
+        <Footer />
+      </MaybeChrome>
+    </div>
   )
 }

@@ -12,7 +12,7 @@ interface Props {
 export default async function RechnungPage({
   searchParams,
 }: {
-  searchParams: Promise<Props['searchParams']> // dein Typ war schon so
+  searchParams: Promise<Props['searchParams']>
 }) {
   const supabase = await supabaseServer()
 
@@ -63,7 +63,6 @@ export default async function RechnungPage({
     template: bs.template,
   }
 
-  // <<< FIX: searchParams awaiten
   const _sp = await searchParams
   const { invoiceNumber } = _sp || {}
 

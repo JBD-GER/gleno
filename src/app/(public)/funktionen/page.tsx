@@ -217,12 +217,6 @@ export default function FeaturesPage() {
                     <path d="M13.172 12l-4.95-4.95 1.414-1.414L16 12l-6.364 6.364-1.414-1.414z" />
                   </svg>
                 </Link>
-                <Link
-                  href="/demo"
-                  className="inline-flex w-full items-center justify-center rounded-full border border-white/60 bg-white/90 px-6 py-3 text-sm font-semibold text-slate-900 ring-1 ring-white/60 backdrop-blur hover:bg-white sm:w-auto"
-                >
-                  Live-Demo buchen
-                </Link>
               </div>
 
               <p className="mt-3 text-[10px] text-slate-500">

@@ -110,17 +110,21 @@ export default function AddressModal({ open, onClose, requestId }: AddressModalP
 
   const modalNode = (
     <div
-      className="fixed inset-0 z-[100000] flex items-start justify-center overflow-y-auto p-4"
+      className="fixed inset-0 z-[100000] flex items-start sm:items-center justify-center overflow-y-auto p-3 sm:p-4"
       aria-modal="true"
       role="dialog"
     >
-      <div className="absolute inset-0 bg-white/10 backdrop-blur-2xl" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-white/10 backdrop-blur-2xl"
+        onClick={onClose}
+      />
       <form
         onSubmit={onSubmit}
-        className="relative z-10 mt-10 w-full max-w-3xl rounded-3xl border border-white/60
-                   bg-white/90 backdrop-blur-xl p-6 shadow-[0_10px_34px_rgba(2,6,23,0.12)]"
+        className="relative z-10 my-6 sm:my-10 w-full max-w-3xl rounded-3xl border border-white/60
+                   bg-white/90 backdrop-blur-xl p-4 sm:p-6 shadow-[0_10px_34px_rgba(2,6,23,0.12)]
+                   max-h-[90vh] overflow-y-auto"
       >
-        <div className="flex items-start justify-between gap-4">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
           <div>
             <h3 className="text-lg font-medium text-slate-900">Personendaten</h3>
             <p className="mt-1 text-xs text-slate-500">
@@ -130,13 +134,13 @@ export default function AddressModal({ open, onClose, requestId }: AddressModalP
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-white/60 bg-white/80 px-3 py-1.5 text-sm hover:shadow-sm"
+            className="self-start rounded-xl border border-white/60 bg-white/80 px-3 py-1.5 text-sm hover:shadow-sm mt-1 sm:mt-0"
           >
             Schließen
           </button>
         </div>
 
-        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 px-4 py-3 text-[13px] text-amber-900">
+        <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50/70 px-3 sm:px-4 py-3 text-[13px] text-amber-900">
           <div className="font-medium">Hinweis zum Datenschutz</div>
           <p className="mt-1 leading-relaxed">
             Du kannst diese Daten später jederzeit über „Personendaten löschen“ entfernen.
@@ -178,17 +182,17 @@ export default function AddressModal({ open, onClose, requestId }: AddressModalP
           )}
         </div>
 
-        <div className="mt-6 flex items-center justify-end gap-2">
+        <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
           <button
             type="button"
             onClick={onClose}
-            className="rounded-xl border border-white/60 bg-white px-4 py-2 text-sm hover:shadow-sm"
+            className="w-full sm:w-auto rounded-xl border border-white/60 bg-white px-4 py-2 text-sm hover:shadow-sm"
           >
             Abbrechen
           </button>
           <button
             disabled={busy}
-            className="rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
+            className="w-full sm:w-auto rounded-xl bg-slate-900 px-4 py-2 text-sm text-white hover:opacity-90 disabled:opacity-50"
           >
             {busy ? 'Speichere…' : 'Speichern'}
           </button>

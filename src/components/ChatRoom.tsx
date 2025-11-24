@@ -1,3 +1,4 @@
+// src/components/ChatRoom.tsx
 'use client'
 
 import * as React from 'react'
@@ -8,6 +9,7 @@ import AppointmentReviewModal from '@/components/appointments/AppointmentReviewM
 import DocumentCloud from '@/components/DocumentCloud'
 import OfferReviewModal from '@/components/offers/OfferReviewModal'
 import OrderReviewModal from '@/components/orders/OrderReviewModal'
+import { PaperClipIcon, PaperAirplaneIcon } from '@heroicons/react/24/outline'
 
 type Message = {
   id: string
@@ -35,7 +37,9 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
   const [text, setText] = React.useState('')
   const [busy, setBusy] = React.useState(false)
   const [uploadBusy, setUploadBusy] = React.useState(false)
-  const [typingUsers, setTypingUsers] = React.useState<Record<string, number>>({})
+  const [typingUsers, setTypingUsers] = React.useState<Record<string, number>>(
+    {},
+  )
   const [addressOpen, setAddressOpen] = React.useState(false)
   const listRef = React.useRef<HTMLDivElement>(null)
   const lastTypingAt = React.useRef<number>(0)
@@ -65,25 +69,33 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
   const ORDER_CANCELED_PREFIX = 'ORDER:CANCELED:'
 
   const INVOICE_UPLOADED_PREFIX = 'INVOICE:UPLOADED:'
-  const INVOICE_STATUS_RE = /^INVOICE:STATUS:(erstellt|bezahlt|verzug):([0-9a-f-]{36})$/i
+  const INVOICE_STATUS_RE =
+    /^INVOICE:STATUS:(erstellt|bezahlt|verzug):([0-9a-f-]{36})$/i
 
   const RATING_REQUEST_RE = /^RATING:REQUEST:([0-9a-f-]{36})$/i
   const RATING_SUBMITTED_RE = /^RATING:SUBMITTED(?::|$)/i
 
-  const UUID_RE = /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
-  const OFFER_MARKER_RE = /OFFER:(?:CREATED|ACCEPTED|DECLINED):\s*([0-9a-f-]{36})/i
-  const ORDER_MARKER_RE = /ORDER:(?:CREATED|ACCEPTED|DECLINED|CANCELED):\s*([0-9a-f-]{36})/i
+  const UUID_RE =
+    /[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}/i
+  const OFFER_MARKER_RE =
+    /OFFER:(?:CREATED|ACCEPTED|DECLINED):\s*([0-9a-f-]{36})/i
+  const ORDER_MARKER_RE =
+    /ORDER:(?:CREATED|ACCEPTED|DECLINED|CANCELED):\s*([0-9a-f-]{36})/i
 
   /* ---------- Marker-Helper ---------- */
   const isAddressRequestMsg = (m: Message) => {
     const t = (m.body_text || '').trim()
     return t === REQUEST_MARKER || t.startsWith(REQUEST_PREFIX)
   }
-  const isAddressAckMsg = (m: Message) => (m.body_text || '').trim().startsWith(ACK_PREFIX)
+  const isAddressAckMsg = (m: Message) =>
+    (m.body_text || '').trim().startsWith(ACK_PREFIX)
 
-  const isApptProposedMsg = (m: Message) => (m.body_text || '').trim().startsWith(APPT_MARKER_PREFIX)
-  const isApptConfirmedMsg = (m: Message) => (m.body_text || '').trim().startsWith(APPT_CONFIRMED_PREFIX)
-  const isApptDeclinedMsg = (m: Message) => (m.body_text || '').trim().startsWith(APPT_DECLINED_PREFIX)
+  const isApptProposedMsg = (m: Message) =>
+    (m.body_text || '').trim().startsWith(APPT_MARKER_PREFIX)
+  const isApptConfirmedMsg = (m: Message) =>
+    (m.body_text || '').trim().startsWith(APPT_CONFIRMED_PREFIX)
+  const isApptDeclinedMsg = (m: Message) =>
+    (m.body_text || '').trim().startsWith(APPT_DECLINED_PREFIX)
 
   const isOfferCreatedMsg = (m: Message) =>
     OFFER_MARKER_RE.test((m.body_text || '').trim()) &&
@@ -131,7 +143,9 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
     const u = t.match(UUID_RE)
     return u ? u[0] : ''
   }
-  function extractInvoiceStatus(t: string): { status: 'erstellt' | 'bezahlt' | 'verzug'; id: string } {
+  function extractInvoiceStatus(
+    t: string,
+  ): { status: 'erstellt' | 'bezahlt' | 'verzug'; id: string } {
     const m = t.match(INVOICE_STATUS_RE)
     return {
       status: (m?.[1] as any) || 'erstellt',
@@ -229,7 +243,7 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
         filter: `id=eq.${requestId}`,
       },
       (payload: any) =>
-        setRequestStatusKey(keyOfStatus(payload?.new?.status))
+        setRequestStatusKey(keyOfStatus(payload?.new?.status)),
     ).subscribe(() => {})
 
     return () => {
@@ -256,7 +270,7 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
             ...m,
             _optimistic: false,
             _ack: true,
-          }))
+          })),
         )
         scrollToBottom(false)
       }
@@ -304,11 +318,10 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
         const t = (msg.body_text || '').trim()
         if (t.startsWith(APPT_CONFIRMED_PREFIX))
           setRequestStatusKey('termin bestätigt')
-        if (t.startsWith(APPT_DECLINED_PREFIX))
-          setRequestStatusKey('aktiv')
+        if (t.startsWith(APPT_DECLINED_PREFIX)) setRequestStatusKey('aktiv')
 
         scrollToBottom()
-      }
+      },
     )
 
     // Typing
@@ -347,7 +360,7 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
         filter: `request_id=eq.${requestId}`,
       },
       (payload: any) =>
-        setPdPresent(payload?.eventType === 'DELETE' ? false : true)
+        setPdPresent(payload?.eventType === 'DELETE' ? false : true),
     ).subscribe(() => {})
     return () => {
       sb.removeChannel(ch)
@@ -398,9 +411,7 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
         return
       }
       setMessages(prev =>
-        prev.map(m =>
-          m.id === temp.id ? { ...m, _ack: true } : m
-        )
+        prev.map(m => (m.id === temp.id ? { ...m, _ack: true } : m)),
       )
       setText('')
     } finally {
@@ -409,9 +420,7 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
   }
 
   /* ---------- Upload ---------- */
-  const onFileChange = async (
-    e: React.ChangeEvent<HTMLInputElement>
-  ) => {
+  const onFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (!conversationId || !me) return
     const inputEl = e.currentTarget
     const file = inputEl.files?.[0]
@@ -424,10 +433,11 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
       fd.set('filename', file.name)
       fd.set('file', file)
 
-      const res = await fetch(
-        `/api/chat/${requestId}/documents`,
-        { method: 'POST', body: fd, credentials: 'include' }
-      )
+      const res = await fetch(`/api/chat/${requestId}/documents`, {
+        method: 'POST',
+        body: fd,
+        credentials: 'include',
+      })
       const j = await res.json().catch(() => ({}))
       if (!res.ok || !j.ok) throw new Error(j?.error || res.statusText)
 
@@ -461,16 +471,14 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
         console.error('sendFile error', insErr)
       } else {
         setMessages(prev =>
-          prev.map(m =>
-            m.id === temp.id ? { ...m, _ack: true } : m
-          )
+          prev.map(m => (m.id === temp.id ? { ...m, _ack: true } : m)),
         )
       }
 
       window.dispatchEvent(
         new CustomEvent('documents:updated', {
           detail: { requestId },
-        })
+        }),
       )
     } catch (err) {
       console.error(err)
@@ -490,14 +498,12 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
 
   const typingVisible = React.useMemo(() => {
     const now = Date.now()
-    return Object.values(typingUsers).some(
-      t => now - t < 1800
-    )
+    return Object.values(typingUsers).some(t => now - t < 1800)
   }, [typingUsers])
 
   const hasRatingSubmitted = React.useMemo(
     () => messages.some(isRatingSubmittedMsg),
-    [messages]
+    [messages],
   )
 
   /* ---------- Filter System-Duplikate ---------- */
@@ -525,11 +531,7 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
     }
 
     return all.filter((m, i) => {
-      if (
-        isAddressAckMsg(m) &&
-        lastAckIndex !== undefined &&
-        i !== lastAckIndex
-      )
+      if (isAddressAckMsg(m) && lastAckIndex !== undefined && i !== lastAckIndex)
         return false
 
       const t = (m.body_text || '').trim()
@@ -696,7 +698,7 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
       <span
         className={cls(
           'inline-flex items-center rounded-lg border px-2 py-[2px] text-[10px]',
-          s.cls
+          s.cls,
         )}
       >
         {s.label}
@@ -781,454 +783,401 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
   }
 
   /* ---------- Typing Label ---------- */
-  const typingLabel =
-    typingVisible && 'Jemand tippt …'
+  const typingLabel = typingVisible && 'Jemand tippt …'
 
   /* -------------------------------- RENDER -------------------------------- */
 
   return (
-    <div
-      className={cls(
-        'flex flex-col rounded-3xl',
-        'border border-white/70 bg-white/80 backdrop-blur-2xl',
-        'shadow-[0_18px_55px_rgba(15,23,42,0.10)] ring-1 ring-white/60',
-        // 🔹 Feste, responsive Höhe für Chat-Card
-        'h-[820px] sm:h-[480px] lg:h-[1060px] max-h-[82vh]'
-      )}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-white/60">
-        <div className="flex flex-col">
-          <div className="inline-flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-slate-900">
-              Chat & Dokumente
-            </h2>
-            <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
-          </div>
-          <p className="text-[10px] text-slate-500">
-            Direkte Abstimmung mit deinem Partner, Dateien teilen, Angebote & Aufträge im Blick.
-          </p>
-        </div>
-        {requestStatusKey && (
-          <span className="rounded-full bg-slate-900/90 px-3 py-1 text-[9px] font-medium text-white">
-            Status: {requestStatusKey}
-          </span>
-        )}
-      </div>
-
-      {/* Messages */}
+    <>
+      {/* Chat-Card mit fester, viewport-basierter Höhe */}
       <div
-        ref={listRef}
-        className="flex-1 min-h-0 overflow-y-auto px-3 py-3 space-y-3
-                   bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.03),_transparent)]"
+        className={cls(
+          'flex flex-col rounded-3xl',
+          'border border-white/70 bg-white/80 backdrop-blur-2xl',
+          'shadow-[0_18px_55px_rgba(15,23,42,0.10)] ring-1 ring-white/60',
+          'min-h-[360px]',
+          'h-[calc(100dvh-260px)] max-h-[calc(100dvh-220px)]',
+        )}
       >
-        {filtered.map(m => {
-          const mine = m.sender_user_id === me
-          const isSending = !!m._optimistic && !m._ack
-          const t = (m.body_text || '').trim()
-
-          // Anschrift benötigt
-          if (isAddressRequestMsg(m)) {
-            const showProvideBtn =
-              isConsumer === true && pdPresent === false
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <div className="w-full max-w-[640px] rounded-2xl border border-amber-200/80 bg-amber-50/95 px-4 py-3 ring-1 ring-white/60 shadow-sm">
-                  <div className="text-sm font-semibold text-amber-900">
-                    Anschrift benötigt
-                  </div>
-                  <p className="mt-1 text-[12px] leading-relaxed text-amber-900/90">
-                    Für Angebot, Auftrag oder Rechnung werden deine
-                    Adressdaten benötigt. Du kannst diese später wieder
-                    entfernen.
-                  </p>
-                  {showProvideBtn && (
-                    <div className="mt-2">
-                      <button
-                        type="button"
-                        onClick={() => setAddressOpen(true)}
-                        className="rounded-xl bg-slate-900 px-3 py-1.5 text-xs text-white hover:opacity-90"
-                      >
-                        Anschrift bereitstellen
-                      </button>
-                    </div>
-                  )}
-                  <div className="mt-1 text-[9px] text-amber-900/70">
-                    {isSending
-                      ? 'Senden…'
-                      : new Date(
-                          m.created_at
-                        ).toLocaleString('de-DE')}
-                  </div>
-                </div>
-              </div>
-            )
-          }
-
-          // Anschrift bestätigt
-          if (isAddressAckMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <div className="w-full max-w-[640px] rounded-2xl border border-emerald-200/80 bg-emerald-50/95 px-4 py-3 ring-1 ring-white/60 shadow-sm">
-                  <div className="text-sm font-semibold text-emerald-900">
-                    Personendaten gespeichert
-                  </div>
-                  <p className="mt-1 text-[12px] text-emerald-900/90">
-                    Die Daten sind hinterlegt und können im Header
-                    eingesehen werden.
-                  </p>
-                  <div className="mt-1 text-[9px] text-emerald-900/70">
-                    {isSending
-                      ? 'Senden…'
-                      : new Date(
-                          m.created_at
-                        ).toLocaleString('de-DE')}
-                  </div>
-                </div>
-              </div>
-            )
-          }
-
-          // Termine
-          if (isApptProposedMsg(m)) {
-            const apptId = extractApptId(t)
-            const meIsConsumer =
-              isConsumer === true && !mine
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <AppointmentCard
-                  id={apptId}
-                  meIsConsumer={!!meIsConsumer}
-                  requestStatusKey={requestStatusKey}
-                />
-              </div>
-            )
-          }
-          if (isApptConfirmedMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <div className="w-full max-w-[640px] rounded-2xl border border-teal-200/80 bg-teal-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
-                  <div className="text-sm font-semibold text-teal-900">
-                    Termin bestätigt
-                  </div>
-                  <div className="mt-1 text-[9px] text-teal-900/70">
-                    {new Date(
-                      m.created_at
-                    ).toLocaleString('de-DE')}
-                  </div>
-                </div>
-              </div>
-            )
-          }
-          if (isApptDeclinedMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <div className="w-full max-w-[640px] rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
-                  <div className="text-sm font-semibold text-rose-900">
-                    Termin abgelehnt
-                  </div>
-                  <div className="mt-1 text-[9px] text-rose-900/70">
-                    {new Date(
-                      m.created_at
-                    ).toLocaleString('de-DE')}
-                  </div>
-                </div>
-              </div>
-            )
-          }
-
-          // Angebote
-          if (isOfferCreatedMsg(m)) {
-            const offerId = extractOfferIdStrict(t)
-            const meIsConsumer =
-              isConsumer === true && m.sender_user_id !== me
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <OfferCard
-                  id={offerId}
-                  meIsConsumer={!!meIsConsumer}
-                />
-              </div>
-            )
-          }
-          if (isOfferAcceptedMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <div className="w-full max-w-[640px] rounded-2xl border border-teal-200/80 bg-teal-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
-                  <div className="text-sm font-semibold text-teal-900">
-                    Angebot angenommen
-                  </div>
-                  <div className="mt-1 text-[9px] text-teal-900/70">
-                    {new Date(
-                      m.created_at
-                    ).toLocaleString('de-DE')}
-                  </div>
-                </div>
-              </div>
-            )
-          }
-          if (isOfferDeclinedMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <div className="w-full max-w-[640px] rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
-                  <div className="text-sm font-semibold text-rose-900">
-                    Angebot abgelehnt
-                  </div>
-                  <div className="mt-1 text-[9px] text-rose-900/70">
-                    {new Date(
-                      m.created_at
-                    ).toLocaleString('de-DE')}
-                  </div>
-                </div>
-              </div>
-            )
-          }
-
-          // Aufträge
-          if (isOrderCreatedMsg(m)) {
-            const orderId = extractOrderIdStrict(t)
-            const meIsConsumer =
-              isConsumer === true && m.sender_user_id !== me
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <OrderCard
-                  id={orderId}
-                  meIsConsumer={!!meIsConsumer}
-                />
-              </div>
-            )
-          }
-          if (isOrderAcceptedMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <div className="w-full max-w-[640px] rounded-2xl border border-blue-200/80 bg-blue-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
-                  <div className="text-sm font-semibold text-blue-900">
-                    Auftrag angenommen
-                  </div>
-                  <div className="mt-1 text-[9px] text-blue-900/70">
-                    {new Date(
-                      m.created_at
-                    ).toLocaleString('de-DE')}
-                  </div>
-                </div>
-              </div>
-            )
-          }
-          if (isOrderDeclinedMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <div className="w-full max-w-[640px] rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
-                  <div className="text-sm font-semibold text-rose-900">
-                    Auftrag abgelehnt
-                  </div>
-                  <div className="mt-1 text-[9px] text-rose-900/70">
-                    {new Date(
-                      m.created_at
-                    ).toLocaleString('de-DE')}
-                  </div>
-                </div>
-              </div>
-            )
-          }
-          if (isOrderCanceledMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <div className="w-full max-w-[640px] rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
-                  <div className="text-sm font-semibold text-rose-900">
-                    Auftrag storniert
-                  </div>
-                  <div className="mt-1 text-[9px] text-rose-900/70">
-                    {new Date(
-                      m.created_at
-                    ).toLocaleString('de-DE')}
-                  </div>
-                </div>
-              </div>
-            )
-          }
-
-          // Rechnung
-          if (isInvoiceUploadedMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <InvoiceUploadedCard />
-              </div>
-            )
-          }
-          if (isInvoiceStatusMsg(m)) {
-            const { status } = extractInvoiceStatus(t)
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <InvoiceStatusCard status={status} />
-              </div>
-            )
-          }
-
-          // Rating
-          if (isRatingRequestMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <RatingRequestCard />
-              </div>
-            )
-          }
-          if (isRatingSubmittedMsg(m)) {
-            return (
-              <div
-                key={m.id}
-                className="flex justify-start"
-              >
-                <RatingSubmittedCard />
-              </div>
-            )
-          }
-
-          // Normale Chat-Nachricht
-          return (
-            <div
-              key={m.id}
-              className={cls(
-                'flex',
-                mine ? 'justify-end' : 'justify-start'
-              )}
-            >
-              <div
-                className={cls(
-                  'max-w-[78%] rounded-2xl px-3 py-2 ring-1 ring-white/60 shadow-sm',
-                  'backdrop-blur-xl text-[12px] leading-relaxed',
-                  mine
-                    ? 'bg-slate-900 text-white rounded-br-sm'
-                    : 'bg-white/95 text-slate-900 rounded-bl-sm'
-                )}
-              >
-                {m.body_text && (
-                  <div className="whitespace-pre-wrap">
-                    {m.body_text}
-                  </div>
-                )}
-                {m.file_path && (
-                  <Attachment
-                    path={m.file_path}
-                    name={m.file_name}
-                    getUrl={downloadUrl}
-                  />
-                )}
-                <div
-                  className={cls(
-                    'mt-1 text-[9px]',
-                    mine
-                      ? 'text-slate-200/80'
-                      : 'text-slate-500'
-                  )}
-                >
-                  {isSending
-                    ? 'Senden…'
-                    : new Date(
-                        m.created_at
-                      ).toLocaleString('de-DE')}
-                </div>
-              </div>
+        {/* Header */}
+        <div className="flex items-center justify-between gap-2 px-4 py-3 border-b border-white/60">
+          <div className="flex flex-col min-w-0">
+            <div className="inline-flex items-center gap-2">
+              <h2 className="truncate text-sm font-semibold text-slate-900">
+                Chat & Dokumente
+              </h2>
+              <span className="inline-flex h-1.5 w-1.5 rounded-full bg-emerald-500" />
             </div>
-          )
-        })}
+            <p className="text-[10px] text-slate-500">
+              Direkte Abstimmung mit Ihrem Partner – alle Nachrichten an einem Ort.
+            </p>
+          </div>
+          {requestStatusKey && (
+            <span className="shrink-0 rounded-full bg-slate-900/90 px-3 py-1 text-[9px] font-medium text-white">
+              Status: {requestStatusKey}
+            </span>
+          )}
+        </div>
+
+        {/* Messages – mit innerem Wrapper, der alles nach unten drückt */}
+        <div
+          ref={listRef}
+          className={cls(
+            'flex-1 min-h-0 overflow-y-auto px-3 py-3',
+            'bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.03),_transparent)]',
+          )}
+        >
+          <div className="flex h-full flex-col justify-end space-y-3">
+            {filtered.map(m => {
+              const mine = m.sender_user_id === me
+              const isSending = !!m._optimistic && !m._ack
+              const t = (m.body_text || '').trim()
+
+              // Anschrift benötigt
+              if (isAddressRequestMsg(m)) {
+                const showProvideBtn = isConsumer === true && pdPresent === false
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <div className="w-full max-w-[640px] rounded-2xl border border-amber-200/80 bg-amber-50/95 px-4 py-3 ring-1 ring-white/60 shadow-sm">
+                      <div className="text-sm font-semibold text-amber-900">
+                        Anschrift benötigt
+                      </div>
+                      <p className="mt-1 text-[12px] leading-relaxed text-amber-900/90">
+                        Für Angebot, Auftrag oder Rechnung werden deine Adressdaten benötigt. Du kannst
+                        diese später wieder entfernen.
+                      </p>
+                      {showProvideBtn && (
+                        <div className="mt-2">
+                          <button
+                            type="button"
+                            onClick={() => setAddressOpen(true)}
+                            className="rounded-xl bg-slate-900 px-3 py-1.5 text-xs text-white hover:opacity-90"
+                          >
+                            Anschrift bereitstellen
+                          </button>
+                        </div>
+                      )}
+                      <div className="mt-1 text-[9px] text-amber-900/70">
+                        {isSending
+                          ? 'Senden…'
+                          : new Date(m.created_at).toLocaleString('de-DE')}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              // Anschrift bestätigt
+              if (isAddressAckMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <div className="w-full max-w-[640px] rounded-2xl border border-emerald-200/80 bg-emerald-50/95 px-4 py-3 ring-1 ring-white/60 shadow-sm">
+                      <div className="text-sm font-semibold text-emerald-900">
+                        Personendaten gespeichert
+                      </div>
+                      <p className="mt-1 text-[12px] text-emerald-900/90">
+                        Die Daten sind hinterlegt und können im Header eingesehen werden.
+                      </p>
+                      <div className="mt-1 text-[9px] text-emerald-900/70">
+                        {isSending
+                          ? 'Senden…'
+                          : new Date(m.created_at).toLocaleString('de-DE')}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              // Termine
+              if (isApptProposedMsg(m)) {
+                const apptId = extractApptId(t)
+                const meIsConsumer = isConsumer === true && !mine
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <AppointmentCard
+                      id={apptId}
+                      meIsConsumer={!!meIsConsumer}
+                      requestStatusKey={requestStatusKey}
+                    />
+                  </div>
+                )
+              }
+              if (isApptConfirmedMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <div className="w-full max-w-[640px] rounded-2xl border border-teal-200/80 bg-teal-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
+                      <div className="text-sm font-semibold text-teal-900">
+                        Termin bestätigt
+                      </div>
+                      <div className="mt-1 text-[9px] text-teal-900/70">
+                        {new Date(m.created_at).toLocaleString('de-DE')}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              if (isApptDeclinedMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <div className="w-full max-w-[640px] rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
+                      <div className="text-sm font-semibold text-rose-900">
+                        Termin abgelehnt
+                      </div>
+                      <div className="mt-1 text-[9px] text-rose-900/70">
+                        {new Date(m.created_at).toLocaleString('de-DE')}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              // Angebote
+              if (isOfferCreatedMsg(m)) {
+                const offerId = extractOfferIdStrict(t)
+                const meIsConsumer =
+                  isConsumer === true && m.sender_user_id !== me
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <OfferCard id={offerId} meIsConsumer={!!meIsConsumer} />
+                  </div>
+                )
+              }
+              if (isOfferAcceptedMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <div className="w-full max-w-[640px] rounded-2xl border border-teal-200/80 bg-teal-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
+                      <div className="text-sm font-semibold text-teal-900">
+                        Angebot angenommen
+                      </div>
+                      <div className="mt-1 text-[9px] text-teal-900/70">
+                        {new Date(m.created_at).toLocaleString('de-DE')}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              if (isOfferDeclinedMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <div className="w-full max-w-[640px] rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
+                      <div className="text-sm font-semibold text-rose-900">
+                        Angebot abgelehnt
+                      </div>
+                      <div className="mt-1 text-[9px] text-rose-900/70">
+                        {new Date(m.created_at).toLocaleString('de-DE')}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              // Aufträge
+              if (isOrderCreatedMsg(m)) {
+                const orderId = extractOrderIdStrict(t)
+                const meIsConsumer =
+                  isConsumer === true && m.sender_user_id !== me
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <OrderCard id={orderId} meIsConsumer={!!meIsConsumer} />
+                  </div>
+                )
+              }
+              if (isOrderAcceptedMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <div className="w-full max-w-[640px] rounded-2xl border border-blue-200/80 bg-blue-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
+                      <div className="text-sm font-semibold text-blue-900">
+                        Auftrag angenommen
+                      </div>
+                      <div className="mt-1 text-[9px] text-blue-900/70">
+                        {new Date(m.created_at).toLocaleString('de-DE')}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              if (isOrderDeclinedMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <div className="w-full max-w-[640px] rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
+                      <div className="text-sm font-semibold text-rose-900">
+                        Auftrag abgelehnt
+                      </div>
+                      <div className="mt-1 text-[9px] text-rose-900/70">
+                        {new Date(m.created_at).toLocaleString('de-DE')}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+              if (isOrderCanceledMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <div className="w-full max-w-[640px] rounded-2xl border border-rose-200/80 bg-rose-50/90 px-4 py-3 ring-1 ring-white/60 shadow-sm">
+                      <div className="text-sm font-semibold text-rose-900">
+                        Auftrag storniert
+                      </div>
+                      <div className="mt-1 text-[9px] text-rose-900/70">
+                        {new Date(m.created_at).toLocaleString('de-DE')}
+                      </div>
+                    </div>
+                  </div>
+                )
+              }
+
+              // Rechnung
+              if (isInvoiceUploadedMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <InvoiceUploadedCard />
+                  </div>
+                )
+              }
+              if (isInvoiceStatusMsg(m)) {
+                const { status } = extractInvoiceStatus(t)
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <InvoiceStatusCard status={status} />
+                  </div>
+                )
+              }
+
+              // Rating
+              if (isRatingRequestMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <RatingRequestCard />
+                  </div>
+                )
+              }
+              if (isRatingSubmittedMsg(m)) {
+                return (
+                  <div key={m.id} className="flex justify-start">
+                    <RatingSubmittedCard />
+                  </div>
+                )
+              }
+
+              // Normale Chat-Nachricht
+              return (
+                <div
+                  key={m.id}
+                  className={cls('flex', mine ? 'justify-end' : 'justify-start')}
+                >
+                  <div
+                    className={cls(
+                      'max-w-[88%] sm:max-w-[78%] md:max-w-[72%]',
+                      'rounded-2xl px-3 py-2 ring-1 ring-white/60 shadow-sm',
+                      'backdrop-blur-xl text-[12px] leading-relaxed',
+                      mine
+                        ? 'bg-slate-900 text-white rounded-br-sm'
+                        : 'bg-white/95 text-slate-900 rounded-bl-sm',
+                    )}
+                  >
+                    {m.body_text && (
+                      <div className="whitespace-pre-wrap break-words">
+                        {m.body_text}
+                      </div>
+                    )}
+                    {m.file_path && (
+                      <Attachment
+                        path={m.file_path}
+                        name={m.file_name}
+                        getUrl={downloadUrl}
+                      />
+                    )}
+                    <div
+                      className={cls(
+                        'mt-1 text-[9px]',
+                        mine ? 'text-slate-200/80' : 'text-slate-500',
+                      )}
+                    >
+                      {isSending
+                        ? 'Senden…'
+                        : new Date(m.created_at).toLocaleString('de-DE')}
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Typing Indicator */}
+        {typingLabel && (
+          <div className="px-4 pb-1 text-[9px] text-slate-500">{typingLabel}</div>
+        )}
+
+        {/* Input + Upload – kompakte Zeile, mobil-freundlich */}
+        <div className="px-3 pt-2 pb-3 border-t border-white/60 bg-white/90 backdrop-blur-2xl">
+          <div className="flex items-end gap-2 sm:gap-3">
+            {/* Datei anhängen – runder Icon-Button links */}
+            <label className="inline-flex h-9 w-9 cursor-pointer items-center justify-center rounded-full border border-white/70 bg-white/98 text-slate-700 shadow-sm hover:bg-slate-50">
+              <input
+                type="file"
+                className="hidden"
+                onChange={onFileChange}
+                accept=".pdf,image/*"
+              />
+              <PaperClipIcon className="h-4 w-4" />
+            </label>
+
+            {/* Textfeld + Senden rechts als Bubble */}
+            <div className="flex flex-1 items-center gap-2 rounded-2xl border border-white/70 bg-white/98 px-3 py-1.5 shadow-sm">
+              <input
+                value={text}
+                onChange={e => {
+                  setText(e.target.value)
+                  notifyTyping()
+                }}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault()
+                    sendText()
+                  } else {
+                    notifyTyping()
+                  }
+                }}
+                placeholder="Nachricht schreiben…"
+                className="w-full flex-1 border-none bg-transparent text-[12px] text-slate-900 outline-none placeholder:text-slate-400 sm:text-[13px]"
+              />
+              <button
+                type="button"
+                onClick={sendText}
+                disabled={!text.trim() || busy}
+                className={cls(
+                  'inline-flex h-8 w-8 items-center justify-center rounded-full sm:h-9 sm:w-9',
+                  'bg-slate-900 text-white shadow-sm',
+                  'hover:opacity-90 disabled:opacity-40',
+                )}
+                aria-label="Nachricht senden"
+              >
+                <PaperAirplaneIcon className="h-4 w-4 -rotate-45" />
+              </button>
+            </div>
+
+            {uploadBusy && (
+              <span className="mb-[2px] hidden text-[10px] text-slate-500 sm:inline">
+                Lädt…
+              </span>
+            )}
+          </div>
+
+          {/* Upload-Status mobil darunter */}
+          {uploadBusy && (
+            <div className="mt-1 text-[10px] text-slate-500 sm:hidden">
+              Datei wird hochgeladen …
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* Typing Indicator */}
-      {typingLabel && (
-        <div className="px-4 pb-1 text-[9px] text-slate-500">
-          {typingLabel}
+      {/* Dokumente – außerhalb der Chat-Card, mit Abstand (besonders mobil angenehm) */}
+      {conversationId && me && (
+        <div className="mt-4 sm:mt-5">
+          <DocumentCloud requestId={requestId} currentUserId={me || ''} />
         </div>
       )}
-
-      {/* Input + Upload (sticky unten im Card) */}
-      <div className="px-3 pt-2 pb-3 border-t border-white/60 bg-white/90 backdrop-blur-2xl">
-        <div className="flex items-center gap-2">
-          <label className="inline-flex items-center gap-1.5 rounded-2xl border border-white/70 bg-white/98 px-3 py-1.5 text-[10px] text-slate-700 cursor-pointer shadow-sm hover:bg-white">
-            <input
-              type="file"
-              className="hidden"
-              onChange={onFileChange}
-              accept=".pdf,image/*"
-            />
-            {uploadBusy ? 'Lädt…' : 'Datei anhängen'}
-          </label>
-        </div>
-        <div className="mt-2 flex items-center gap-2">
-          <input
-            value={text}
-            onChange={e => {
-              setText(e.target.value)
-              notifyTyping()
-            }}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && !e.shiftKey) {
-                e.preventDefault()
-                sendText()
-              } else {
-                notifyTyping()
-              }
-            }}
-            placeholder="Nachricht schreiben…"
-            className="flex-1 rounded-2xl border border-white/70 bg-white/98 px-3 py-2 text-[12px] text-slate-900 outline-none shadow-sm placeholder:text-slate-400"
-          />
-          <button
-            onClick={sendText}
-            disabled={!text.trim() || busy}
-            className={cls(
-              'rounded-2xl px-4 py-2 text-[12px] font-medium shadow-sm',
-              'border border-slate-900/10 bg-slate-900 text-white',
-              'hover:opacity-90 disabled:opacity-40'
-            )}
-          >
-            Senden
-          </button>
-        </div>
-      </div>
 
       {/* Personendaten Modal */}
       <AddressModal
@@ -1236,16 +1185,6 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
         onClose={() => setAddressOpen(false)}
         requestId={requestId}
       />
-
-      {/* Dokumente unten im selben Stil */}
-      {conversationId && me && (
-        <div className="px-3 pb-3">
-          <DocumentCloud
-            requestId={requestId}
-            currentUserId={me || ''}
-          />
-        </div>
-      )}
 
       {/* Rating Modal */}
       {ratingOpen && (
@@ -1265,7 +1204,7 @@ export default function ChatRoom({ requestId }: { requestId: string }) {
           }}
         />
       )}
-    </div>
+    </>
   )
 }
 
@@ -1304,9 +1243,7 @@ function Attachment({
           {name || 'Anhang öffnen'}
         </a>
       ) : (
-        <span className="opacity-60">
-          {name || 'Anhang'}
-        </span>
+        <span className="opacity-60">{name || 'Anhang'}</span>
       )}
     </div>
   )
@@ -1370,17 +1307,14 @@ function RatingModal({
       if (!res.ok) {
         console.warn(
           'ratings/submit response:',
-          await res.text().catch(() => '')
+          await res.text().catch(() => ''),
         )
       }
       await onSubmitted()
       onClose()
       alert('Danke für deine Bewertung!')
     } catch (e: any) {
-      setError(
-        e?.message ||
-          'Fehler beim Senden der Bewertung.'
-      )
+      setError(e?.message || 'Fehler beim Senden der Bewertung.')
     } finally {
       setBusy(false)
     }
@@ -1398,7 +1332,7 @@ function RatingModal({
         className={cls(
           'relative z-10 mt-12 w-full max-w-xl max-h-[92vh] overflow-y-auto',
           'rounded-3xl border border-white/70 bg-white/92 backdrop-blur-2xl',
-          'p-6 shadow-[0_18px_55px_rgba(15,23,42,0.22)] ring-1 ring-white/80'
+          'p-6 shadow-[0_18px_55px_rgba(15,23,42,0.22)] ring-1 ring-white/80',
         )}
       >
         <div className="flex items-start justify-between gap-4">
@@ -1422,7 +1356,7 @@ function RatingModal({
 
         <div className="mt-4 space-y-3">
           <label className="block">
-            <span className="block text-[10px] text-slate-600 mb-1">
+            <span className="mb-1 block text-[10px] text-slate-600">
               Sterne (0–10)
             </span>
             <div className="flex flex-wrap items-center gap-1">
@@ -1435,7 +1369,7 @@ function RatingModal({
                     'px-2 py-1 rounded-lg border text-[11px]',
                     i === stars
                       ? 'bg-slate-900 text-white border-slate-900'
-                      : 'bg-white border-white/70 text-slate-800 hover:bg-slate-50'
+                      : 'bg-white border-white/70 text-slate-800 hover:bg-slate-50',
                   )}
                 >
                   {i}
@@ -1445,7 +1379,7 @@ function RatingModal({
           </label>
 
           <label className="block">
-            <span className="block text-[10px] text-slate-600 mb-1">
+            <span className="mb-1 block text-[10px] text-slate-600">
               Kommentar
             </span>
             <textarea
@@ -1458,7 +1392,7 @@ function RatingModal({
           </label>
 
           <label className="block">
-            <span className="block text-[10px] text-slate-600 mb-1">
+            <span className="mb-1 block text-[10px] text-slate-600">
               Name (optional)
             </span>
             <input
@@ -1469,11 +1403,7 @@ function RatingModal({
             />
           </label>
 
-          {error && (
-            <div className="text-[10px] text-rose-600">
-              {error}
-            </div>
-          )}
+          {error && <div className="text-[10px] text-rose-600">{error}</div>}
 
           <div className="pt-2 flex items-center justify-end gap-2">
             <button
@@ -1491,7 +1421,7 @@ function RatingModal({
               className={cls(
                 'rounded-xl px-3 py-1.5 text-[11px] font-medium text-white',
                 'bg-slate-900 hover:opacity-90',
-                busy && 'opacity-60'
+                busy && 'opacity-60',
               )}
             >
               {busy ? 'Sende…' : 'Bewertung senden'}
@@ -1502,7 +1432,5 @@ function RatingModal({
     </div>
   )
 
-  return typeof document !== 'undefined'
-    ? createPortal(node, document.body)
-    : node
+  return typeof document !== 'undefined' ? createPortal(node, document.body) : node
 }

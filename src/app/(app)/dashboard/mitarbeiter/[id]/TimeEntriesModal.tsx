@@ -159,6 +159,9 @@ export default function TimeEntriesModal({
     notes: '',
   }))
 
+  // Filter / Aktionen auf Mobile ein- / ausblenden
+  const [filtersOpen, setFiltersOpen] = useState(false)
+
   const edited = (id: string) => edit[id] ?? {}
   const merged = (r: Entry) => ({ ...r, ...edited(r.id) })
 
@@ -534,7 +537,7 @@ export default function TimeEntriesModal({
 
         {/* Panel */}
         <div className="fixed inset-0 overflow-y-auto">
-          <div className="flex min-h-full items-start justify-center p-3 sm:p-6">
+          <div className="flex min-h-full items-start justify-center p-2 sm:p-4 lg:p-6">
             <Transition.Child
               as={Fragment}
               enter="transition ease-out duration-200"
@@ -544,181 +547,221 @@ export default function TimeEntriesModal({
               leaveFrom="opacity-100 translate-y-0 scale-100"
               leaveTo="opacity-0 translate-y-3 scale-[0.97]"
             >
-              <Dialog.Panel className="w-full max-w-7xl overflow-hidden rounded-[32px] border border-white/70 bg-white/95 shadow-[0_30px_120px_rgba(15,23,42,0.45)] backdrop-blur-2xl ring-1 ring-white/70">
+              <Dialog.Panel className="w-full max-w-7xl overflow-hidden rounded-3xl border border-white/70 bg-white/95 shadow-[0_30px_120px_rgba(15,23,42,0.45)] backdrop-blur-2xl ring-1 ring-white/70 sm:rounded-[32px]">
                 {/* Header */}
-                <div className="border-b border-slate-100 bg-white/90 px-5 pb-4 pt-4">
-                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
-                    {/* Titel & Meta */}
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <Dialog.Title className="truncate text-xl font-semibold text-slate-900">
-                          Zeiteinträge {employeeName ? `– ${employeeName}` : ''}
-                        </Dialog.Title>
-                        <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
-                          Arbeitszeiten
-                        </span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
-                        <span>
-                          Zeitraum:{' '}
-                          <span className="font-mono">{normDisplay.from}</span> –{' '}
-                          <span className="font-mono">{normDisplay.to}</span>
-                        </span>
-                        <span className="hidden sm:inline">
-                          • Gesamt:{' '}
-                          <span className="font-mono font-semibold">
-                            {fmtHMS(total)}
+                <div className="border-b border-slate-100 bg-white/90 px-4 pb-3 pt-3 sm:px-5 sm:pb-4 sm:pt-4">
+                  <div className="flex flex-col gap-2 sm:gap-3">
+                    {/* Titel + Close */}
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <Dialog.Title className="truncate text-base font-semibold text-slate-900 sm:text-lg md:text-xl">
+                            Zeiteinträge {employeeName ? `– ${employeeName}` : ''}
+                          </Dialog.Title>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
+                            Arbeitszeiten
                           </span>
-                        </span>
-                        <span className="hidden sm:inline">
-                          •{' '}
-                          {statusFilter === 'alle'
-                            ? 'alle Einträge'
-                            : statusFilter === 'laufend'
-                            ? 'nur laufende Timer'
-                            : 'nur abgeschlossene Einträge'}
-                        </span>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 text-[11px] text-slate-600 sm:gap-3">
+                          <span>
+                            Zeitraum:{' '}
+                            <span className="font-mono">{normDisplay.from}</span> –{' '}
+                            <span className="font-mono">{normDisplay.to}</span>
+                          </span>
+                          <span className="hidden sm:inline">
+                            • Gesamt:{' '}
+                            <span className="font-mono font-semibold">
+                              {fmtHMS(total)}
+                            </span>
+                          </span>
+                          <span className="hidden sm:inline">
+                            •{' '}
+                            {statusFilter === 'alle'
+                              ? 'alle Einträge'
+                              : statusFilter === 'laufend'
+                              ? 'nur laufende Timer'
+                              : 'nur abgeschlossene Einträge'}
+                          </span>
+                        </div>
                       </div>
+
+                      {/* X zum Schließen */}
+                      <button
+                        onClick={onClose}
+                        className="ml-1 inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm outline-none hover:bg-slate-50 hover:text-slate-800"
+                        aria-label="Schließen"
+                      >
+                        <XMarkIcon className="h-4 w-4" />
+                      </button>
                     </div>
 
-                    {/* Buttons */}
-                    <div className="flex flex-wrap items-center justify-between gap-2 lg:justify-end">
+                    {/* Buttons Zeile */}
+                    <div className="flex w-full flex-wrap items-center justify-between gap-2 pt-1 sm:justify-end lg:w-auto">
                       <button
                         type="button"
                         onClick={() => setCreating((v) => !v)}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-[11px] font-medium text-emerald-800 shadow-sm outline-none hover:bg-emerald-100"
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50/80 px-3 py-1.5 text-[11px] font-medium text-emerald-800 shadow-sm outline-none hover:bg-emerald-100 sm:flex-none sm:w-auto"
                       >
-                        {creating
-                          ? 'Neuen Eintrag abbrechen'
-                          : 'Zeiteintrag hinzufügen'}
+                        <span className="sm:hidden">
+                          {creating ? 'Abbrechen' : 'Neu'}
+                        </span>
+                        <span className="hidden sm:inline">
+                          {creating
+                            ? 'Neuen Eintrag abbrechen'
+                            : 'Zeiteintrag hinzufügen'}
+                        </span>
                       </button>
 
                       <button
                         onClick={exportCsv}
                         disabled={rows.length === 0}
-                        className="inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-800 shadow-sm outline-none hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full border border-slate-200 bg-white/90 px-3 py-1.5 text-[11px] font-medium text-slate-800 shadow-sm outline-none hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 sm:flex-none sm:w-auto"
                       >
                         <ArrowDownTrayIcon className="h-4 w-4 text-slate-700" />
-                        <span>Gefilterte Einträge als CSV</span>
+                        <span className="sm:hidden">CSV</span>
+                        <span className="hidden sm:inline">
+                          Gefilterte Einträge als CSV
+                        </span>
                       </button>
 
                       <button
                         onClick={() => load(true)}
                         disabled={loading}
-                        className="inline-flex items-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-sm outline-none hover:bg-slate-800 disabled:opacity-60"
+                        className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-full bg-slate-900 px-3.5 py-1.5 text-[11px] font-medium text-white shadow-sm outline-none hover:bg-slate-800 disabled:opacity-60 sm:flex-none sm:w-auto"
                       >
                         <ArrowPathIcon
                           className={`h-4 w-4 ${loading ? 'animate-spin' : ''}`}
                         />
-                        <span>Aktualisieren</span>
-                      </button>
-
-                      <button
-                        onClick={onClose}
-                        className="hidden rounded-full p-1.5 text-slate-500 outline-none hover:bg-slate-100 hover:text-slate-800 lg:inline-flex"
-                      >
-                        <XMarkIcon className="h-5 w-5" />
+                        <span className="sm:hidden">Refresh</span>
+                        <span className="hidden sm:inline">Aktualisieren</span>
                       </button>
                     </div>
-                  </div>
 
-                  {/* Filterzeile */}
-                  <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
-                    <div className="flex flex-1 flex-wrap items-end gap-3">
-                      <div className="w-full max-w-[150px]">
-                        <label className="mb-1 block text-[11px] text-slate-600">
-                          Von
-                        </label>
-                        <input
-                          type="date"
-                          value={from}
-                          onChange={(e) => onChangeFrom(e.target.value)}
-                          className="w-full rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-indigo-200"
+                    {/* Filter-Bereich mit Toggle (Mobile) */}
+                    <div className="mt-2 sm:mt-3">
+                      {/* Toggle nur auf Mobile/Tablet */}
+                      <button
+                        type="button"
+                        onClick={() => setFiltersOpen((v) => !v)}
+                        className="flex w-full items-center justify-between rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-sm outline-none hover:bg-slate-50 lg:hidden"
+                      >
+                        <span>
+                          Filter & Zeitraum{' '}
+                          {filtersOpen ? 'ausblenden' : 'anzeigen'}
+                        </span>
+                        <ChevronDownIcon
+                          className={`h-4 w-4 text-slate-500 transition-transform ${
+                            filtersOpen ? 'rotate-180' : ''
+                          }`}
                         />
-                      </div>
-                      <div className="w-full max-w-[150px]">
-                        <label className="mb-1 block text-[11px] text-slate-600">
-                          Bis
-                        </label>
-                        <input
-                          type="date"
-                          value={to}
-                          onChange={(e) => onChangeTo(e.target.value)}
-                          className="w-full rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-indigo-200"
-                        />
-                      </div>
+                      </button>
 
-                      {/* Zeitraum-Preset */}
-                      <div className="w-full max-w-[190px]">
-                        <label className="mb-1 block text-[11px] text-slate-600">
-                          Zeitraum
-                        </label>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const order: RangePreset[] = [
-                              '7tage',
-                              '30tage',
-                              'monat',
-                              'benutzerdefiniert',
-                            ]
-                            const idx = order.indexOf(rangePreset)
-                            const next = order[(idx + 1) % order.length]
-                            if (next === 'benutzerdefiniert') {
-                              setRangePreset('benutzerdefiniert')
-                            } else {
-                              applyRangePreset(next)
-                            }
-                          }}
-                          className="flex w-full items-center justify-between rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-left text-xs font-medium text-slate-800 shadow-sm outline-none hover:border-slate-300 hover:bg-slate-50"
-                        >
-                          <span>{presetLabel(rangePreset)}</span>
-                          <ChevronDownIcon className="h-4 w-4 text-slate-500" />
-                        </button>
-                      </div>
+                      {/* Filterzeile */}
+                      <div
+                        className={
+                          'mt-3 flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between ' +
+                          (filtersOpen ? '' : ' hidden lg:flex')
+                        }
+                      >
+                        <div className="flex flex-1 flex-wrap items-end gap-3">
+                          <div className="w-full max-w-[160px] flex-1 sm:max-w-[150px]">
+                            <label className="mb-1 block text-[11px] text-slate-600">
+                              Von
+                            </label>
+                            <input
+                              type="date"
+                              value={from}
+                              onChange={(e) => onChangeFrom(e.target.value)}
+                              className="w-full rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-indigo-200"
+                            />
+                          </div>
+                          <div className="w-full max-w-[160px] flex-1 sm:max-w-[150px]">
+                            <label className="mb-1 block text-[11px] text-slate-600">
+                              Bis
+                            </label>
+                            <input
+                              type="date"
+                              value={to}
+                              onChange={(e) => onChangeTo(e.target.value)}
+                              className="w-full rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-indigo-200"
+                            />
+                          </div>
 
-                      {/* Status-Toggle */}
-                      <div className="w-full max-w-[220px]">
-                        <label className="mb-1 block text-[11px] text-slate-600">
-                          Status
-                        </label>
-                        <div className="inline-flex w-full overflow-hidden rounded-full border border-slate-200 bg-white/95 text-xs shadow-sm">
-                          {(['alle', 'laufend', 'fertig'] as const).map((k) => (
+                          {/* Zeitraum-Preset */}
+                          <div className="w-full max-w-[220px] sm:max-w-[190px]">
+                            <label className="mb-1 block text-[11px] text-slate-600">
+                              Zeitraum
+                            </label>
                             <button
-                              key={k}
-                              onClick={() => setStatusFilter(k)}
-                              className={[
-                                'flex-1 px-3 py-1.5 transition',
-                                statusFilter === k
-                                  ? 'bg-slate-900 text-white'
-                                  : 'text-slate-800 hover:bg-slate-50',
-                              ].join(' ')}
+                              type="button"
+                              onClick={() => {
+                                const order: RangePreset[] = [
+                                  '7tage',
+                                  '30tage',
+                                  'monat',
+                                  'benutzerdefiniert',
+                                ]
+                                const idx = order.indexOf(rangePreset)
+                                const next = order[(idx + 1) % order.length]
+                                if (next === 'benutzerdefiniert') {
+                                  setRangePreset('benutzerdefiniert')
+                                } else {
+                                  applyRangePreset(next)
+                                }
+                              }}
+                              className="flex w-full items-center justify-between rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-left text-xs font-medium text-slate-800 shadow-sm outline-none hover:border-slate-300 hover:bg-slate-50"
                             >
-                              {k === 'alle'
-                                ? 'Alle'
-                                : k === 'laufend'
-                                ? 'Laufend'
-                                : 'Fertig'}
+                              <span>{presetLabel(rangePreset)}</span>
+                              <ChevronDownIcon className="h-4 w-4 text-slate-500" />
                             </button>
-                          ))}
+                          </div>
+
+                          {/* Status-Toggle */}
+                          <div className="w-full max-w-[260px]">
+                            <label className="mb-1 block text-[11px] text-slate-600">
+                              Status
+                            </label>
+                            <div className="inline-flex w-full overflow-hidden rounded-full border border-slate-200 bg-white/95 text-xs shadow-sm">
+                              {(['alle', 'laufend', 'fertig'] as const).map(
+                                (k) => (
+                                  <button
+                                    key={k}
+                                    onClick={() => setStatusFilter(k)}
+                                    className={[
+                                      'flex-1 px-3 py-1.5 transition',
+                                      statusFilter === k
+                                        ? 'bg-slate-900 text-white'
+                                        : 'text-slate-800 hover:bg-slate-50',
+                                    ].join(' ')}
+                                  >
+                                    {k === 'alle'
+                                      ? 'Alle'
+                                      : k === 'laufend'
+                                      ? 'Laufend'
+                                      : 'Fertig'}
+                                  </button>
+                                ),
+                              )}
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Gesamtzeit-Badge */}
+                        <div className="text-[11px] text-slate-700 lg:text-right">
+                          <span className="inline-block rounded-full bg-slate-50 px-3 py-1">
+                            Gesamtzeit im Zeitraum:{' '}
+                            <span className="font-mono font-semibold">
+                              {fmtHMS(total)}
+                            </span>
+                          </span>
                         </div>
                       </div>
                     </div>
 
-                    {/* Mobile: Gesamtzeit */}
-                    <div className="text-[11px] text-slate-700 lg:text-right">
-                      <span className="inline-block rounded-full bg-slate-50 px-3 py-1">
-                        Gesamtzeit im Zeitraum:{' '}
-                        <span className="font-mono font-semibold">
-                          {fmtHMS(total)}
-                        </span>
-                      </span>
-                    </div>
-
-                    {/* Close-Button Mobile */}
+                    {/* Zusätzlicher Schließen-Button unten nur auf Mobile */}
                     <button
                       onClick={onClose}
-                      className="mt-1 inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none hover:bg-slate-50 lg:hidden"
+                      className="mt-2 inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm outline-none hover:bg-slate-50 lg:hidden"
                     >
                       Schließen
                     </button>
@@ -727,13 +770,13 @@ export default function TimeEntriesModal({
 
                 {/* Fehler */}
                 {error && (
-                  <div className="mx-5 mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+                  <div className="mx-4 mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 sm:mx-5">
                     {error}
                   </div>
                 )}
 
                 {/* Content */}
-                <div className="max-h-[70vh] overflow-y-auto px-5 pb-5 pt-3">
+                <div className="max-h-[65vh] overflow-y-auto px-4 pb-5 pt-3 sm:max-h-[70vh] sm:px-5 lg:max-h-[72vh]">
                   {/* Neuer manueller Eintrag */}
                   {creating && (
                     <div className="mb-4 rounded-2xl border border-emerald-200 bg-emerald-50/80 p-4 text-sm text-slate-800">
@@ -892,8 +935,8 @@ export default function TimeEntriesModal({
                     </div>
                   )}
 
-                  {/* Mobile: Karten */}
-                  <div className="space-y-3 md:hidden">
+                  {/* Mobile & Tablet & kleine Laptops (bis < xl): Karten */}
+                  <div className="space-y-3 xl:hidden">
                     {filteredRows.length === 0 && !loading && (
                       <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 text-sm text-slate-600 shadow-sm">
                         Keine Einträge im Zeitraum.
@@ -1017,7 +1060,9 @@ export default function TimeEntriesModal({
                                 <input
                                   type="text"
                                   value={m.project?.title ?? ''}
-                                  placeholder={m.project_id ? '(Projekt zugeordnet)' : ''}
+                                  placeholder={
+                                    m.project_id ? '(Projekt zugeordnet)' : ''
+                                  }
                                   disabled
                                   className="w-full rounded-xl border border-dashed border-slate-200 bg-slate-50 px-2 py-1.5 text-sm text-slate-500"
                                   title={m.project_id || undefined}
@@ -1040,7 +1085,7 @@ export default function TimeEntriesModal({
                               />
                             </div>
 
-                            <div className="flex items-center justify-end gap-2">
+                            <div className="flex flex-wrap items-center justify-end gap-2">
                               <button
                                 onClick={() => save(r.id)}
                                 disabled={savingId === r.id}
@@ -1072,8 +1117,8 @@ export default function TimeEntriesModal({
                     })}
                   </div>
 
-                  {/* Desktop/Tablet-Tabelle */}
-                  <div className="hidden md:block">
+                  {/* Desktop (ab xl): Tabelle */}
+                  <div className="hidden xl:block">
                     {filteredRows.length === 0 && !loading && (
                       <div className="rounded-2xl border border-slate-200 bg-white/95 p-6 text-sm text-slate-600 shadow-sm">
                         Keine Einträge im Zeitraum.
@@ -1103,7 +1148,10 @@ export default function TimeEntriesModal({
                           <div className="col-span-2">Ende</div>
                           <div className="col-span-1 text-right">Pause (Min)</div>
                           <div className="col-span-2">Projekt</div>
-                          <div className="col-span-1 text-right">Dauer</div>
+                          {/* Dauer-Header mit min-width */}
+                          <div className="col-span-1 text-right min-w-[90px]">
+                            Dauer
+                          </div>
                           <div className="col-span-2 text-right">Aktionen</div>
                         </div>
 
@@ -1206,13 +1254,13 @@ export default function TimeEntriesModal({
                                     />
                                   </div>
 
-                                  {/* Dauer */}
-                                  <div className="col-span-6 sm:col-span-1 text-right text-[11px] text-slate-700">
-                                    <div className="font-mono text-xs">
+                                  {/* Dauer – breiter & als Pill */}
+                                  <div className="col-span-6 sm:col-span-1 flex flex-col items-end text-[11px] text-slate-700 min-w-[90px]">
+                                    <div className="inline-flex items-center rounded-full bg-slate-50 px-2.5 py-0.5 font-mono text-xs">
                                       {fmtHMS(dur)}
                                     </div>
                                     {isRunning && (
-                                      <div className="mt-0.5 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-100">
+                                      <div className="mt-1 inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-medium text-emerald-700 ring-1 ring-emerald-100">
                                         läuft
                                       </div>
                                     )}
@@ -1269,7 +1317,7 @@ export default function TimeEntriesModal({
                   </div>
                 </div>
 
-                {/* Footer */}
+                {/* Footer Desktop */}
                 <div className="hidden border-t border-slate-100 bg-white/90 px-5 py-3 text-right text-[11px] text-slate-700 lg:block">
                   Gesamtzeit im Zeitraum:{' '}
                   <span className="font-mono font-semibold">

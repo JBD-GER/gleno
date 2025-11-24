@@ -18,8 +18,8 @@ export default function ExpandableGrid({
   const visible = showAll ? cards : cards.slice(0, limit)
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <div className="space-y-3 sm:space-y-4">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {visible.map((node, i) => (
           <div key={i}>{node}</div>
         ))}
@@ -28,8 +28,8 @@ export default function ExpandableGrid({
       {cards.length > limit && (
         <div className="flex justify-center">
           <button
-            onClick={() => setShowAll(v => !v)}
-            className="rounded-lg border border-white/60 bg-white/70 px-4 py-2 text-sm text-slate-900 shadow-sm hover:bg-white backdrop-blur"
+            onClick={() => setShowAll((v) => !v)}
+            className="w-full rounded-lg border border-white/60 bg-white/70 px-4 py-2 text-sm text-slate-900 shadow-sm backdrop-blur hover:bg-white sm:w-auto"
           >
             {showAll ? 'Weniger anzeigen' : 'Alle anzeigen'}
           </button>

@@ -1,4 +1,3 @@
-// src/app/(app)/dashboard/cloud/CloudClient.tsx
 'use client'
 
 import {
@@ -104,7 +103,11 @@ function DateInputWithCalendar({ value, onChange }: DateInputWithCalendarProps) 
   const displayValue = value ? formatDisplayDate(value) : ''
 
   const buildCalendar = () => {
-    const startOfMonth = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), 1)
+    const startOfMonth = new Date(
+      currentMonth.getFullYear(),
+      currentMonth.getMonth(),
+      1,
+    )
     const startWeekday = (startOfMonth.getDay() + 6) % 7 // Montag = 0
     const startDate = new Date(startOfMonth)
     startDate.setDate(startOfMonth.getDate() - startWeekday)
@@ -134,13 +137,21 @@ function DateInputWithCalendar({ value, onChange }: DateInputWithCalendarProps) 
 
   const goPrevMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() - 1, 1),
+      new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth() - 1,
+        1,
+      ),
     )
   }
 
   const goNextMonth = () => {
     setCurrentMonth(
-      new Date(currentMonth.getFullYear(), currentMonth.getMonth() + 1, 1),
+      new Date(
+        currentMonth.getFullYear(),
+        currentMonth.getMonth() + 1,
+        1,
+      ),
     )
   }
 
@@ -152,12 +163,12 @@ function DateInputWithCalendar({ value, onChange }: DateInputWithCalendarProps) 
           readOnly
           value={displayValue}
           placeholder="tt.mm.jjjj"
-          onClick={() => setOpen((o) => !o)}
-          className="w-[108px] rounded-full border border-slate-200 bg-white px-3 py-1 pr-7 text-[11px] text-slate-600 shadow-sm outline-none placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-200"
+          onClick={() => setOpen(o => !o)}
+          className="w-full rounded-full border border-slate-200 bg-white px-3 py-1 pr-7 text-[11px] text-slate-600 shadow-sm outline-none placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-200 sm:w-[108px]"
         />
         <button
           type="button"
-          onClick={() => setOpen((o) => !o)}
+          onClick={() => setOpen(o => !o)}
           className="absolute right-1.5 top-1 flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
         >
           <CalendarDaysIcon className="h-3.5 w-3.5" />
@@ -165,10 +176,11 @@ function DateInputWithCalendar({ value, onChange }: DateInputWithCalendarProps) 
       </div>
 
       {open && (
-        <div className="absolute right-0 z-40 mt-2 w-64 rounded-2xl border border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.18)]">
+        <div className="absolute right-0 z-40 mt-2 w-64 rounded-2xl border border-slate-200 bg-white shadow-[0_12px_30px_rgba(15,23,42,0.18)]">
           <div className="flex items-center justify-between px-3 pt-2 pb-1">
             <span className="text-xs font-medium text-slate-900">
-              {MONTH_NAMES[currentMonth.getMonth()]} {currentMonth.getFullYear()}
+              {MONTH_NAMES[currentMonth.getMonth()]}{' '}
+              {currentMonth.getFullYear()}
             </span>
             <div className="flex items-center gap-1">
               <button
@@ -189,8 +201,11 @@ function DateInputWithCalendar({ value, onChange }: DateInputWithCalendarProps) 
           </div>
 
           <div className="grid grid-cols-7 gap-1 px-3 pb-1 pt-1 text-[10px] text-slate-400">
-            {WEEKDAYS_SHORT.map((w) => (
-              <div key={w} className="flex items-center justify-center">
+            {WEEKDAYS_SHORT.map(w => (
+              <div
+                key={w}
+                className="flex items-center justify-center"
+              >
                 {w}
               </div>
             ))}
@@ -199,7 +214,8 @@ function DateInputWithCalendar({ value, onChange }: DateInputWithCalendarProps) 
           <div className="grid grid-cols-7 gap-1 px-3 pb-3 text-[11px]">
             {weeks.map((week, wi) =>
               week.map((day, di) => {
-                const inCurrentMonth = day.getMonth() === currentMonth.getMonth()
+                const inCurrentMonth =
+                  day.getMonth() === currentMonth.getMonth()
                 const isSelected =
                   selected &&
                   day.getFullYear() === selected.getFullYear() &&
@@ -213,9 +229,11 @@ function DateInputWithCalendar({ value, onChange }: DateInputWithCalendarProps) 
                     onClick={() => handleSelect(day)}
                     className={[
                       'flex h-7 w-7 items-center justify-center rounded-full transition',
-                      inCurrentMonth ? 'text-slate-700' : 'text-slate-300',
+                      inCurrentMonth
+                        ? 'text-slate-700'
+                        : 'text-slate-300',
                       isSelected
-                        ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/50'
+                        ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/40'
                         : 'hover:bg-slate-100',
                     ].join(' ')}
                   >
@@ -242,7 +260,13 @@ function DateInputWithCalendar({ value, onChange }: DateInputWithCalendarProps) 
               onClick={() => {
                 const today = new Date()
                 onChange(toIsoDate(today))
-                setCurrentMonth(new Date(today.getFullYear(), today.getMonth(), 1))
+                setCurrentMonth(
+                  new Date(
+                    today.getFullYear(),
+                    today.getMonth(),
+                    1,
+                  ),
+                )
                 setOpen(false)
               }}
               className="rounded-full px-2 py-1 text-slate-700 hover:bg-slate-100"
@@ -262,7 +286,9 @@ export default function CloudClient({ userId }: Props) {
   const supabase = supabaseClient()
 
   const [folders, setFolders] = useState<Folder[]>([])
-  const [activeFolderId, setActiveFolderId] = useState<string | null>(null)
+  const [activeFolderId, setActiveFolderId] = useState<string | null>(
+    null,
+  )
   const [documents, setDocuments] = useState<DocumentItem[]>([])
   const [viewMode, setViewMode] = useState<ViewMode>('list')
   const [loading, setLoading] = useState(true)
@@ -282,7 +308,7 @@ export default function CloudClient({ userId }: Props) {
   const [searchTerm, setSearchTerm] = useState('')
 
   const activeFolder = useMemo(
-    () => folders.find((f) => f.id === activeFolderId) ?? folders[0],
+    () => folders.find(f => f.id === activeFolderId) ?? folders[0],
     [folders, activeFolderId],
   )
 
@@ -290,10 +316,14 @@ export default function CloudClient({ userId }: Props) {
     let docs = [...documents]
 
     if (dateFrom || dateTo) {
-      const fromMs = dateFrom ? new Date(dateFrom + 'T00:00:00').getTime() : null
-      const toMs = dateTo ? new Date(dateTo + 'T23:59:59').getTime() : null
+      const fromMs = dateFrom
+        ? new Date(dateFrom + 'T00:00:00').getTime()
+        : null
+      const toMs = dateTo
+        ? new Date(dateTo + 'T23:59:59').getTime()
+        : null
 
-      docs = docs.filter((doc) => {
+      docs = docs.filter(doc => {
         const docMs = new Date(doc.uploaded_at).getTime()
         if (fromMs !== null && docMs < fromMs) return false
         if (toMs !== null && docMs > toMs) return false
@@ -303,7 +333,7 @@ export default function CloudClient({ userId }: Props) {
 
     if (searchTerm.trim()) {
       const q = searchTerm.trim().toLowerCase()
-      docs = docs.filter((doc) => doc.name.toLowerCase().includes(q))
+      docs = docs.filter(doc => doc.name.toLowerCase().includes(q))
     }
 
     return docs
@@ -317,7 +347,9 @@ export default function CloudClient({ userId }: Props) {
         const res = await fetch('/api/cloud', { cache: 'no-store' })
         const data = await res.json()
         if (!res.ok) {
-          throw new Error(data.error || 'Fehler beim Laden der Cloud-Daten.')
+          throw new Error(
+            data.error || 'Fehler beim Laden der Cloud-Daten.',
+          )
         }
         setFolders(data.folders || [])
         setDocuments(data.documents || [])
@@ -340,11 +372,17 @@ export default function CloudClient({ userId }: Props) {
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(`/api/cloud/documents?folder_id=${folderId}`, {
-        cache: 'no-store',
-      })
+      const res = await fetch(
+        `/api/cloud/documents?folder_id=${folderId}`,
+        {
+          cache: 'no-store',
+        },
+      )
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Fehler beim Laden der Dokumente.')
+      if (!res.ok)
+        throw new Error(
+          data.error || 'Fehler beim Laden der Dokumente.',
+        )
       setDocuments(data.documents || [])
     } catch (e: any) {
       setError(e.message || 'Unbekannter Fehler.')
@@ -370,9 +408,12 @@ export default function CloudClient({ userId }: Props) {
         body: JSON.stringify({ name }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Fehler beim Anlegen des Ordners.')
+      if (!res.ok)
+        throw new Error(
+          data.error || 'Fehler beim Anlegen des Ordners.',
+        )
 
-      setFolders((prev) => [...prev, data.folder])
+      setFolders(prev => [...prev, data.folder])
       setNewFolderName('')
       setActiveFolderId(data.folder.id)
       setDocuments([])
@@ -399,11 +440,14 @@ export default function CloudClient({ userId }: Props) {
         body: JSON.stringify({ id: folder.id }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Fehler beim Löschen des Ordners.')
+      if (!res.ok)
+        throw new Error(
+          data.error || 'Fehler beim Löschen des Ordners.',
+        )
 
-      setFolders((prev) => prev.filter((f) => f.id !== folder.id))
+      setFolders(prev => prev.filter(f => f.id !== folder.id))
       if (activeFolderId === folder.id) {
-        const remaining = folders.filter((f) => f.id !== folder.id)
+        const remaining = folders.filter(f => f.id !== folder.id)
         if (remaining.length > 0) {
           setActiveFolderId(remaining[0].id)
           reloadDocuments(remaining[0].id)
@@ -439,7 +483,9 @@ export default function CloudClient({ userId }: Props) {
     void handleFilesUpload(files, activeFolder.id)
   }
 
-  const handleFileInputChange = async (e: ChangeEvent<HTMLInputElement>) => {
+  const handleFileInputChange = async (
+    e: ChangeEvent<HTMLInputElement>,
+  ) => {
     if (!activeFolder) return
     const files = Array.from(e.target.files || [])
     if (!files.length) return
@@ -447,7 +493,10 @@ export default function CloudClient({ userId }: Props) {
     e.target.value = ''
   }
 
-  const handleFilesUpload = async (files: File[], folderId: string) => {
+  const handleFilesUpload = async (
+    files: File[],
+    folderId: string,
+  ) => {
     if (!files.length) return
     setUploading(true)
     setError(null)
@@ -482,10 +531,13 @@ export default function CloudClient({ userId }: Props) {
         })
         const data = await res.json()
         if (!res.ok) {
-          throw new Error(data.error || 'Fehler beim Speichern der Metadaten.')
+          throw new Error(
+            data.error ||
+              'Fehler beim Speichern der Metadaten.',
+          )
         }
 
-        setDocuments((prev) => [data.document, ...prev])
+        setDocuments(prev => [data.document, ...prev])
       }
     } catch (e: any) {
       setError(e.message || 'Fehler beim Hochladen.')
@@ -495,7 +547,8 @@ export default function CloudClient({ userId }: Props) {
   }
 
   const handleDeleteDocument = async (doc: DocumentItem) => {
-    if (!window.confirm(`Dokument "${doc.name}" wirklich löschen?`)) return
+    if (!window.confirm(`Dokument "${doc.name}" wirklich löschen?`))
+      return
     setError(null)
     try {
       const res = await fetch('/api/cloud/documents', {
@@ -504,9 +557,12 @@ export default function CloudClient({ userId }: Props) {
         body: JSON.stringify({ id: doc.id, path: doc.path }),
       })
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Fehler beim Löschen des Dokuments.')
+      if (!res.ok)
+        throw new Error(
+          data.error || 'Fehler beim Löschen des Dokuments.',
+        )
 
-      setDocuments((prev) => prev.filter((d) => d.id !== doc.id))
+      setDocuments(prev => prev.filter(d => d.id !== doc.id))
     } catch (e: any) {
       setError(e.message || 'Unbekannter Fehler.')
     }
@@ -521,10 +577,17 @@ export default function CloudClient({ userId }: Props) {
         .createSignedUrl(doc.path, 60)
 
       if (error || !data?.signedUrl) {
-        throw new Error(error?.message || 'Konnte Dokument-URL nicht erzeugen.')
+        throw new Error(
+          error?.message ||
+            'Konnte Dokument-URL nicht erzeugen.',
+        )
       }
 
-      window.open(data.signedUrl, '_blank', 'noopener,noreferrer')
+      window.open(
+        data.signedUrl,
+        '_blank',
+        'noopener,noreferrer',
+      )
     } catch (e: any) {
       setError(e.message || 'Fehler beim Öffnen des Dokuments.')
     } finally {
@@ -537,7 +600,7 @@ export default function CloudClient({ userId }: Props) {
     setExporting(true)
     setError(null)
 
-    const docsForExport = filteredDocuments.map((d) => ({
+    const docsForExport = filteredDocuments.map(d => ({
       id: d.id,
       name: d.name,
       path: d.path,
@@ -568,10 +631,8 @@ export default function CloudClient({ userId }: Props) {
       const blob = await res.blob()
       const url = window.URL.createObjectURL(blob)
       const a = document.createElement('a')
-      const safeFolderName = (activeFolder.name || 'Dokumentenexport').replace(
-        /\s+/g,
-        '_',
-      )
+      const safeFolderName = (activeFolder.name || 'Dokumentenexport')
+        .replace(/\s+/g, '_')
       const today = new Date().toISOString().slice(0, 10)
 
       a.href = url
@@ -615,395 +676,433 @@ export default function CloudClient({ userId }: Props) {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-6rem)] w-full text-slate-900">
-      {/* Background-Glow */}
-      <div className="pointer-events-none absolute inset-0 -z-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.06),_transparent_60%)]" />
-      </div>
-
-      {/* HEADER-CARD */}
-      <div className="mb-6 overflow-hidden rounded-3xl border border-slate-200/80 bg-white/90 px-4 py-4 shadow-[0_18px_40px_rgba(15,23,42,0.06)] sm:px-6 sm:py-5">
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-600">
-              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-              Digitale Ablage für dein Business
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-slate-900 text-slate-50 shadow-md shadow-slate-900/40">
-                <DocumentArrowUpIcon className="h-5 w-5" />
+    <div className="relative min-h-[calc(100vh-6rem)] w-full  px-3 py-4 text-slate-900 sm:px-4 lg:px-6">
+      <div className="mx-auto w-full  space-y-4 sm:space-y-6">
+        {/* HEADER-CARD */}
+        <div className="overflow-hidden rounded-3xl border border-slate-200 bg-white px-4 py-4 shadow-sm sm:px-6 sm:py-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="space-y-2">
+              <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] text-slate-600">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                Digitale Ablage für dein Business
               </div>
-              <div>
-                <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-                  Dokumenten-Cloud
-                </h1>
-                <p className="mt-1 max-w-2xl text-xs text-slate-500 sm:text-sm">
-                  Belege, Rechnungen und Verträge an einem Ort – strukturiert nach Ordnern
-                  und jederzeit abrufbar.
-                </p>
+              <div className="flex items-start gap-3">
+                <div className="mt-0.5 flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-slate-50 shadow-sm sm:h-11 sm:w-11">
+                  <DocumentArrowUpIcon className="h-5 w-5 sm:h-6 sm:w-6" />
+                </div>
+                <div>
+                  <h1 className="text-lg font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                    Dokumenten-Cloud
+                  </h1>
+                  <p className="mt-1 max-w-2xl text-xs text-slate-500 sm:text-sm">
+                    Belege, Rechnungen und Verträge an einem Ort – strukturiert
+                    nach Ordnern und jederzeit abrufbar.
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Layout */}
-      <div className="grid gap-6 md:grid-cols-[260px,1fr]">
-        {/* Ordner-Spalte */}
-        <aside className="rounded-3xl border border-white/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
-              <FolderIcon className="h-5 w-5 text-slate-400" />
-              <span>Ordner</span>
+        {/* Layout */}
+        <div className="grid gap-4 md:grid-cols-[260px,1fr] lg:gap-6">
+          {/* Ordner-Spalte */}
+          <aside className="rounded-3xl border border-white/70 bg-white/90 p-4 shadow-sm">
+            <div className="mb-3 flex items-center justify-between">
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-700">
+                <FolderIcon className="h-5 w-5 text-slate-400" />
+                <span>Ordner</span>
+              </div>
             </div>
-          </div>
 
-          <div className="max-h-[360px] space-y-1 overflow-y-auto pr-1">
-            {folders.map((folder) => {
-              const isActive = activeFolder?.id === folder.id
-              return (
-                <div
-                  key={folder.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => handleFolderClick(folder)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' || e.key === ' ') {
-                      e.preventDefault()
-                      void handleFolderClick(folder)
-                    }
-                  }}
-                  className={`group flex w-full cursor-pointer items-center justify-between rounded-2xl px-3 py-2 text-left text-sm transition ${
-                    isActive
-                      ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/40'
-                      : 'bg-white/0 text-slate-700 hover:bg-slate-100'
-                  }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span
-                      className={`flex h-7 w-7 items-center justify-center rounded-xl text-xs ${
-                        isActive ? 'bg-slate-800/80 text-slate-100' : 'bg-slate-100 text-slate-500'
-                      }`}
-                    >
-                      <FolderIcon className="h-4 w-4" />
-                    </span>
-                    <span className="truncate">{folder.name}</span>
-                  </span>
-                  <span
+            <div className="max-h-[260px] space-y-1 overflow-y-auto pr-1 sm:max-h-[360px]">
+              {folders.map(folder => {
+                const isActive = activeFolder?.id === folder.id
+                return (
+                  <div
+                    key={folder.id}
                     role="button"
                     tabIndex={0}
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      void handleDeleteFolder(folder)
-                    }}
-                    onKeyDown={(e) => {
+                    onClick={() => handleFolderClick(folder)}
+                    onKeyDown={e => {
                       if (e.key === 'Enter' || e.key === ' ') {
                         e.preventDefault()
-                        e.stopPropagation()
-                        void handleDeleteFolder(folder)
+                        void handleFolderClick(folder)
                       }
                     }}
-                    className={`rounded-full p-1 text-xs transition ${
+                    className={`group flex w-full cursor-pointer items-center justify-between rounded-2xl px-3 py-2 text-left text-sm transition ${
                       isActive
-                        ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                        : 'text-slate-400 hover:bg-slate-200 hover:text-slate-600'
+                        ? 'bg-slate-900 text-white shadow-sm'
+                        : 'bg-white/0 text-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    <TrashIcon className="h-3.5 w-3.5" />
-                  </span>
-                </div>
-              )
-            })}
-
-            {folders.length === 0 && !loading && (
-              <p className="mt-2 text-xs text-slate-400">
-                Noch keine Ordner – Standardordner werden automatisch angelegt.
-              </p>
-            )}
-          </div>
-
-          {/* Neuer Ordner */}
-          <div className="mt-4 border-t border-slate-100 pt-3">
-            <div className="flex items-center gap-2">
-              <input
-                type="text"
-                value={newFolderName}
-                onChange={(e) => setNewFolderName(e.target.value)}
-                placeholder="Neuer Ordnername"
-                className="flex-1 rounded-xl border border-white/60 bg-white/80 px-3 py-1.5 text-xs text-slate-700 shadow-sm outline-none placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-200"
-              />
-              <button
-                type="button"
-                onClick={handleCreateFolder}
-                disabled={creatingFolder || !newFolderName.trim()}
-                className="inline-flex items-center justify-center rounded-xl border border-slate-900/10 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-slate-900/20 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                <PlusIcon className="mr-1 h-4 w-4" />
-                Ordner
-              </button>
-            </div>
-            <p className="mt-1 text-[10px] text-slate-400">
-              Standardordner: „Eingehende Rechnungen“, „Ausgehende Rechnungen“.
-            </p>
-          </div>
-        </aside>
-
-        {/* Content-Spalte */}
-        <section className="space-y-4">
-          {/* Upload-Zeile + Ansicht-Umschalter */}
-          <div className="flex flex-col gap-3 rounded-3xl border border-white/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl md:flex-row md:items-center md:justify-between">
-            <div className="flex flex-1 flex-col gap-1">
-              <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
-                Upload-Bereich
-              </span>
-              <span className="text-sm text-slate-600">
-                Dateien per Drag & Drop oder Klick hinzufügen.
-              </span>
-              <span className="text-[11px] text-slate-400">
-                Aktueller Ordner:{' '}
-                <span className="font-medium text-slate-600">
-                  {activeFolder ? activeFolder.name : '–'}
-                </span>
-              </span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={() => setViewMode('grid')}
-                className={`inline-flex items-center rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
-                  viewMode === 'grid'
-                    ? 'border-slate-900 bg-slate-900 text-white shadow-sm shadow-slate-900/40'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <Squares2X2Icon className="mr-1 h-4 w-4" />
-                Grid
-              </button>
-              <button
-                type="button"
-                onClick={() => setViewMode('list')}
-                className={`inline-flex items-center rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
-                  viewMode === 'list'
-                    ? 'border-slate-900 bg-slate-900 text-white shadow-sm shadow-slate-900/40'
-                    : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
-                }`}
-              >
-                <ListBulletIcon className="mr-1 h-4 w-4" />
-                Liste
-              </button>
-            </div>
-          </div>
-
-          {/* Dropzone */}
-          <div
-            onDragOver={onDragOver}
-            onDragLeave={onDragLeave}
-            onDrop={onDrop}
-            className={`relative flex min-h-[140px] flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed px-4 py-6 text-center text-sm transition ${
-              dragActive
-                ? 'border-indigo-300 bg-indigo-50/60'
-                : 'border-slate-200 bg-white/80 hover:border-slate-300'
-            }`}
-          >
-            <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top,_rgba(79,70,229,0.12),_transparent_55%)]" />
-            <div className="relative z-10 flex flex-col items-center gap-2">
-              <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-slate-50 shadow-md shadow-slate-900/40">
-                <DocumentArrowUpIcon className="h-5 w-5" />
-              </span>
-              <p className="text-sm text-slate-700">
-                Dateien hierher ziehen <span className="text-slate-400">oder</span>
-              </p>
-              <label className="mt-1 inline-flex cursor-pointer items-center rounded-full border border-slate-900/10 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-slate-900/20 hover:bg-slate-50">
-                <input
-                  type="file"
-                  multiple
-                  className="hidden"
-                  onChange={handleFileInputChange}
-                  disabled={!activeFolder || uploading}
-                />
-                <DocumentArrowUpIcon className="mr-1.5 h-4 w-4" />
-                Dateien auswählen
-              </label>
-              <p className="mt-1 text-[11px] text-slate-400">
-                {uploading
-                  ? 'Upload läuft … bitte einen Moment.'
-                  : 'PDF, Bilder, Office-Dokumente – bis zu einigen MB pro Datei.'}
-              </p>
-            </div>
-          </div>
-
-          {/* Fehlermeldung */}
-          {error && (
-            <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
-              {error}
-            </div>
-          )}
-
-          {/* Dokumentliste */}
-          <div className="rounded-3xl border border-white/60 bg-white/80 p-4 shadow-[0_18px_40px_rgba(15,23,42,0.06)] backdrop-blur-xl">
-            <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-sm font-medium text-slate-700">
-                  {activeFolder ? activeFolder.name : 'Dokumente'}
-                </h2>
-                <p className="mt-0.5 text-[11px] text-slate-400">
-                  {filteredDocuments.length} Dokument
-                  {filteredDocuments.length === 1 ? '' : 'e'} im aktuellen Filter
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-3">
-                {/* Suchfeld */}
-                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50/80 px-2.5 py-1 shadow-sm">
-                  <MagnifyingGlassIcon className="h-3.5 w-3.5 text-slate-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Dateiname suchen…"
-                    className="w-28 bg-transparent text-[11px] text-slate-700 placeholder:text-slate-300 outline-none border-none sm:w-40"
-                  />
-                </div>
-
-                {/* Zeitraum-Filter */}
-                <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-2.5 py-1 text-[11px] text-slate-500 shadow-sm">
-                  <span className="ml-0.5 text-slate-400">Zeitraum</span>
-                  <div className="flex items-center gap-2">
-                    <DateInputWithCalendar value={dateFrom} onChange={setDateFrom} />
-                    <span className="text-slate-300">–</span>
-                    <DateInputWithCalendar value={dateTo} onChange={setDateTo} />
-                  </div>
-                  {(dateFrom || dateTo) && (
-                    <button
-                      type="button"
-                      onClick={resetDateFilter}
-                      className="ml-1 rounded-full px-2 py-0.5 text-[10px] text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                    <span className="flex items-center gap-2">
+                      <span
+                        className={`flex h-7 w-7 items-center justify-center rounded-xl text-xs ${
+                          isActive
+                            ? 'bg-slate-800/80 text-slate-100'
+                            : 'bg-slate-100 text-slate-500'
+                        }`}
+                      >
+                        <FolderIcon className="h-4 w-4" />
+                      </span>
+                      <span className="truncate">{folder.name}</span>
+                    </span>
+                    <span
+                      role="button"
+                      tabIndex={0}
+                      onClick={e => {
+                        e.stopPropagation()
+                        void handleDeleteFolder(folder)
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          e.stopPropagation()
+                          void handleDeleteFolder(folder)
+                        }
+                      }}
+                      className={`rounded-full p-1 text-xs transition ${
+                        isActive
+                          ? 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                          : 'text-slate-400 hover:bg-slate-200 hover:text-slate-600'
+                      }`}
                     >
-                      Zurücksetzen
-                    </button>
-                  )}
-                </div>
+                      <TrashIcon className="h-3.5 w-3.5" />
+                    </span>
+                  </div>
+                )
+              })}
 
-                {/* Export-Button */}
+              {folders.length === 0 && !loading && (
+                <p className="mt-2 text-xs text-slate-400">
+                  Noch keine Ordner – Standardordner werden automatisch
+                  angelegt.
+                </p>
+              )}
+            </div>
+
+            {/* Neuer Ordner */}
+            <div className="mt-4 border-t border-slate-100 pt-3">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <input
+                  type="text"
+                  value={newFolderName}
+                  onChange={e => setNewFolderName(e.target.value)}
+                  placeholder="Neuer Ordnername"
+                  className="flex-1 rounded-xl border border-white/70 bg-white px-3 py-1.5 text-xs text-slate-700 shadow-sm outline-none placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-200"
+                />
                 <button
                   type="button"
-                  onClick={handleExport}
-                  disabled={!activeFolder || !filteredDocuments.length || exporting || loading}
-                  className="inline-flex items-center rounded-full border border-slate-900 bg-slate-900 px-3 py-1.5 text-xs font-medium text-white shadow-sm shadow-slate-900/30 transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-500"
+                  onClick={handleCreateFolder}
+                  disabled={
+                    creatingFolder || !newFolderName.trim()
+                  }
+                  className="inline-flex items-center justify-center rounded-xl border border-slate-900/10 bg-white px-2.5 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-slate-900/20 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  {exporting ? 'Export läuft …' : 'Export als PDF'}
+                  <PlusIcon className="mr-1 h-4 w-4" />
+                  Ordner
+                </button>
+              </div>
+              <p className="mt-1 text-[10px] text-slate-400">
+                Standardordner: „Eingehende Rechnungen“, „Ausgehende
+                Rechnungen“.
+              </p>
+            </div>
+          </aside>
+
+          {/* Content-Spalte */}
+          <section className="space-y-4 lg:space-y-5">
+            {/* Upload-Zeile + Ansicht-Umschalter */}
+            <div className="flex flex-col gap-3 rounded-3xl border border-white/70 bg-white/90 p-4 shadow-sm md:flex-row md:items-center md:justify-between">
+              <div className="flex flex-1 flex-col gap-1">
+                <span className="text-xs font-medium uppercase tracking-wide text-slate-500">
+                  Upload-Bereich
+                </span>
+                <span className="text-sm text-slate-600">
+                  Dateien per Drag & Drop oder Klick hinzufügen.
+                </span>
+                <span className="text-[11px] text-slate-400">
+                  Aktueller Ordner:{' '}
+                  <span className="font-medium text-slate-600">
+                    {activeFolder ? activeFolder.name : '–'}
+                  </span>
+                </span>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setViewMode('grid')}
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+                    viewMode === 'grid'
+                      ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <Squares2X2Icon className="mr-1 h-4 w-4" />
+                  Grid
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setViewMode('list')}
+                  className={`inline-flex items-center rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+                    viewMode === 'list'
+                      ? 'border-slate-900 bg-slate-900 text-white shadow-sm'
+                      : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 hover:bg-slate-50'
+                  }`}
+                >
+                  <ListBulletIcon className="mr-1 h-4 w-4" />
+                  Liste
                 </button>
               </div>
             </div>
 
-            {loading && (
-              <div className="py-8 text-center text-sm text-slate-400">
-                Lade Dokumente …
+            {/* Dropzone */}
+            <div
+              onDragOver={onDragOver}
+              onDragLeave={onDragLeave}
+              onDrop={onDrop}
+              className={`relative flex min-h-[140px] flex-col items-center justify-center overflow-hidden rounded-3xl border-2 border-dashed px-4 py-6 text-center text-sm transition ${
+                dragActive
+                  ? 'border-indigo-300 bg-indigo-50/60'
+                  : 'border-slate-200 bg-white hover:border-slate-300'
+              }`}
+            >
+              <div className="relative z-10 flex flex-col items-center gap-2">
+                <span className="inline-flex h-10 w-10 items-center justify-center rounded-2xl bg-slate-900 text-slate-50 shadow-sm">
+                  <DocumentArrowUpIcon className="h-5 w-5" />
+                </span>
+                <p className="text-sm text-slate-700">
+                  Dateien hierher ziehen{' '}
+                  <span className="text-slate-400">oder</span>
+                </p>
+                <label className="mt-1 inline-flex cursor-pointer items-center rounded-full border border-slate-900/10 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm transition hover:border-slate-900/20 hover:bg-slate-50">
+                  <input
+                    type="file"
+                    multiple
+                    className="hidden"
+                    onChange={handleFileInputChange}
+                    disabled={!activeFolder || uploading}
+                  />
+                  <DocumentArrowUpIcon className="mr-1.5 h-4 w-4" />
+                  Dateien auswählen
+                </label>
+                <p className="mt-1 text-[11px] text-slate-400">
+                  {uploading
+                    ? 'Upload läuft … bitte einen Moment.'
+                    : 'PDF, Bilder, Office-Dokumente – bis zu einigen MB pro Datei.'}
+                </p>
+              </div>
+            </div>
+
+            {/* Fehlermeldung */}
+            {error && (
+              <div className="rounded-2xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
+                {error}
               </div>
             )}
 
-            {!loading && filteredDocuments.length === 0 && (
-              <div className="py-8 text-center text-sm text-slate-400">
-                Keine Dokumente im ausgewählten Filter.
-              </div>
-            )}
+            {/* Dokumentliste */}
+            <div className="rounded-3xl border border-white/70 bg-white/90 p-4 shadow-sm">
+              <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div>
+                  <h2 className="text-sm font-medium text-slate-700">
+                    {activeFolder ? activeFolder.name : 'Dokumente'}
+                  </h2>
+                  <p className="mt-0.5 text-[11px] text-slate-400">
+                    {filteredDocuments.length} Dokument
+                    {filteredDocuments.length === 1 ? '' : 'e'} im
+                    aktuellen Filter
+                  </p>
+                </div>
 
-            {/* GRID-VIEW */}
-            {!loading && filteredDocuments.length > 0 && viewMode === 'grid' && (
-              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                {filteredDocuments.map((doc) => {
-                  const opening = openingDocId === doc.id
-                  return (
-                    <div
-                      key={doc.id}
-                      onClick={() => void handleOpenDocument(doc)}
-                      className="group flex cursor-pointer flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-3 text-xs text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-200 hover:bg-white hover:shadow-md"
-                    >
-                      <div className="mb-2 flex items-start gap-2">
-                        <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900 text-slate-50">
-                          <DocumentArrowUpIcon className="h-4 w-4" />
-                        </div>
-                        <div className="min-w-0">
-                          <div className="truncate text-[13px] font-medium text-slate-800">
-                            {doc.name}
-                          </div>
-                          <div className="mt-0.5 text-[11px] text-slate-400">
-                            {formatDateTime(doc.uploaded_at)}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="flex items-center justify-between text-[11px] text-slate-400">
-                        <span>{opening ? 'Öffne …' : formatSize(doc.size)}</span>
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            void handleDeleteDocument(doc)
-                          }}
-                          className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                        >
-                          <TrashIcon className="h-3 w-3" />
-                          Löschen
-                        </button>
-                      </div>
+                <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:justify-end">
+                  {/* Suchfeld */}
+                  <div className="flex w-full items-center gap-2 rounded-full border border-white/80 bg-white/70 px-2.5 py-1 shadow-sm sm:w-auto">
+                    <MagnifyingGlassIcon className="h-3.5 w-3.5 text-slate-400" />
+                    <input
+                      type="text"
+                      value={searchTerm}
+                      onChange={e =>
+                        setSearchTerm(e.target.value)
+                      }
+                      placeholder="Dateiname suchen…"
+                      className="w-full bg-transparent text-[11px] text-slate-700 outline-none placeholder:text-slate-300 sm:w-40"
+                    />
+                  </div>
+
+                  {/* Zeitraum-Filter */}
+                  <div className="flex w-full flex-col gap-1 rounded-2xl border border-slate-200 bg-slate-50 px-2.5 py-1.5 text-[11px] text-slate-500 shadow-sm sm:w-auto sm:flex-row sm:items-center">
+                    <span className="text-slate-400 sm:ml-0.5">
+                      Zeitraum (von – bis)
+                    </span>
+                    <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                      <DateInputWithCalendar
+                        value={dateFrom}
+                        onChange={setDateFrom}
+                      />
+                      <span className="hidden text-slate-300 sm:inline">
+                        –
+                      </span>
+                      <DateInputWithCalendar
+                        value={dateTo}
+                        onChange={setDateTo}
+                      />
                     </div>
-                  )
-                })}
-              </div>
-            )}
-
-            {/* LIST-VIEW */}
-            {!loading && filteredDocuments.length > 0 && viewMode === 'list' && (
-              <div className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/70 text-xs text-slate-600">
-                <div className="grid grid-cols-[minmax(0,3fr)_minmax(0,2fr)_120px] border-b border-slate-100 bg-slate-100/80 px-4 py-2 text-[11px] font-medium text-slate-500">
-                  <div>Datei</div>
-                  <div>Datum</div>
-                  <div className="text-right">Größe</div>
-                </div>
-                <div className="divide-y divide-slate-100">
-                  {filteredDocuments.map((doc) => {
-                    const opening = openingDocId === doc.id
-                    return (
-                      <div
-                        key={doc.id}
-                        onClick={() => void handleOpenDocument(doc)}
-                        className="grid cursor-pointer grid-cols-[minmax(0,3fr)_minmax(0,2fr)_120px] items-center px-4 py-2 hover:bg-white"
+                    {(dateFrom || dateTo) && (
+                      <button
+                        type="button"
+                        onClick={resetDateFilter}
+                        className="mt-1 self-start rounded-full px-2 py-0.5 text-[10px] text-slate-400 hover:bg-slate-100 hover:text-slate-700 sm:mt-0"
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-slate-50">
-                            <DocumentArrowUpIcon className="h-4 w-4" />
-                          </span>
-                          <span className="truncate text-[13px] text-slate-800">
-                            {doc.name}
-                          </span>
-                        </div>
-                        <div className="text-[11px] text-slate-500">
-                          {formatDateTime(doc.uploaded_at)}
-                        </div>
-                        <div className="flex items-center justify-end gap-3">
-                          <span className="text-[11px] text-slate-500">
-                            {opening ? 'Öffne …' : formatSize(doc.size)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.stopPropagation()
-                              void handleDeleteDocument(doc)
-                            }}
-                            className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
-                          >
-                            <TrashIcon className="h-3 w-3" />
-                            Löschen
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
+                        Zurücksetzen
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Export-Button */}
+                  <button
+                    type="button"
+                    onClick={handleExport}
+                    disabled={
+                      !activeFolder ||
+                      !filteredDocuments.length ||
+                      exporting ||
+                      loading
+                    }
+                    className="inline-flex w-full items-center justify-center rounded-full border border-slate-900 bg-slate-900 px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:border-slate-300 disabled:bg-slate-200 disabled:text-slate-500 sm:w-auto"
+                  >
+                    {exporting ? 'Export läuft …' : 'Export als PDF'}
+                  </button>
                 </div>
               </div>
-            )}
-          </div>
-        </section>
+
+              {loading && (
+                <div className="py-8 text-center text-sm text-slate-400">
+                  Lade Dokumente …
+                </div>
+              )}
+
+              {!loading && filteredDocuments.length === 0 && (
+                <div className="py-8 text-center text-sm text-slate-400">
+                  Keine Dokumente im ausgewählten Filter.
+                </div>
+              )}
+
+              {/* GRID-VIEW */}
+              {!loading &&
+                filteredDocuments.length > 0 &&
+                viewMode === 'grid' && (
+                  <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                    {filteredDocuments.map(doc => {
+                      const opening =
+                        openingDocId === doc.id
+                      return (
+                        <div
+                          key={doc.id}
+                          onClick={() =>
+                            void handleOpenDocument(doc)
+                          }
+                          className="group flex cursor-pointer flex-col justify-between rounded-2xl border border-slate-100 bg-slate-50/80 p-3 text-xs text-slate-600 shadow-sm transition hover:-translate-y-0.5 hover:border-slate-200 hover:bg-white hover:shadow-md"
+                        >
+                          <div className="mb-2 flex items-start gap-2">
+                            <div className="mt-0.5 flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-slate-900 text-slate-50">
+                              <DocumentArrowUpIcon className="h-4 w-4" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="truncate text-[13px] font-medium text-slate-800">
+                                {doc.name}
+                              </div>
+                              <div className="mt-0.5 text-[11px] text-slate-400">
+                                {formatDateTime(doc.uploaded_at)}
+                              </div>
+                            </div>
+                          </div>
+                          <div className="flex items-center justify-between text-[11px] text-slate-400">
+                            <span>
+                              {opening
+                                ? 'Öffne …'
+                                : formatSize(doc.size)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={e => {
+                                e.stopPropagation()
+                                void handleDeleteDocument(doc)
+                              }}
+                              className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[11px] text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                            >
+                              <TrashIcon className="h-3 w-3" />
+                              Löschen
+                            </button>
+                          </div>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+              {/* LIST-VIEW */}
+              {!loading &&
+                filteredDocuments.length > 0 &&
+                viewMode === 'list' && (
+                  <div className="overflow-hidden rounded-2xl border border-slate-100 bg-slate-50/70 text-xs text-slate-600">
+                    {/* Header nur ab sm anzeigen */}
+                    <div className="hidden grid-cols-[minmax(0,3fr)_minmax(0,2fr)_120px] border-b border-slate-100 bg-slate-100/80 px-4 py-2 text-[11px] font-medium text-slate-500 sm:grid">
+                      <div>Datei</div>
+                      <div>Datum</div>
+                      <div className="text-right">Größe</div>
+                    </div>
+                    <div className="divide-y divide-slate-100">
+                      {filteredDocuments.map(doc => {
+                        const opening =
+                          openingDocId === doc.id
+                        return (
+                          <div
+                            key={doc.id}
+                            onClick={() =>
+                              void handleOpenDocument(doc)
+                            }
+                            className="flex flex-col gap-1 px-3 py-2 hover:bg-white sm:grid sm:grid-cols-[minmax(0,3fr)_minmax(0,2fr)_120px] sm:items-center sm:gap-0 sm:px-4"
+                          >
+                            <div className="flex items-center gap-2">
+                              <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-slate-900 text-slate-50">
+                                <DocumentArrowUpIcon className="h-4 w-4" />
+                              </span>
+                              <span className="truncate text-[13px] text-slate-800">
+                                {doc.name}
+                              </span>
+                            </div>
+                            <div className="text-[11px] text-slate-500 sm:text-left">
+                              {formatDateTime(doc.uploaded_at)}
+                            </div>
+                            <div className="flex items-center justify-between gap-3 sm:justify-end">
+                              <span className="text-[11px] text-slate-500">
+                                {opening
+                                  ? 'Öffne …'
+                                  : formatSize(doc.size)}
+                              </span>
+                              <button
+                                type="button"
+                                onClick={e => {
+                                  e.stopPropagation()
+                                  void handleDeleteDocument(doc)
+                                }}
+                                className="inline-flex items-center gap-1 rounded-full px-2 py-1 text-[10px] text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                              >
+                                <TrashIcon className="h-3 w-3" />
+                                Löschen
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+            </div>
+          </section>
+        </div>
       </div>
     </div>
   )

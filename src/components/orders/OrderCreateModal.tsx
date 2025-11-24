@@ -3,6 +3,7 @@
 
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 
 function cls(...arr: Array<string | false | null | undefined>) {
   return arr.filter(Boolean).join(' ')
@@ -28,17 +29,13 @@ export default function OrderCreateModal({
   const [title, setTitle] = React.useState('')
   const [net, setNet] = React.useState<number | ''>('')
   const [tax, setTax] = React.useState<number | ''>(19)
-  const [discountType, setDiscountType] =
-    React.useState<DiscountType>('percent')
-  const [discountLabel, setDiscountLabel] =
-    React.useState('Rabatt')
-  const [discountValue, setDiscountValue] =
-    React.useState<number | ''>(0)
+  const [discountType, setDiscountType] = React.useState<DiscountType>('percent')
+  const [discountLabel, setDiscountLabel] = React.useState('Rabatt')
+  const [discountValue, setDiscountValue] = React.useState<number | ''>(0)
   const [files, setFiles] = React.useState<File[]>([])
   const [busy, setBusy] = React.useState(false)
   const [error, setError] = React.useState<string | null>(null)
-  const [grossPreview, setGrossPreview] =
-    React.useState<number>(0)
+  const [grossPreview, setGrossPreview] = React.useState<number>(0)
 
   // ESC + Scroll Lock
   React.useEffect(() => {
@@ -61,16 +58,12 @@ export default function OrderCreateModal({
     const t = Number(tax || 0)
     const dv = Number(discountValue || 0)
     const after =
-      discountType === 'percent'
-        ? Math.max(0, n * (1 - dv / 100))
-        : Math.max(0, n - dv)
+      discountType === 'percent' ? Math.max(0, n * (1 - dv / 100)) : Math.max(0, n - dv)
     const gross = after + after * (t / 100)
     setGrossPreview(Math.round(gross * 100) / 100)
   }, [net, tax, discountType, discountValue])
 
-  const onFilePick = (
-    e: React.ChangeEvent<HTMLInputElement>,
-  ) => {
+  const onFilePick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = Array.from(e.target.files || [])
     setFiles(prev => [...prev, ...f])
     e.currentTarget.value = ''
@@ -82,13 +75,7 @@ export default function OrderCreateModal({
 
   const submit = async () => {
     setError(null)
-    if (
-      !title.trim() ||
-      net === '' ||
-      tax === '' ||
-      !discountLabel.trim() ||
-      files.length === 0
-    ) {
+    if (!title.trim() || net === '' || tax === '' || !discountLabel.trim() || files.length === 0) {
       setError('Bitte alle Pflichtfelder ausfüllen.')
       return
     }
@@ -106,17 +93,13 @@ export default function OrderCreateModal({
       fd.set('discount_label', discountLabel.trim())
       files.forEach(f => fd.append('files[]', f))
 
-      const res = await fetch(
-        '/api/partners/orders/create',
-        {
-          method: 'POST',
-          body: fd,
-          credentials: 'include',
-        },
-      )
+      const res = await fetch('/api/partners/orders/create', {
+        method: 'POST',
+        body: fd,
+        credentials: 'include',
+      })
       const j = await res.json().catch(() => ({}))
-      if (!res.ok || !j.ok)
-        throw new Error(j?.error || res.statusText)
+      if (!res.ok || !j.ok) throw new Error(j?.error || res.statusText)
 
       // DocumentCloud refresh
       window.dispatchEvent(
@@ -137,7 +120,7 @@ export default function OrderCreateModal({
   if (!open) return null
 
   const node = (
-    <div className="fixed inset-0 z-[100000] flex items-start justify-center p-4">
+    <div className="fixed inset-0 z-[100000] flex items-start justify-center p-3 sm:p-4">
       {/* Overlay */}
       <div
         className="absolute inset-0 bg-slate-900/20 backdrop-blur-xl"
@@ -146,28 +129,28 @@ export default function OrderCreateModal({
 
       {/* Card */}
       <div
-        className="relative z-10 mt-8 w-full max-w-3xl max-h-[92vh] overflow-y-auto
-                   rounded-3xl border border-white/60 bg-white/80 backdrop-blur-xl p-6
+        className="relative z-10 mt-6 sm:mt-10 w-full max-w-3xl max-h-[92vh] overflow-y-auto
+                   rounded-3xl border border-white/60 bg-white/80 backdrop-blur-xl p-4 sm:p-6
                    shadow-[0_10px_34px_rgba(2,6,23,0.12)] ring-1 ring-white/60"
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-medium text-slate-900">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <h3 className="text-sm sm:text-lg font-medium text-slate-900 truncate">
               Auftrag anlegen
             </h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Titel, Nettosumme, MwSt., Rabatt festlegen.
-              Mindestens eine Auftrags-Datei hochladen.
+            <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
+              Titel, Nettosumme, MwSt., Rabatt festlegen. Mindestens eine Auftrags-Datei hochladen.
             </p>
           </div>
           <button
             type="button"
             onClick={() => !busy && onClose()}
-            className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm disabled:opacity-60"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/90 text-slate-500 hover:text-slate-700 hover:bg-white shadow-sm disabled:opacity-60"
             disabled={busy}
+            aria-label="Schließen"
           >
-            Schließen
+            <XMarkIcon className="h-4 w-4" />
           </button>
         </div>
 
@@ -175,9 +158,7 @@ export default function OrderCreateModal({
         <div className="mt-4 grid grid-cols-1 gap-3">
           {/* Titel */}
           <label className="text-sm">
-            <span className="mb-1 block text-xs text-slate-600">
-              Überschrift*
-            </span>
+            <span className="mb-1 block text-xs text-slate-600">Überschrift*</span>
             <input
               className="w-full rounded-xl border border-white/60 bg-white/90 px-3 py-2 text-sm outline-none
                          focus:ring-2 focus:ring-indigo-100"
@@ -190,9 +171,7 @@ export default function OrderCreateModal({
           {/* Netto / MwSt / Brutto */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="text-sm">
-              <span className="mb-1 block text-xs text-slate-600">
-                Netto-Summe (€)*
-              </span>
+              <span className="mb-1 block text-xs text-slate-600">Netto-Summe (€)*</span>
               <input
                 type="number"
                 min={0}
@@ -201,18 +180,12 @@ export default function OrderCreateModal({
                            focus:ring-2 focus:ring-indigo-100"
                 value={net}
                 onChange={e =>
-                  setNet(
-                    e.target.value === ''
-                      ? ''
-                      : Number(e.target.value),
-                  )
+                  setNet(e.target.value === '' ? '' : Number(e.target.value))
                 }
               />
             </label>
             <label className="text-sm">
-              <span className="mb-1 block text-xs text-slate-600">
-                MwSt (%)*
-              </span>
+              <span className="mb-1 block text-xs text-slate-600">MwSt (%)*</span>
               <input
                 type="number"
                 min={0}
@@ -222,19 +195,13 @@ export default function OrderCreateModal({
                            focus:ring-2 focus:ring-indigo-100"
                 value={tax}
                 onChange={e =>
-                  setTax(
-                    e.target.value === ''
-                      ? ''
-                      : Number(e.target.value),
-                  )
+                  setTax(e.target.value === '' ? '' : Number(e.target.value))
                 }
                 placeholder="0, 7, 19 oder individuell"
               />
             </label>
             <div className="text-sm">
-              <span className="mb-1 block text-xs text-slate-600">
-                Brutto (Vorschau)
-              </span>
+              <span className="mb-1 block text-xs text-slate-600">Brutto (Vorschau)</span>
               <div className="rounded-xl border border-white/60 bg-white/70 px-3 py-2 text-sm">
                 {grossPreview.toFixed(2)} €
               </div>
@@ -244,27 +211,19 @@ export default function OrderCreateModal({
           {/* Rabatt */}
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <label className="text-sm">
-              <span className="mb-1 block text-xs text-slate-600">
-                Rabatt-Typ*
-              </span>
+              <span className="mb-1 block text-xs text-slate-600">Rabatt-Typ*</span>
               <select
                 className="w-full rounded-xl border border-white/60 bg-white/90 px-3 py-2 text-sm outline-none
                            focus:ring-2 focus:ring-indigo-100"
                 value={discountType}
-                onChange={e =>
-                  setDiscountType(
-                    e.target.value as DiscountType,
-                  )
-                }
+                onChange={e => setDiscountType(e.target.value as DiscountType)}
               >
                 <option value="percent">% Prozent</option>
                 <option value="fixed">€ Fix</option>
               </select>
             </label>
             <label className="text-sm">
-              <span className="mb-1 block text-xs text-slate-600">
-                Rabatt-Wert*
-              </span>
+              <span className="mb-1 block text-xs text-slate-600">Rabatt-Wert*</span>
               <input
                 type="number"
                 min={0}
@@ -273,25 +232,17 @@ export default function OrderCreateModal({
                            focus:ring-2 focus:ring-indigo-100"
                 value={discountValue}
                 onChange={e =>
-                  setDiscountValue(
-                    e.target.value === ''
-                      ? ''
-                      : Number(e.target.value),
-                  )
+                  setDiscountValue(e.target.value === '' ? '' : Number(e.target.value))
                 }
               />
             </label>
             <label className="text-sm">
-              <span className="mb-1 block text-xs text-slate-600">
-                Rabatt-Bezeichnung*
-              </span>
+              <span className="mb-1 block text-xs text-slate-600">Rabatt-Bezeichnung*</span>
               <input
                 className="w-full rounded-xl border border-white/60 bg-white/90 px-3 py-2 text-sm outline-none
                            focus:ring-2 focus:ring-indigo-100"
                 value={discountLabel}
-                onChange={e =>
-                  setDiscountLabel(e.target.value)
-                }
+                onChange={e => setDiscountLabel(e.target.value)}
                 placeholder="z. B. Neukunden-Rabatt"
               />
             </label>
@@ -322,15 +273,11 @@ export default function OrderCreateModal({
                     key={f.name}
                     className="flex items-center justify-between gap-2"
                   >
-                    <span className="truncate">
-                      {f.name}
-                    </span>
+                    <span className="truncate">{f.name}</span>
                     <button
                       className="text-slate-500 hover:underline"
                       type="button"
-                      onClick={() =>
-                        removeFile(f.name)
-                      }
+                      onClick={() => removeFile(f.name)}
                     >
                       entfernen
                     </button>
@@ -340,19 +287,15 @@ export default function OrderCreateModal({
             )}
           </div>
 
-          {error && (
-            <div className="text-xs text-rose-600">
-              {error}
-            </div>
-          )}
+          {error && <div className="text-xs text-rose-600">{error}</div>}
 
           {/* Actions */}
-          <div className="mt-3 flex items-center justify-end gap-2">
+          <div className="mt-3 flex flex-col-reverse sm:flex-row sm:justify-end items-stretch sm:items-center gap-2 sm:gap-3">
             <button
               type="button"
               disabled={busy}
               onClick={() => !busy && onClose()}
-              className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm disabled:opacity-60"
+              className="w-full sm:w-auto rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm disabled:opacity-60"
             >
               Abbrechen
             </button>
@@ -368,14 +311,12 @@ export default function OrderCreateModal({
               }
               onClick={submit}
               className={cls(
-                'rounded-xl px-3 py-1.5 text-sm text-white',
+                'w-full sm:w-auto rounded-xl px-3 py-1.5 text-sm text-white',
                 'bg-slate-900 hover:opacity-90',
                 busy && 'opacity-60 cursor-wait',
               )}
             >
-              {busy
-                ? 'Speichere…'
-                : 'Auftrag erstellen'}
+              {busy ? 'Speichere…' : 'Auftrag erstellen'}
             </button>
           </div>
         </div>
@@ -383,7 +324,5 @@ export default function OrderCreateModal({
     </div>
   )
 
-  return typeof document !== 'undefined'
-    ? createPortal(node, document.body)
-    : node
+  return typeof document !== 'undefined' ? createPortal(node, document.body) : node
 }

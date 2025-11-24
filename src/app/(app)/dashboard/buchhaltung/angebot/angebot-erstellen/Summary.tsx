@@ -2,13 +2,33 @@
 'use client'
 
 import React, { useEffect, useMemo, useRef, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { useAngebot } from './AngebotContext'
 
+// Gleiche Logik wie bei den Toggles / Einstellungen
+function labelFromTemplateName(fileName: string | null): string {
+  if (!fileName) return 'Keine Auswahl'
+  const n = fileName.toLowerCase()
+
+  if (/(weiss|weiß|white)/.test(n)) return 'Standard'
+  if (/beige/.test(n)) return 'Beige'
+  if (/clean/.test(n)) return 'Clean'
+  if (/modern/.test(n)) return 'Modern'
+  if (/kompakt/.test(n)) return 'Kompakt'
+  if (/premium/.test(n)) return 'Premium'
+  if (/klassisch/.test(n)) return 'Klassisch'
+
+  // Fallback: Dateiname ohne .pdf
+  return fileName.replace(/\.pdf$/i, '')
+}
+
 export default function Summary({ onBack }: { onBack: () => void }) {
+  const router = useRouter()
+
   const {
     selectedCustomer,
-    offerId,          // 👈 aus dem Context holen
-    offerNumber,      // kommt aus /api/next-offer-number (UI) oder aus Edit-Flow
+    offerId,
+    offerNumber,
     date,
     validUntil,
     title,
@@ -22,7 +42,7 @@ export default function Summary({ onBack }: { onBack: () => void }) {
   // ------- Anzeige-/Dateiname (stabil memoisieren) -------
   const displayName = useMemo(() => {
     const first = (selectedCustomer?.first_name ?? '').trim()
-    const last  = (selectedCustomer?.last_name ?? '').trim()
+    const last = (selectedCustomer?.last_name ?? '').trim()
     const company = (selectedCustomer?.company as string | undefined)?.trim() ?? ''
     return company || `${first} ${last}`.trim()
   }, [selectedCustomer?.first_name, selectedCustomer?.last_name, selectedCustomer?.company])
@@ -31,12 +51,22 @@ export default function Summary({ onBack }: { onBack: () => void }) {
     (s || '').replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_+|_+$/g, '')
 
   const fallbackFilename = useMemo(() => {
-    return [
-      safe(displayName),
-      offerNumber || '',
-      safe(selectedCustomer?.customer_number || ''),
-    ].filter(Boolean).join('_') + '.pdf'
+    return (
+      [
+        safe(displayName),
+        offerNumber || '',
+        safe(selectedCustomer?.customer_number || ''),
+      ]
+        .filter(Boolean)
+        .join('_') + '.pdf'
+    )
   }, [displayName, offerNumber, selectedCustomer?.customer_number])
+
+  // Menschlich lesbares Vorlagen-Label
+  const templateLabel = useMemo(
+    () => labelFromTemplateName(billingSettings?.template ?? null),
+    [billingSettings?.template]
+  )
 
   // ------- STABILE Abhängigkeit für den Fetch bauen -------
   const previewKey = useMemo(() => {
@@ -49,7 +79,7 @@ export default function Summary({ onBack }: { onBack: () => void }) {
       custNo: selectedCustomer?.customer_number ?? '',
       // Meta
       offerNumber: offerNumber ?? '',
-      offerId: offerId ?? null,           // 👈 stabil mitserialisieren
+      offerId: offerId ?? null,
       date: date ?? '',
       validUntil: validUntil ?? '',
       title: title ?? '',
@@ -62,7 +92,7 @@ export default function Summary({ onBack }: { onBack: () => void }) {
         description: p.description ?? '',
         quantity: Number(p.quantity ?? 0),
         unitPrice: Number(p.unitPrice ?? 0),
-        unit: p.unit ?? ''
+        unit: p.unit ?? '',
       })),
       discount: {
         enabled: !!discount?.enabled,
@@ -96,12 +126,12 @@ export default function Summary({ onBack }: { onBack: () => void }) {
   const [loading, setLoading] = useState<boolean>(false)
   const lastUrlRef = useRef<string | null>(null)
 
-  // ------- Preview abrufen: triggert NUR wenn previewKey sich ändert -------
+  // ------- Preview abrufen -------
   useEffect(() => {
     let aborted = false
 
     async function fetchPdf() {
-      // Hard Guard: keine Anfrage ohne Kunde oder (für saubere Nummern) ohne offerNumber
+      // Guard: keine Anfrage ohne Kunde oder ohne offerNumber
       if (!selectedCustomer || !offerNumber) {
         setPdfUrl(null)
         setServerFilename(null)
@@ -117,13 +147,13 @@ export default function Summary({ onBack }: { onBack: () => void }) {
           meta: {
             title: title ?? '',
             intro: intro ?? '',
-            commit: false,                 // Preview
+            commit: false, // Preview
             date: date ?? '',
             validUntil: validUntil ?? '',
             taxRate: Number(taxRate ?? 0),
             billingSettings: { template: billingSettings?.template ?? '' },
-            offerNumber: offerNumber,      // ⬅︎ exakt die UI-/DB-Nummer mitschicken
-            offerId: offerId || undefined, // ⬅︎ WICHTIG: ID mitschicken, damit Server Update erkennt
+            offerNumber: offerNumber,
+            offerId: offerId || undefined,
             discount: {
               enabled: !!discount?.enabled,
               label: discount?.label ?? 'Rabatt',
@@ -141,7 +171,6 @@ export default function Summary({ onBack }: { onBack: () => void }) {
         })
 
         if (!res.ok) {
-          // Bei Fehler Preview leeren, aber UI nicht blockieren
           console.error('Fehler beim Generieren des PDFs:', await res.text())
           if (!aborted) {
             setPdfUrl(null)
@@ -151,8 +180,13 @@ export default function Summary({ onBack }: { onBack: () => void }) {
         }
 
         const cd = res.headers.get('Content-Disposition') || ''
-        let fnMatch = cd.match(/filename\*?=(?:UTF-8'')?"?([^"]+)"?/i)?.[1] ?? null
-        if (fnMatch) { try { fnMatch = decodeURIComponent(fnMatch) } catch {} }
+        let fnMatch =
+          cd.match(/filename\*?=(?:UTF-8'')?"?([^"]+)"?/i)?.[1] ?? null
+        if (fnMatch) {
+          try {
+            fnMatch = decodeURIComponent(fnMatch)
+          } catch {}
+        }
 
         const blob = await res.blob()
         const objUrl = URL.createObjectURL(blob)
@@ -170,8 +204,10 @@ export default function Summary({ onBack }: { onBack: () => void }) {
     }
 
     fetchPdf()
-    return () => { aborted = true }
-  }, [previewKey, selectedCustomer, offerNumber]) // <-- EIN stabiler Schlüssel statt zig Abhängigkeiten
+    return () => {
+      aborted = true
+    }
+  }, [previewKey, selectedCustomer, offerNumber])
 
   // URL aufräumen beim Unmount
   useEffect(() => {
@@ -203,20 +239,31 @@ export default function Summary({ onBack }: { onBack: () => void }) {
         >
           ← Zurück
         </button>
+
+        {/* NEU: Direkt zur Angebots-Übersicht */}
+        <button
+          onClick={() => router.push('/dashboard/buchhaltung/angebot')}
+          className="inline-flex items-center rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-800 hover:bg-gray-50"
+        >
+          Zur Übersicht
+        </button>
       </div>
 
       <div className="overflow-hidden rounded-xl border border-gray-200 bg-white shadow-sm">
         <div className="border-b border-gray-100 px-4 py-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-sm text-gray-500">Vorschau für</p>
-              <h3 className="text-base font-semibold text-gray-900">
+              <p className="text-xs sm:text-sm text-gray-500">Vorschau für</p>
+              <h3 className="text-sm sm:text-base font-semibold text-gray-900">
                 {offerNumber || '—'} <span className="text-gray-400">•</span>{' '}
                 <span className="text-gray-700">{displayName}</span>
               </h3>
               {serverFilename && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Dateiname: <span className="font-medium text-gray-700">{serverFilename}</span>
+                <p className="mt-1 text-xs text-gray-500">
+                  Dateiname:{' '}
+                  <span className="font-medium text-gray-700">
+                    {serverFilename}
+                  </span>
                 </p>
               )}
             </div>
@@ -225,7 +272,7 @@ export default function Summary({ onBack }: { onBack: () => void }) {
               {!loading && pdfUrl && (
                 <button
                   onClick={handleDownload}
-                  className="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                  className="inline-flex items-center rounded-lg bg-emerald-600 px-3 py-2 text-xs sm:text-sm font-medium text-white hover:bg-emerald-700"
                 >
                   Herunterladen
                 </button>
@@ -237,15 +284,15 @@ export default function Summary({ onBack }: { onBack: () => void }) {
         <div className="p-4">
           {loading ? (
             <div className="space-y-3">
-              <div className="h-4 w-48 animate-pulse rounded bg-gray-200" />
-              <div className="h-4 w-64 animate-pulse rounded bg-gray-200" />
-              <div className="h-[800px] w-full animate-pulse rounded border border-dashed border-gray-200 bg-gray-50" />
+              <div className="h-4 w-40 animate-pulse rounded bg-gray-200" />
+              <div className="h-4 w-56 animate-pulse rounded bg-gray-200" />
+              <div className="h-[480px] w-full animate-pulse rounded border border-dashed border-gray-200 bg-gray-50 sm:h-[640px] lg:h-[900px]" />
             </div>
           ) : pdfUrl ? (
             <div className="rounded-lg border border-gray-200">
               <iframe
                 src={pdfUrl}
-                className="h-[800px] w-full"
+                className="h-[480px] w-full sm:h-[640px] lg:h-[900px]"
                 title="Angebot PDF Vorschau"
               />
             </div>
@@ -276,7 +323,13 @@ export default function Summary({ onBack }: { onBack: () => void }) {
           <div>
             <div className="text-gray-500">Vorlage</div>
             <div className="font-medium text-gray-900">
-              {billingSettings?.template || '—'}
+              {/* Lesbares Label + optional technischer Dateiname */}
+              {templateLabel}
+              {billingSettings?.template && (
+                <span className="ml-2 text-xs text-gray-400 break-all">
+                  ({billingSettings.template})
+                </span>
+              )}
             </div>
           </div>
         </div>

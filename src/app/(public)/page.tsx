@@ -160,110 +160,89 @@ function JsonLd() {
 
 /* ---------------------- Lead Flow Animation ------------------------------- */
 function LeadFlowAnimation() {
-  const dots = Array.from({ length: 8 })
-
   return (
     <div className="mt-10">
       <div className="lf-wrapper">
         {/* Quellen */}
-        <div className="lf-sources">
-          <div className="lf-node lf-source lf-market">
-            <span className="lf-dot-indicator" />
+        <div className="lf-sources-row">
+          <div className="lf-chip">
+            <span className="lf-chip-dot" />
             <span>Marktplatz-Leads</span>
           </div>
-          <div className="lf-node lf-source lf-website">
-            <span className="lf-dot-indicator" />
+          <div className="lf-chip">
+            <span className="lf-chip-dot" />
             <span>Website-Leads</span>
           </div>
-          <div className="lf-node lf-source lf-offline">
-            <span className="lf-dot-indicator" />
+          <div className="lf-chip">
+            <span className="lf-chip-dot" />
             <span>Offline-Leads</span>
           </div>
         </div>
 
+        {/* Verbindung / animierter Punkt */}
+        <div className="lf-line-wrap" aria-hidden="true">
+          <div className="lf-line">
+            <span className="lf-line-dot" />
+          </div>
+        </div>
+
         {/* Zentrum */}
-        <div className="lf-node lf-center">
+        <div className="lf-center-card">
           <div className="lf-center-top">ALLE KANÄLE</div>
           <div className="lf-center-main">Dein Unternehmen</div>
           <div className="lf-center-sub">gebündelt in GLENO</div>
+          <p className="lf-center-copy">
+            Egal ob Marktplatz, Website oder offline – alle Leads laufen in
+            denselben CRM-Flow in GLENO.
+          </p>
         </div>
-
-        {/* Animierte Punkte (nur Desktop sichtbar) */}
-        {dots.map((_, i) => (
-          <span
-            key={`m-${i}`}
-            className="lf-float lf-from-market"
-            style={{ animationDelay: `${i * 0.35}s` }}
-          />
-        ))}
-        {dots.map((_, i) => (
-          <span
-            key={`w-${i}`}
-            className="lf-float lf-from-website"
-            style={{ animationDelay: `${0.18 + i * 0.35}s` }}
-          />
-        ))}
-        {dots.map((_, i) => (
-          <span
-            key={`o-${i}`}
-            className="lf-float lf-from-offline"
-            style={{ animationDelay: `${0.28 + i * 0.35}s` }}
-          />
-        ))}
       </div>
 
       <style>{`
-        /* Base: Mobile-First (clean, keine Überschneidungen) */
         .lf-wrapper {
           position: relative;
           margin: 0 auto;
-          margin-top: 12px;
-          max-width: 420px;
-          padding: 32px 18px 26px;
-          border-radius: 26px;
+          max-width: 440px;
+          padding: 24px 18px 22px;
+          border-radius: 22px;
           background:
-            radial-gradient(circle at top, rgba(15,23,42,0.96), rgba(2,6,23,1));
+            radial-gradient(circle at top, rgba(15,23,42,0.9), rgba(2,6,23,1));
           box-shadow:
             0 18px 60px rgba(15,23,42,0.75),
-            0 0 40px rgba(15,23,42,0.7);
-          border: 1px solid rgba(148,163,253,0.22);
+            0 0 35px rgba(15,23,42,0.7);
+          border: 1px solid rgba(148,163,253,0.25);
           overflow: hidden;
-          backdrop-filter: blur(20px);
+          backdrop-filter: blur(18px);
           display: flex;
           flex-direction: column;
           align-items: center;
-          gap: 18px;
+          gap: 14px;
         }
 
-        .lf-sources {
+        .lf-sources-row {
           display: flex;
           flex-wrap: wrap;
           justify-content: center;
           gap: 8px;
           width: 100%;
-          z-index: 3;
         }
 
-        .lf-node {
+        .lf-chip {
           display: inline-flex;
           align-items: center;
           gap: 7px;
-          padding: 8px 14px;
+          padding: 7px 14px;
           border-radius: 999px;
           font-size: 10px;
           font-weight: 500;
           white-space: nowrap;
-          z-index: 2;
-        }
-
-        .lf-source {
-          background: rgba(1,6,18,0.98);
+          background: rgba(2,6,23,0.98);
           color: rgba(248,250,252,0.98);
           border: 1px solid rgba(148,163,253,0.35);
           backdrop-filter: blur(14px);
         }
 
-        .lf-dot-indicator {
+        .lf-chip-dot {
           width: 7px;
           height: 7px;
           border-radius: 999px;
@@ -271,21 +250,60 @@ function LeadFlowAnimation() {
           box-shadow: 0 0 14px rgba(56,189,248,0.95);
         }
 
-        .lf-center {
-          position: relative;
-          flex-direction: column;
+        .lf-line-wrap {
+          margin-top: 4px;
+          height: 56px;
+          display: flex;
+          justify-content: center;
           align-items: flex-start;
-          padding: 12px 16px 10px;
+        }
+
+        .lf-line {
+          position: relative;
+          width: 1.5px;
+          height: 48px;
+          border-radius: 999px;
+          background: linear-gradient(
+            to bottom,
+            rgba(148,163,253,0.0),
+            rgba(148,163,253,0.4),
+            rgba(56,189,248,0.8)
+          );
+          overflow: visible;
+        }
+
+        .lf-line-dot {
+          position: absolute;
+          left: 50%;
+          width: 8px;
+          height: 8px;
+          border-radius: 999px;
+          background: #38bdf8;
+          box-shadow: 0 0 16px rgba(56,189,248,0.9);
+          transform: translateX(-50%);
+          animation: lf-dot-move 1.8s infinite ease-in-out;
+        }
+
+        @keyframes lf-dot-move {
+          0%   { transform: translate(-50%, -4px); opacity: 0; }
+          15%  { opacity: 1; }
+          80%  { transform: translate(-50%, 40px); opacity: 1; }
+          100% { transform: translate(-50%, 40px); opacity: 0; }
+        }
+
+        .lf-center-card {
+          width: 100%;
+          margin-top: 6px;
+          padding: 14px 16px 12px;
           border-radius: 18px;
           background:
-            radial-gradient(circle at top, rgba(56,189,248,0.18), transparent),
+            radial-gradient(circle at top, rgba(56,189,248,0.16), transparent),
             rgba(2,6,23,0.98);
           color: #e5e7eb;
-          border: 1px solid rgba(148,163,253,0.36);
+          border: 1px solid rgba(148,163,253,0.4);
           box-shadow:
             0 16px 40px rgba(15,23,42,0.95),
             0 0 22px rgba(56,189,248,0.25);
-          margin-top: 4px;
         }
 
         .lf-center-top {
@@ -293,122 +311,54 @@ function LeadFlowAnimation() {
           text-transform: uppercase;
           letter-spacing: 0.16em;
           color: rgba(148,163,253,0.95);
+          margin-bottom: 2px;
         }
         .lf-center-main {
-          font-size: 13px;
+          font-size: 14px;
           font-weight: 600;
           color: #f9fafb;
         }
         .lf-center-sub {
-          font-size: 8px;
+          font-size: 9px;
           color: rgba(156,163,175,1);
+          margin-top: 2px;
+        }
+        .lf-center-copy {
+          margin-top: 8px;
+          font-size: 9px;
+          line-height: 1.4;
+          color: rgba(156,163,175,0.95);
         }
 
-        .lf-float {
-          display: none; /* Mobile: keine Animation */
-        }
-
-        /* Desktop-Layout: Pills oben verteilt + Animation */
-        @media (min-width: 768px) {
+        /* Leicht skalieren auf größeren Screens – gleiche Struktur wie Handy */
+        @media (min-width: 640px) {
           .lf-wrapper {
-            max-width: 820px;
-            height: 340px;
-            padding: 72px 80px 72px;
-            border-radius: 999px;
-            background:
-              radial-gradient(circle at top, rgba(56,189,248,0.14), transparent),
-              radial-gradient(circle at bottom, rgba(15,23,42,0.98), rgba(2,6,23,1));
-            box-shadow:
-              0 35px 110px rgba(15,23,42,0.70),
-              0 0 70px rgba(56,189,248,0.12);
-            display: block;
+            max-width: 520px;
+            padding: 26px 22px 24px;
+            border-radius: 24px;
           }
+          .lf-center-main {
+            font-size: 16px;
+          }
+          .lf-center-copy {
+            font-size: 10px;
+          }
+        }
 
-          .lf-sources {
-            position: static;
-            display: block;
+        @media (min-width: 1024px) {
+          .lf-wrapper {
+            max-width: 600px;
+            border-radius: 26px;
           }
-
-          .lf-source {
-            position: absolute;
-          }
-
-          .lf-market {
-            top: 40px;
-            left: 80px;
-          }
-          .lf-website {
-            top: 32px;
-            left: 50%;
-            transform: translateX(-50%);
-          }
-          .lf-offline {
-            top: 40px;
-            right: 80px;
-          }
-
-          .lf-center {
-            position: absolute;
-            left: 50%;
-            bottom: 70px;
-            transform: translateX(-50%);
-            margin-top: 0;
-          }
-
-          .lf-float {
-            display: block;
-            position: absolute;
-            width: 5px;
-            height: 5px;
-            border-radius: 999px;
-            background: #38bdf8;
-            box-shadow: 0 0 12px rgba(56,189,248,0.9);
-            opacity: 0;
-          }
-
-          .lf-from-market {
-            top: 110px;
-            left: 104px;
-            animation: lf-move-market 3.2s infinite ease-in-out;
-          }
-          .lf-from-website {
-            top: 100px;
-            left: 50%;
-            transform: translateX(-50%);
-            animation: lf-move-website 3.0s infinite ease-in-out;
-          }
-          .lf-from-offline {
-            top: 110px;
-            right: 104px;
-            animation: lf-move-offline 3.4s infinite ease-in-out;
-          }
-
-          @keyframes lf-move-market {
-            0%   { opacity: 0; transform: translate(0,0); }
-            12%  { opacity: 1; }
-            68%  { opacity: 1; transform: translate(260px,120px); }
-            100% { opacity: 0; transform: translate(260px,120px); }
-          }
-
-          @keyframes lf-move-website {
-            0%   { opacity: 0; transform: translate(-50%,0); }
-            14%  { opacity: 1; }
-            70%  { opacity: 1; transform: translate(-50%,110px); }
-            100% { opacity: 0; transform: translate(-50%,110px); }
-          }
-
-          @keyframes lf-move-offline {
-            0%   { opacity: 0; transform: translate(0,0); }
-            12%  { opacity: 1; }
-            68%  { opacity: 1; transform: translate(-260px,120px); }
-            100% { opacity: 0; transform: translate(-260px,120px); }
+          .lf-sources-row {
+            gap: 12px;
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .lf-float {
+          .lf-line-dot {
             animation: none !important;
-            opacity: 0.2;
+            opacity: 0.6;
           }
         }
       `}</style>
@@ -844,7 +794,7 @@ export default function HomePage() {
                   className="inline-flex w-full items-center justify-center rounded-2xl px-6 py-3 text-sm font-semibold text-white shadow-sm hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 sm:w-auto"
                   style={{ backgroundColor: ACCENT }}
                 >
-                  Jetzt Zugang sichern
+                  Zugang sichern
                 </Link>
               </div>
             </div>

@@ -1,4 +1,4 @@
-// src/app/(app)/dashboard/buchhaltung/rechnung-erstellen/OfferWizard.tsx
+// src/app/(app)/dashboard/buchhaltung/rechnung/rechnung-erstellen/InvoiceWizard.tsx
 'use client'
 
 import React, { useState, useEffect } from 'react'
@@ -56,7 +56,8 @@ export default function InvoiceWizard({
       initialData={initialData}
       isEdit={isEdit}
     >
-      <div className="mx-auto max-w-4xl space-y-6 p-6">
+      {/* >>> HIER die Breite/Abstände wie beim Angebot <<< */}
+      <div className="mx-auto w-full max-w-5xl space-y-6 px-4 py-6 sm:px-6 lg:px-8">
         <Inner />
       </div>
     </RechnungProvider>

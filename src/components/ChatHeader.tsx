@@ -168,7 +168,9 @@ export default function ChatHeader({
         if (!cancelled) setMe({ id: null, role: 'unknown' })
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [sb])
 
   /* Conversation + Joins */
@@ -253,7 +255,9 @@ export default function ChatHeader({
       })
       setLoading(false)
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [sb, requestId])
 
   /* PD presence */
@@ -267,7 +271,9 @@ export default function ChatHeader({
         .maybeSingle()
       if (!cancelled) setPdPresent(!!data?.id)
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [sb, requestId])
 
   React.useEffect(() => {
@@ -312,13 +318,13 @@ export default function ChatHeader({
         .limit(1)
       if (!cancelled) {
         setAppointmentId(
-          !error && data && data.length > 0
-            ? String(data[0].id)
-            : null,
+          !error && data && data.length > 0 ? String(data[0].id) : null,
         )
       }
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [sb, requestId])
 
   React.useEffect(() => {
@@ -369,16 +375,16 @@ export default function ChatHeader({
 
       if (cancelled) return
 
-      setOrderId(
-        latest && latest[0] ? String(latest[0].id) : null,
-      )
+      setOrderId(latest && latest[0] ? String(latest[0].id) : null)
       setActiveOrderId(
         latestActive && latestActive[0]
           ? String(latestActive[0].id)
           : null,
       )
     })()
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+    }
   }, [sb, requestId])
 
   React.useEffect(() => {
@@ -407,9 +413,7 @@ export default function ChatHeader({
           .order('created_at', { ascending: false })
           .limit(1)
 
-        setOrderId(
-          latest && latest[0] ? String(latest[0].id) : null,
-        )
+        setOrderId(latest && latest[0] ? String(latest[0].id) : null)
         setActiveOrderId(
           latestActive && latestActive[0]
             ? String(latestActive[0].id)
@@ -461,8 +465,7 @@ export default function ChatHeader({
     const isOfferDeclined =
       k === 'angebot abgelehnt' || k === 'angebot_abgelehnt'
     const isOfferAccepted =
-      k === 'angebot angenommen' ||
-      k === 'angebot_angenommen'
+      k === 'angebot angenommen' || k === 'angebot_angenommen'
 
     const isAuftragErstellt =
       k === 'auftrag erstellt' || k === 'auftrag_erstellt'
@@ -637,8 +640,7 @@ export default function ChatHeader({
         body: JSON.stringify({ request_id: info.request.id }),
       })
       const j = await res.json().catch(() => ({}))
-      if (!res.ok || !j.ok)
-        throw new Error(j?.error || res.statusText)
+      if (!res.ok || !j.ok) throw new Error(j?.error || res.statusText)
 
       setInfo(prev =>
         prev
@@ -659,8 +661,7 @@ export default function ChatHeader({
   }, [info?.request?.id, flags.isOfferAccepted, activeOrderId])
 
   const createOrderTitle = React.useMemo(() => {
-    if (activeOrderId)
-      return 'Es existiert bereits ein aktiver Auftrag'
+    if (activeOrderId) return 'Es existiert bereits ein aktiver Auftrag'
     if (!flags.isOfferAccepted) {
       if (flags.isAuftragStorniert) {
         return 'Vorheriger Auftrag wurde storniert – sobald das Angebot (wieder) angenommen ist, kannst du einen neuen Auftrag anlegen.'
@@ -692,7 +693,7 @@ export default function ChatHeader({
       {!loading && info && (
         <>
           {/* Kopfzeile */}
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             {/* Links: Status + Anfrage */}
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
@@ -786,7 +787,7 @@ export default function ChatHeader({
             </div>
 
             {/* Rechts: Partner-Block */}
-            <div className="sm:text-right">
+            <div className="mt-1 md:mt-0 text-left md:text-right md:min-w-[180px]">
               <div className="text-[9px] sm:text-xs text-slate-500 uppercase tracking-wide">
                 Partner
               </div>
@@ -807,15 +808,13 @@ export default function ChatHeader({
             </div>
           </div>
 
-          {/* Aktionszeile – mobil horizontal scroll */}
-          <div className="mt-3 -mx-1 flex items-center gap-1.5 overflow-x-auto pb-1">
+          {/* Aktionszeile – mobil & Tablet: Wrap statt Horizontal-Scroll */}
+          <div className="mt-3 flex flex-wrap items-center gap-1.5">
             {/* Admin */}
             {isAdmin && (
               <>
                 <HeaderBtn
-                  onClick={() =>
-                    canOpenApptModal && setApptOpen(true)
-                  }
+                  onClick={() => canOpenApptModal && setApptOpen(true)}
                 >
                   Termin anlegen
                 </HeaderBtn>
@@ -824,9 +823,7 @@ export default function ChatHeader({
                 </HeaderBtn>
                 <HeaderBtn
                   onClick={() => setOrderCreateOpen(true)}
-                  disabled={
-                    !flags.isOfferAccepted || !!activeOrderId
-                  }
+                  disabled={!flags.isOfferAccepted || !!activeOrderId}
                   title={createOrderTitle}
                 >
                   Auftrag anlegen
@@ -858,9 +855,7 @@ export default function ChatHeader({
                   onClick={() => {
                     if (appointmentId) setReviewOpen(true)
                   }}
-                  disabled={
-                    !flags.terminBestaetigt || !appointmentId
-                  }
+                  disabled={!flags.terminBestaetigt || !appointmentId}
                   title={
                     !flags.terminBestaetigt
                       ? 'Nur bei bestätigtem Termin'
@@ -899,9 +894,7 @@ export default function ChatHeader({
             {!isAdmin && effectiveRole === 'partner' && (
               <>
                 <HeaderBtn
-                  onClick={() =>
-                    canOpenApptModal && setApptOpen(true)
-                  }
+                  onClick={() => canOpenApptModal && setApptOpen(true)}
                 >
                   Termin anlegen
                 </HeaderBtn>
@@ -924,9 +917,7 @@ export default function ChatHeader({
 
                 <HeaderBtn
                   onClick={onCreateOrder}
-                  disabled={
-                    !flags.isOfferAccepted || !!activeOrderId
-                  }
+                  disabled={!flags.isOfferAccepted || !!activeOrderId}
                   title={createOrderTitle}
                 >
                   Auftrag anlegen
@@ -949,7 +940,7 @@ export default function ChatHeader({
 
             {/* Fallback */}
             {!isAdmin && effectiveRole === 'unknown' && (
-              <span className="text-[10px] text-slate-500 px-1">
+              <span className="text-[10px] text-slate-500">
                 Rolle unbekannt – keine Aktionen verfügbar.
               </span>
             )}
@@ -1053,7 +1044,7 @@ function HeaderBtn(
       title={props.title}
       onClick={props.onClick}
       className={cls(
-        'mx-1 inline-flex items-center whitespace-nowrap rounded-2xl border border-white/60 bg-white px-3 py-1.5 text-[10px] sm:text-xs shadow hover:shadow-sm',
+        'inline-flex items-center whitespace-nowrap rounded-2xl border border-white/60 bg-white px-2.5 sm:px-3 py-1.5 text-[10px] sm:text-xs shadow hover:shadow-sm',
         props.disabled && 'opacity-50 cursor-not-allowed',
       )}
     >

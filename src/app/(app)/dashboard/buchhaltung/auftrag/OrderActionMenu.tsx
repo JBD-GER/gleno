@@ -1,10 +1,22 @@
 'use client'
 
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import {
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  type CSSProperties,
+} from 'react'
 import { useRouter } from 'next/navigation'
 import { createPortal } from 'react-dom'
 
-type OrderStatus = 'Erstellt' | 'Verschickt' | 'Abgerechnet' | string | null | undefined
+type OrderStatus =
+  | 'Erstellt'
+  | 'Verschickt'
+  | 'Abgerechnet'
+  | string
+  | null
+  | undefined
 
 function Portal({ children }: { children: React.ReactNode }) {
   if (typeof window === 'undefined') return null
@@ -16,7 +28,7 @@ function useGlobalPosition(
   panelRef: React.RefObject<HTMLElement | null>,
   open: boolean
 ) {
-  const [style, setStyle] = useState<React.CSSProperties>({ display: 'none' })
+  const [style, setStyle] = useState<CSSProperties>({ display: 'none' })
 
   const compute = () => {
     const btn = btnRef.current
@@ -46,7 +58,10 @@ function useGlobalPosition(
     const fitsBelow = window.innerHeight - br.bottom >= pr.height + margin
     if (!fitsBelow) {
       const upTop = br.top - pr.height - margin
-      top = upTop >= margin ? upTop : Math.max(margin, window.innerHeight - pr.height - margin)
+      top =
+        upTop >= margin
+          ? upTop
+          : Math.max(margin, window.innerHeight - pr.height - margin)
     }
 
     panel.style.visibility = prevVis
@@ -93,14 +108,20 @@ export default function OrderActionsMenu({
   const panelRef = useRef<HTMLDivElement | null>(null)
   const btnRef = useRef<HTMLButtonElement | null>(null)
 
-  const style = useGlobalPosition(btnRef as React.RefObject<HTMLElement | null>, panelRef as React.RefObject<HTMLElement | null>, open)
+  const style = useGlobalPosition(
+    btnRef as React.RefObject<HTMLElement | null>,
+    panelRef as React.RefObject<HTMLElement | null>,
+    open
+  )
 
   useEffect(() => {
     if (!open) return
     const onDown = (e: MouseEvent) => {
       const t = e.target as Node
       if (!panelRef.current || !btnRef.current) return
-      if (!panelRef.current.contains(t) && !btnRef.current.contains(t)) setOpen(false)
+      if (!panelRef.current.contains(t) && !btnRef.current.contains(t)) {
+        setOpen(false)
+      }
     }
     const onEsc = (e: KeyboardEvent) => e.key === 'Escape' && setOpen(false)
     document.addEventListener('mousedown', onDown)
@@ -120,11 +141,13 @@ export default function OrderActionsMenu({
         body: JSON.stringify({ orderConfirmationNumber }),
       })
       if (!res.ok) throw new Error(await res.text())
+
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       const cd = res.headers.get('Content-Disposition') || ''
       const m = cd.match(/filename="([^"]+)"/i)
       const filename = m?.[1] || `Rechnung_${orderConfirmationNumber}.pdf`
+
       const a = document.createElement('a')
       a.href = url
       a.download = filename
@@ -132,6 +155,7 @@ export default function OrderActionsMenu({
       a.click()
       a.remove()
       URL.revokeObjectURL(url)
+
       router.push(redirectAfter)
     } catch (e) {
       console.error(e)
@@ -165,9 +189,12 @@ export default function OrderActionsMenu({
     pdfPath
   )}&disposition=inline`
 
-  const isErstellt = (currentStatus ?? 'Erstellt').toString().toLowerCase() === 'erstellt'
-  const isVerschickt = (currentStatus ?? '').toString().toLowerCase() === 'verschickt'
-  const isAbgerechnet = (currentStatus ?? '').toString().toLowerCase() === 'abgerechnet'
+  const isErstellt =
+    (currentStatus ?? 'Erstellt').toString().toLowerCase() === 'erstellt'
+  const isVerschickt =
+    (currentStatus ?? '').toString().toLowerCase() === 'verschickt'
+  const isAbgerechnet =
+    (currentStatus ?? '').toString().toLowerCase() === 'abgerechnet'
 
   return (
     <div className="relative inline-block text-left">
@@ -187,16 +214,38 @@ export default function OrderActionsMenu({
       >
         {loading ? (
           <span className="inline-flex items-center gap-2">
-            <svg className="h-4 w-4 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
-              <path className="opacity-90" d="M12 2a10 10 0 0 1 10 10h-3" stroke="currentColor" strokeWidth="3" />
+            <svg
+              className="h-4 w-4 animate-spin"
+              viewBox="0 0 24 24"
+              fill="none"
+            >
+              <circle
+                className="opacity-25"
+                cx="12"
+                cy="12"
+                r="10"
+                stroke="currentColor"
+                strokeWidth="3"
+              />
+              <path
+                className="opacity-90"
+                d="M12 2a10 10 0 0 1 10 10h-3"
+                stroke="currentColor"
+                strokeWidth="3"
+              />
             </svg>
             Bitte warten…
           </span>
         ) : (
           <>
             Aktionen
-            <svg className={`h-4 w-4 text-slate-700 transition-transform ${open ? 'rotate-180' : ''}`} viewBox="0 0 20 20" fill="currentColor">
+            <svg
+              className={`h-4 w-4 text-slate-700 transition-transform ${
+                open ? 'rotate-180' : ''
+              }`}
+              viewBox="0 0 20 20"
+              fill="currentColor"
+            >
               <path d="M5.23 7.21a.75.75 0 0 1 1.06.02L10 10.94l3.71-3.71a.75.75 0 1 1 1.06 1.06l-4.24 4.24a.75.75 0 0 1-1.06 0L5.21 8.29a.75.75 0 0 1 .02-1.08z" />
             </svg>
           </>
@@ -216,7 +265,10 @@ export default function OrderActionsMenu({
             ].join(' ')}
           >
             <div className="border-b border-slate-200 bg-slate-50/70 px-3 py-2 text-[11px] uppercase tracking-wide text-slate-600">
-              Auftrag <span className="font-semibold text-slate-800">{orderConfirmationNumber}</span>
+              Auftrag{' '}
+              <span className="font-semibold text-slate-800">
+                {orderConfirmationNumber}
+              </span>
             </div>
             <ul className="py-1 text-sm text-slate-800">
               <li>
@@ -228,8 +280,18 @@ export default function OrderActionsMenu({
                   className="flex items-center gap-2 px-3 py-2 transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
                   onClick={() => setOpen(false)}
                 >
-                  <svg className="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none">
-                    <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                  <svg
+                    className="h-4 w-4 text-slate-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <path
+                      d="M5 12h14M12 5l7 7-7 7"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    />
                   </svg>
                   PDF anzeigen
                 </a>
@@ -245,8 +307,18 @@ export default function OrderActionsMenu({
                     role="menuitem"
                     className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                   >
-                    <svg className="h-4 w-4 text-indigo-600" viewBox="0 0 24 24" fill="none">
-                      <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                    <svg
+                      className="h-4 w-4 text-indigo-600"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M5 12h14M12 5l7 7-7 7"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
                     </svg>
                     Als „Verschickt“ markieren
                   </button>
@@ -261,8 +333,16 @@ export default function OrderActionsMenu({
                     role="menuitem"
                     className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                   >
-                    <svg className="h-4 w-4 text-slate-600" viewBox="0 0 24 24" fill="none">
-                      <path d="M7 7h10v10H7z" stroke="currentColor" strokeWidth="1.8" />
+                    <svg
+                      className="h-4 w-4 text-slate-600"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M7 7h10v10H7z"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                      />
                     </svg>
                     Zurück auf „Erstellt“
                   </button>
@@ -278,8 +358,17 @@ export default function OrderActionsMenu({
                   role="menuitem"
                   className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                 >
-                  <svg className="h-4 w-4 text-slate-500" viewBox="0 0 24 24" fill="none">
-                    <path d="M6 12h12M6 8h8M6 16h6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  <svg
+                    className="h-4 w-4 text-slate-500"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                  >
+                    <path
+                      d="M6 12h12M6 8h8M6 16h6"
+                      stroke="currentColor"
+                      strokeWidth="1.8"
+                      strokeLinecap="round"
+                    />
                   </svg>
                   {loading === 'gen' ? 'Erzeuge…' : 'Rechnung erzeugen'}
                 </button>

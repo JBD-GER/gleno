@@ -1,3 +1,4 @@
+// src/app/(app)/dashboard/kalender/AddAppointmentModal.tsx
 'use client'
 
 import React, {
@@ -156,7 +157,7 @@ export default function AddAppointmentModal({
     }
   }, [isOpen])
 
-  /* Live-Kundensuche – debounced, ohne AbortError-Fehler */
+  /* Live-Kundensuche – debounced */
   useEffect(() => {
     if (!isOpen) return
 
@@ -293,7 +294,7 @@ export default function AddAppointmentModal({
       {!isControlled && (
         <button
           onClick={() => setOpen(true)}
-          className="inline-flex items-center gap-2 rounded-2xl border border-white/70 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm backdrop-blur hover:bg-slate-50 active:scale-[0.98] transition"
+          className="inline-flex items-center gap-2 rounded-2xl border border-white/70 bg-white px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm backdrop-blur transition hover:bg-slate-50 active:scale-[0.98]"
         >
           <PencilSquareIcon className="h-5 w-5" />
           Neuer Termin
@@ -304,7 +305,7 @@ export default function AddAppointmentModal({
         <Dialog onClose={() => setOpen(false)} className="relative z-[200]">
           <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm" />
 
-          <div className="fixed inset-0 flex items-center justify-center p-4">
+          <div className="fixed inset-0 flex items-center justify-center p-3 sm:p-4">
             <Transition.Child
               enter="ease-out duration-200"
               enterFrom="opacity-0 translate-y-2 scale-95"
@@ -313,7 +314,7 @@ export default function AddAppointmentModal({
               leaveFrom="opacity-100 translate-y-0 scale-100"
               leaveTo="opacity-0 translate-y-2 scale-95"
             >
-              <Dialog.Panel className="w-full max-w-2xl overflow-hidden rounded-2xl border border-white/70 bg-white/92 shadow-[0_20px_70px_rgba(15,23,42,0.35)] backdrop-blur-xl">
+              <Dialog.Panel className="w-full max-w-2xl max-h-[90vh] overflow-y-auto rounded-2xl border border-white/70 bg-white/92 shadow-[0_20px_70px_rgba(15,23,42,0.35)] backdrop-blur-xl">
                 {/* Top-Bar */}
                 <div className="relative">
                   <div
@@ -329,10 +330,10 @@ export default function AddAppointmentModal({
                   >
                     <XMarkIcon className="h-5 w-5" />
                   </button>
-                  <Dialog.Title className="px-6 pb-1 pt-4 text-lg font-semibold text-slate-900">
+                  <Dialog.Title className="px-5 pb-1 pt-4 text-base font-semibold text-slate-900 sm:px-6 sm:text-lg">
                     Termin erstellen
                   </Dialog.Title>
-                  <p className="px-6 pb-3 text-xs text-slate-500">
+                  <p className="px-5 pb-3 text-xs text-slate-500 sm:px-6">
                     Wählen Sie Art, Kunde, Mitarbeiter und Dauer – alles in einem
                     schlanken Flow.
                   </p>
@@ -340,7 +341,7 @@ export default function AddAppointmentModal({
 
                 <form
                   onSubmit={submit}
-                  className="grid grid-cols-1 gap-4 px-6 pb-6 md:grid-cols-2"
+                  className="grid grid-cols-1 gap-4 px-5 pb-5 sm:px-6 sm:pb-6 md:grid-cols-2"
                 >
                   {/* Art */}
                   <label className="col-span-1 md:col-span-2">
@@ -504,7 +505,7 @@ export default function AddAppointmentModal({
                   </label>
 
                   {/* Startzeit + Mitarbeiter in EINER Zeile (auf Desktop) */}
-                  <div className="col-span-1 md:col-span-2 grid gap-4 md:grid-cols-2">
+                  <div className="col-span-1 grid gap-4 md:col-span-2 md:grid-cols-2">
                     {/* Start */}
                     <label>
                       <span className="mb-1 flex items-center gap-2 text-sm font-medium text-slate-700">
@@ -589,7 +590,7 @@ export default function AddAppointmentModal({
                     </div>
                   </div>
 
-                  {/* Dauer – JETZT GANZZEILIG */}
+                  {/* Dauer – ganzzeilig */}
                   <label className="col-span-1 md:col-span-2">
                     <span className="mb-1 flex items-center gap-2 text-sm font-medium text-slate-700">
                       <ClockIcon className="h-4 w-4" /> Dauer

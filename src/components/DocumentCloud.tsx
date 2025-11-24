@@ -245,11 +245,11 @@ export default function DocumentCloud({ requestId }: Props) {
           ))}
         </div>
 
-        {/* Info rechts */}
-        <div className="flex items-center justify-between gap-2 text-[10px] text-slate-500">
+        {/* Info rechts (auf Mobile unter Tabs) */}
+        <div className="flex flex-wrap items-center gap-1 text-[10px] text-slate-500">
           {loading && <span>Lade Dokumente…</span>}
           {!loading && error && (
-            <span className="text-rose-600 truncate max-w-[180px] sm:max-w-xs">
+            <span className="text-rose-600 truncate max-w-[200px] sm:max-w-xs">
               {error}
             </span>
           )}

@@ -158,7 +158,9 @@ export function AngebotProvider({
       const company = (selectedCustomer?.company ?? '').trim()
       const displayName = company || `${first} ${last}`.trim()
 
-      setTitle(prev => (prev && prev !== 'Angebot – ' ? prev : `Angebot – ${displayName}`))
+      setTitle(prev =>
+        prev && prev !== 'Angebot – ' ? prev : `Angebot – ${displayName}`
+      )
       const today = new Date()
       setDate(d => d || today.toISOString().slice(0, 10))
       const until = new Date(today)

@@ -1,3 +1,4 @@
+// src/app/(app)/dashboard/kalender/CalendarClient.tsx
 'use client'
 
 import React, {
@@ -20,6 +21,8 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
   UserCircleIcon,
+  ListBulletIcon,
+  CalendarDaysIcon,
 } from '@heroicons/react/24/outline'
 
 /* ----------------------------- Typen ----------------------------- */
@@ -52,8 +55,9 @@ type Employee = {
   last_name: string | null
 }
 
+type ViewMode = 'calendar' | 'list'
+
 /* ----------------------------- Helpers ----------------------------- */
-/** dunklere, ruhige Palette (kein Lila) */
 const PALETTE = [
   '#0f172a',
   '#1f2937',
@@ -102,7 +106,6 @@ function toValidDate(v: string | null | undefined): Date | null {
   return isNaN(d.getTime()) ? null : d
 }
 
-/* helper für initial start für Modal */
 function dateToLocalInput(d: Date) {
   const pad = (n: number) => String(n).padStart(2, '0')
   const y = d.getFullYear()
@@ -123,6 +126,8 @@ export default function CalendarClient() {
   const [selEvent, setSelEvent] = useState<EventDetail | null>(null)
   const [openDetail, setOpenDetail] = useState(false)
   const [viewTitle, setViewTitle] = useState('')
+
+  const [viewMode, setViewMode] = useState<ViewMode>('calendar')
 
   const calendarRef = useRef<FullCalendar | null>(null)
 
@@ -210,6 +215,7 @@ export default function CalendarClient() {
     if (api.view.type !== desired) api.changeView(desired)
   }, [])
 
+  // initial load
   useEffect(() => {
     loadEmployees()
     loadAppointments('all')
@@ -219,8 +225,15 @@ export default function CalendarClient() {
     employeeIdRef.current = employeeId
   }, [employeeId])
 
+  // initial: auf Handy direkt Listenansicht
   useEffect(() => {
-    // initial & on resize (debounced)
+    if (typeof window !== 'undefined' && window.innerWidth < 768) {
+      setViewMode('list')
+    }
+  }, [])
+
+  // responsive calendar view (nur für Kalenderansicht)
+  useEffect(() => {
     let t: number | undefined
     const onR = () => {
       window.clearTimeout(t)
@@ -230,6 +243,44 @@ export default function CalendarClient() {
     window.addEventListener('resize', onR)
     return () => window.removeEventListener('resize', onR)
   }, [applyResponsiveView])
+
+  /* ------------------------- List-View Daten ------------------------- */
+  const listGroups = useMemo(() => {
+    if (!events.length) return []
+
+    const groups = new Map<
+      string,
+      { date: Date; items: { ev: any; ex: FCEventExt }[] }
+    >()
+
+    const sorted = [...events].sort((a, b) => {
+      const as = new Date(a.start).getTime()
+      const bs = new Date(b.start).getTime()
+      return as - bs
+    })
+
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    const pastLimit = new Date(today)
+    pastLimit.setDate(pastLimit.getDate() - 7)
+    const futureLimit = new Date(today)
+    futureLimit.setDate(futureLimit.getDate() + 60)
+
+    for (const ev of sorted) {
+      const start = new Date(ev.start)
+      if (start < pastLimit || start > futureLimit) continue
+      const key = start.toISOString().slice(0, 10)
+      const ex = ev.extendedProps as FCEventExt
+      if (!groups.has(key)) {
+        groups.set(key, { date: start, items: [] })
+      }
+      groups.get(key)!.items.push({ ev, ex })
+    }
+
+    return Array.from(groups.values()).sort(
+      (a, b) => a.date.getTime() - b.date.getTime(),
+    )
+  }, [events])
 
   /* ------------------------- Custom Event Content ------------------------ */
   const eventContent = useCallback((arg: EventContentArg) => {
@@ -258,7 +309,6 @@ export default function CalendarClient() {
       ex.customerName ? ` – ${ex.customerName}` : ''
     }`
 
-    // -------- Monatsansicht: sehr kompakt --------
     if (isMonth) {
       return (
         <div className="flex items-center gap-1.5 text-[11px] leading-tight">
@@ -273,7 +323,6 @@ export default function CalendarClient() {
       )
     }
 
-    // -------- Kompakte Events (z.B. 15 / 30 min) -> Titel + Mitarbeiter --------
     if (isCompact) {
       return (
         <div
@@ -314,7 +363,6 @@ export default function CalendarClient() {
       )
     }
 
-    // -------- Normale / längere Events --------
     return (
       <div
         className="group relative flex h-full w-full flex-col rounded-xl border border-slate-200 bg-white/95 px-2.5 py-1.5 text-[11px] leading-tight shadow-sm hover:shadow-md"
@@ -325,7 +373,6 @@ export default function CalendarClient() {
           style={{ background: accent }}
         />
         <div className="ml-1.5 flex items-center justify-between gap-2">
-          {/* Zeit nur hier – nicht in der kompakten Variante */}
           <div className="text-[11px] font-semibold tracking-wide text-slate-700">
             {timeText}
           </div>
@@ -365,17 +412,18 @@ export default function CalendarClient() {
     )
   }, [])
 
-  /* ------------------------- Klick: Detail-Modal ------------------------- */
-  const onEventClick = (info: any) => {
-    info.jsEvent?.preventDefault?.()
-    info.jsEvent?.stopPropagation?.()
-    const e = info.event
-    const ex = e.extendedProps as FCEventExt
+  /* ------------------------- Detail-Modal öffnen ------------------------- */
+  const openDetailFor = useCallback((raw: any) => {
+    if (!raw) return
+    const ex = raw.extendedProps as FCEventExt
+    const start = new Date(raw.start)
+    const end = new Date(raw.end)
+
     setSelEvent({
-      id: e.id,
-      title: e.title + (ex.customerName ? ` – ${ex.customerName}` : ''),
-      start: e.start!,
-      end: e.end!,
+      id: raw.id,
+      title: raw.title + (ex.customerName ? ` – ${ex.customerName}` : ''),
+      start,
+      end,
       notiz: ex.notiz,
       mitarbeiter: ex.mitarbeiter,
       accent: ex.accent,
@@ -383,6 +431,12 @@ export default function CalendarClient() {
       customerName: ex.customerName,
     })
     requestAnimationFrame(() => setOpenDetail(true))
+  }, [])
+
+  const onEventClick = (info: any) => {
+    info.jsEvent?.preventDefault?.()
+    info.jsEvent?.stopPropagation?.()
+    openDetailFor(info.event)
   }
 
   /* --------------------- Klick auf freien Slot -> neues Modal --------------------- */
@@ -394,170 +448,327 @@ export default function CalendarClient() {
 
   /* ------------------------- Header (Custom) ------------------------- */
   const api = calendarRef.current?.getApi()
+  const handleChangeViewMode = (mode: ViewMode) => {
+    setViewMode(mode)
+  }
+
   const header = useMemo(
-    () => (
-      <div className="flex flex-col gap-3 border-b border-white/60 bg-white/80 px-3 pb-3 pt-4 backdrop-blur sm:px-4 md:px-6">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          {/* Navigation + Titel */}
-          <div className="flex min-w-0 items-center gap-2">
-            <button
-              className="rounded-lg border border-white/70 bg-white px-2 py-2 text-slate-800 shadow-sm hover:bg-slate-50"
-              onClick={() => api?.prev()}
-              aria-label="Vorherige Ansicht"
-            >
-              <ChevronLeftIcon className="h-5 w-5" />
-            </button>
-            <button
-              className="rounded-lg border border-white/70 bg-white px-2 py-2 text-slate-800 shadow-sm hover:bg-slate-50"
-              onClick={() => api?.next()}
-              aria-label="Nächste Ansicht"
-            >
-              <ChevronRightIcon className="h-5 w-5" />
-            </button>
-            <div className="ml-1 truncate text-base font-semibold text-slate-900 sm:text-lg">
-              {viewTitle}
-            </div>
-          </div>
-
-          {/* Actions */}
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Mitarbeiter-Filter */}
-            <div className="flex items-center gap-2 rounded-lg border border-white/70 bg-white px-2 py-1.5 shadow-sm">
-              <UserCircleIcon className="h-5 w-5 text-slate-600" />
-              <select
-                value={employeeId}
-                onChange={async (e) => {
-                  const v = (e.target.value || 'all') as 'all' | string
-                  setEmployeeId(v)
-                  employeeIdRef.current = v
-                  await loadAppointments(v)
-                }}
-                className="min-w-[180px] max-w-[60vw] bg-transparent text-sm text-slate-800 outline-none"
-              >
-                <option value="all">Alle Mitarbeiter</option>
-                {employees.map((emp) => (
-                  <option key={emp.id} value={emp.id}>
-                    {fullName(emp)}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <button
-              onClick={() => api?.today()}
-              className="rounded-lg border border-white/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm hover:bg-slate-50"
-            >
-              Heute
-            </button>
-
-            {/* Views: mobil = Dropdown, ab sm = Segmented */}
-            <div className="sm:hidden">
-              <select
-                onChange={(e) => api?.changeView(e.target.value)}
-                className="rounded-lg border border-white/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm"
-                defaultValue={api?.view?.type ?? 'timeGridWeek'}
-              >
-                <option value="dayGridMonth">Monat</option>
-                <option value="timeGridWeek">Woche</option>
-                <option value="timeGridDay">Tag</option>
-              </select>
-            </div>
-            <div className="hidden overflow-hidden rounded-lg border border-white/70 bg-white sm:flex shadow-sm">
-              <button
-                onClick={() => api?.changeView('dayGridMonth')}
-                className="px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
-              >
-                Monat
-              </button>
-              <button
-                onClick={() => api?.changeView('timeGridWeek')}
-                className="border-l border-white/70 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
-              >
-                Woche
-              </button>
-              <button
-                onClick={() => api?.changeView('timeGridDay')}
-                className="border-l border-white/70 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
-              >
-                Tag
-              </button>
-            </div>
-
-            {/* Weißer Button – eigenes Trigger-Modal (uncontrolled) */}
-            <AddAppointmentModal
-              onSuccess={() => loadAppointments(employeeIdRef.current)}
-            />
+  () => (
+    <div className="flex flex-col gap-3 border-b border-white/60 bg-white/85 px-3 pb-3 pt-4 backdrop-blur sm:px-4 md:px-6">
+      {/* Zeile 1: Navigation + Titel + View-Toggle */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        {/* Navigation + Titel */}
+        <div className="flex min-w-0 items-center gap-2">
+          <button
+            className="rounded-lg border border-white/70 bg-white px-2.5 py-2 text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={() => api?.prev()}
+            aria-label="Vorherige Ansicht"
+          >
+            <ChevronLeftIcon className="h-5 w-5" />
+          </button>
+          <button
+            className="rounded-lg border border-white/70 bg-white px-2.5 py-2 text-slate-800 shadow-sm hover:bg-slate-50"
+            onClick={() => api?.next()}
+            aria-label="Nächste Ansicht"
+          >
+            <ChevronRightIcon className="h-5 w-5" />
+          </button>
+          <div className="ml-1 truncate text-base font-semibold text-slate-900 sm:text-lg">
+            {viewTitle}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
-          <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-amber-500" /> Bald (≤24h)
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded-full bg-slate-300" /> Vergangen
-          </span>
-          <span className="inline-flex items-center gap-1">
-            <span className="h-2 w-2 rounded bg-slate-200" /> Terminfarbe
-          </span>
+        {/* Neuer Kalender/Liste-Toggle – EIN Design für Desktop, Tablet & Handy */}
+        <div className="flex items-center gap-2">
+          <div className="inline-flex overflow-hidden rounded-full border border-white/70 bg-white shadow-sm">
+            <button
+              type="button"
+              onClick={() => handleChangeViewMode('calendar')}
+              className={`flex items-center gap-1 px-3 py-1.5 text-xs sm:text-sm ${
+                viewMode === 'calendar'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <CalendarDaysIcon
+                className={`h-4 w-4 ${
+                  viewMode === 'calendar' ? 'text-white' : 'text-slate-600'
+                }`}
+              />
+              <span className="hidden sm:inline">Kalender</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => handleChangeViewMode('list')}
+              className={`flex items-center gap-1 border-l border-white/70 px-3 py-1.5 text-xs sm:text-sm ${
+                viewMode === 'list'
+                  ? 'bg-slate-900 text-white'
+                  : 'text-slate-700 hover:bg-slate-50'
+              }`}
+            >
+              <ListBulletIcon
+                className={`h-4 w-4 ${
+                  viewMode === 'list' ? 'text-white' : 'text-slate-600'
+                }`}
+              />
+              <span className="hidden sm:inline">Liste</span>
+            </button>
+          </div>
         </div>
       </div>
-    ),
-    [viewTitle, api, employees, employeeId, loadAppointments],
-  )
+
+      {/* Zeile 2: Filter, Heute, Kalender-View-Auswahl */}
+      <div className="flex flex-wrap items-center gap-2">
+        {/* Mitarbeiter-Filter */}
+        <div className="flex items-center gap-2 rounded-lg border border-white/70 bg-white px-2.5 py-1.5 shadow-sm">
+          <UserCircleIcon className="h-5 w-5 text-slate-600" />
+          <select
+            value={employeeId}
+            onChange={async (e) => {
+              const v = (e.target.value || 'all') as 'all' | string
+              setEmployeeId(v)
+              employeeIdRef.current = v
+              await loadAppointments(v)
+            }}
+            className="min-w-[180px] max-w-[60vw] bg-transparent text-sm text-slate-800 outline-none"
+          >
+            <option value="all">Alle Mitarbeiter</option>
+            {employees.map((emp) => (
+              <option key={emp.id} value={emp.id}>
+                {fullName(emp)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Heute-Button */}
+        <button
+          onClick={() => api?.today()}
+          className="rounded-lg border border-white/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm hover:bg-slate-50"
+        >
+          Heute
+        </button>
+
+        {/* Kalender-View-Auswahl – auf Handy kompakt, auf Tablet/Desktop Buttons */}
+        <div className="flex flex-1 justify-end gap-2">
+          {/* Mobile/Tablet: Dropdown */}
+          <select
+            onChange={(e) => api?.changeView(e.target.value)}
+            className="flex sm:hidden rounded-lg border border-white/70 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm"
+            defaultValue={api?.view?.type ?? 'timeGridWeek'}
+          >
+            <option value="dayGridMonth">Monat</option>
+            <option value="timeGridWeek">Woche</option>
+            <option value="timeGridDay">Tag</option>
+          </select>
+
+          {/* Ab sm: Drei Buttons */}
+          <div className="hidden overflow-hidden rounded-lg border border-white/70 bg-white shadow-sm sm:inline-flex">
+            <button
+              onClick={() => api?.changeView('dayGridMonth')}
+              className="px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+            >
+              Monat
+            </button>
+            <button
+              onClick={() => api?.changeView('timeGridWeek')}
+              className="border-l border-white/70 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+            >
+              Woche
+            </button>
+            <button
+              onClick={() => api?.changeView('timeGridDay')}
+              className="border-l border-white/70 px-3 py-2 text-sm text-slate-900 hover:bg-slate-50"
+            >
+              Tag
+            </button>
+          </div>
+
+          {/* Neuer Termin – bleibt wie gehabt */}
+          <AddAppointmentModal
+            onSuccess={() => loadAppointments(employeeIdRef.current)}
+          />
+        </div>
+      </div>
+
+      {/* Legende */}
+      <div className="flex flex-wrap items-center gap-3 text-[11px] text-slate-600">
+        <span className="inline-flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-amber-500" /> Bald (≤24h)
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="h-2 w-2 rounded-full bg-slate-300" /> Vergangen
+        </span>
+        <span className="inline-flex items-center gap-1">
+          <span className="h-2 w-2 rounded bg-slate-200" /> Terminfarbe
+        </span>
+      </div>
+    </div>
+  ),
+  [viewTitle, api, employees, employeeId, loadAppointments, viewMode],
+)
+
 
   /* ------------------------- Render ------------------------- */
   return (
     <div
-      className="flex h-[calc(100vh-180px)] flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/80 shadow-[0_10px_40px_rgba(2,6,23,0.08)] backdrop-blur-xl"
+      className="flex h-[calc(100vh-190px)] flex-col overflow-hidden rounded-2xl border border-white/70 bg-white/90 shadow-[0_10px_40px_rgba(2,6,23,0.08)] backdrop-blur-xl sm:h-[calc(100vh-210px)]"
       style={{
         backgroundImage:
-          'radial-gradient(1000px 500px at 120% -30%, rgba(2,6,23,0.05), transparent)',
+          'radial-gradient(900px 400px at 110% -30%, rgba(2,6,23,0.05), transparent)',
       }}
     >
       {header}
 
-      {/* Kalender selbst scrollt, nicht die ganze Seite */}
+      {/* Inhalt: Kalender ODER Liste */}
       <div className="flex-1 overflow-y-auto px-1 pb-2 pt-2 sm:px-2">
-        <FullCalendar
-          ref={calendarRef}
-          plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
-          initialView="timeGridWeek"
-          locale={deLocale}
-          headerToolbar={false}
-          height="100%"
-          allDaySlot={false}
-          expandRows={false}
-          stickyHeaderDates
-          navLinks
-          nowIndicator
-          dayMaxEvents={3}
-          slotEventOverlap={false}
-          slotMinTime="06:00:00"
-          slotMaxTime="20:00:00"
-          scrollTime="08:00:00"
-          slotLabelFormat={{
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          }}
-          eventTimeFormat={{
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: false,
-          }}
-          events={events}
-          eventClick={onEventClick}
-          eventContent={eventContent}
-          dayHeaderClassNames="!text-slate-700 !font-semibold"
-          dayCellClassNames="fc-daycell-custom"
-          datesSet={(arg: DatesSetArg) => setViewTitle(arg.view.title)}
-          eventDidMount={(arg) => {
-            const ex = arg.event.extendedProps as unknown as FCEventExt
-            if (ex?.isPast) arg.el.classList.add('opacity-60')
-          }}
-          dateClick={onDateClick}
-        />
+        {viewMode === 'calendar' ? (
+          <FullCalendar
+            ref={calendarRef}
+            plugins={[dayGridPlugin, timeGridPlugin, interactionPlugin]}
+            initialView="timeGridWeek"
+            locale={deLocale}
+            headerToolbar={false}
+            height="100%"
+            allDaySlot={false}
+            expandRows={false}
+            stickyHeaderDates
+            navLinks
+            nowIndicator
+            dayMaxEvents={3}
+            slotEventOverlap={false}
+            slotMinTime="06:00:00"
+            slotMaxTime="20:00:00"
+            scrollTime="08:00:00"
+            slotLabelFormat={{
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+            }}
+            eventTimeFormat={{
+              hour: '2-digit',
+              minute: '2-digit',
+              hour12: false,
+            }}
+            events={events}
+            eventClick={onEventClick}
+            eventContent={eventContent}
+            dayHeaderClassNames="!text-slate-700 !font-semibold"
+            dayCellClassNames="fc-daycell-custom"
+            datesSet={(arg: DatesSetArg) => setViewTitle(arg.view.title)}
+            eventDidMount={(arg) => {
+              const ex = arg.event.extendedProps as unknown as FCEventExt
+              if (ex?.isPast) arg.el.classList.add('opacity-60')
+            }}
+            dateClick={onDateClick}
+          />
+        ) : (
+          <div className="space-y-4 pb-4">
+            {listGroups.length === 0 ? (
+              <div className="mt-4 rounded-2xl border border-dashed border-slate-300 bg-white/70 p-6 text-center text-sm text-slate-600">
+                Keine Termine im sichtbaren Zeitraum. Erstellen Sie einen
+                Termin im Kalender oder über den Button „Neuer Termin“.
+              </div>
+            ) : (
+              listGroups.map((group) => (
+                <section
+                  key={group.date.toISOString()}
+                  className="rounded-2xl border border-white/70 bg-white/90 p-3 shadow-sm backdrop-blur"
+                >
+                  <div className="mb-2 flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold text-slate-900">
+                      {group.date.toLocaleDateString('de-DE', {
+                        weekday: 'long',
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      })}
+                    </div>
+                    <div className="text-[11px] text-slate-500">
+                      {group.items.length} Termin
+                      {group.items.length !== 1 ? 'e' : ''}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    {group.items.map(({ ev, ex }) => {
+                      const start = new Date(ev.start)
+                      const end = new Date(ev.end)
+                      const timeLabel = `${start.toLocaleTimeString('de-DE', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })} – ${end.toLocaleTimeString('de-DE', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                      })}`
+
+                      const chips = (ex.mitarbeiter || '')
+                        .split(',')
+                        .map((s) => s.trim())
+                        .filter(Boolean)
+
+                      return (
+                        <button
+                          key={ev.id}
+                          type="button"
+                          onClick={() => openDetailFor(ev)}
+                          className="w-full rounded-xl border border-slate-200 bg-white/95 px-3 py-2 text-left text-sm text-slate-800 shadow-[0_1px_0_rgba(148,163,184,0.4)] hover:border-slate-300 hover:shadow-md active:scale-[0.99]"
+                        >
+                          <div className="flex items-start gap-2">
+                            <div className="mt-0.5 flex flex-col items-center">
+                              <span className="rounded-full bg-slate-900 px-2 py-0.5 text-[10px] font-semibold text-white">
+                                {timeLabel}
+                              </span>
+                              <span
+                                className="mt-1 h-4 w-1.5 rounded-full"
+                                style={{ background: ex.accent }}
+                              />
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <div className="line-clamp-2 text-[13px] font-semibold text-slate-900">
+                                {ev.title}
+                                {ex.customerName
+                                  ? ` – ${ex.customerName}`
+                                  : ''}
+                              </div>
+                              {ex.location && (
+                                <div className="mt-0.5 text-[11px] text-slate-500">
+                                  {ex.location}
+                                </div>
+                              )}
+                              {ex.notiz && (
+                                <div className="mt-0.5 line-clamp-2 text-[11px] text-slate-600">
+                                  {ex.notiz}
+                                </div>
+                              )}
+                              {chips.length > 0 && (
+                                <div className="mt-1 flex flex-wrap gap-1.5">
+                                  {chips.slice(0, 3).map((c, i) => (
+                                    <span
+                                      key={`${c}-${i}`}
+                                      className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-[10px] text-slate-700"
+                                    >
+                                      {c}
+                                    </span>
+                                  ))}
+                                  {chips.length > 3 && (
+                                    <span className="rounded-full bg-slate-100 px-1.5 py-0.5 text-[10px] text-slate-600">
+                                      +{chips.length - 3}
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </section>
+              ))
+            )}
+          </div>
+        )}
       </div>
 
       {/* Detail-Modal */}
@@ -582,13 +793,13 @@ export default function CalendarClient() {
         }}
       />
 
-      {/* FC Skin */}
+      {/* FullCalendar Skin */}
       <style jsx global>{`
         .fc .fc-timegrid-axis {
           background: linear-gradient(
             180deg,
-            rgba(248, 250, 252, 0.95),
-            rgba(255, 255, 255, 0.95)
+            rgba(248, 250, 252, 0.96),
+            rgba(255, 255, 255, 0.98)
           );
         }
         .fc .fc-scrollgrid {
@@ -598,6 +809,7 @@ export default function CalendarClient() {
         }
         .fc .fc-col-header-cell-cushion {
           padding: 8px 0;
+          font-size: 12px;
         }
         .fc-theme-standard td,
         .fc-theme-standard th {
@@ -616,9 +828,8 @@ export default function CalendarClient() {
         .fc .fc-timegrid-now-indicator-arrow {
           border-color: transparent transparent transparent #ef4444 !important;
         }
-        /* höhere Slots wie bei Google */
         .fc .fc-timegrid-slot {
-          height: 3.2rem;
+          height: 3rem;
         }
         .fc .fc-scroller {
           overflow-y: auto !important;
@@ -626,6 +837,18 @@ export default function CalendarClient() {
         }
         .fc-daygrid-event-harness {
           margin: 2px 6px;
+        }
+        @media (max-width: 640px) {
+          .fc .fc-timegrid-slot {
+            height: 2.6rem;
+          }
+          .fc .fc-timegrid-axis-frame {
+            font-size: 10px;
+            padding-right: 4px;
+          }
+          .fc .fc-timegrid-slot-label {
+            font-size: 11px;
+          }
         }
       `}</style>
     </div>

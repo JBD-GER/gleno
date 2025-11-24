@@ -1,4 +1,3 @@
-// src/app/(app)/dashboard/Sidebar.tsx
 'use client'
 
 import { useEffect, useState, type ComponentType, type SVGProps } from 'react'
@@ -165,7 +164,6 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       icon: UserCircleIcon,
       children: [
         { href: '/dashboard/mitarbeiter', label: 'Mitarbeiter', icon: UserCircleIcon },
-        // Logistik Übersicht entfernt
         { href: '/dashboard/logistik/materialien', label: 'Materialien', icon: Squares2X2Icon },
         { href: '/dashboard/logistik/lieferanten', label: 'Lieferanten', icon: BuildingStorefrontIcon },
         { href: '/dashboard/logistik/fuhrpark', label: 'Fuhrpark', icon: TruckIcon },
@@ -558,7 +556,13 @@ export default function Sidebar({ userEmail }: SidebarProps) {
         </nav>
 
         {/* Footer / Anleitung + Feedback + Logout */}
-        <div className="border-t border-white/70 bg-white/60 backdrop-blur-xl p-3 shadow-[0_-6px_18px_rgba(15,23,42,0.06)] space-y-2">
+        <div
+          className="space-y-2 border-t border-white/70 bg-white/60 p-3 shadow-[0_-6px_18px_rgba(15,23,42,0.06)] backdrop-blur-xl"
+          style={{
+            // etwas mehr Luft + Safe-Area für iOS
+            paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom, 0px))',
+          }}
+        >
           {role !== 'mitarbeiter' && (
             <button
               type="button"

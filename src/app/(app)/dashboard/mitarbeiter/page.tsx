@@ -22,25 +22,32 @@ export default async function MitarbeiterPage({
   const sp = await searchParams
 
   const supabase = await supabaseServer()
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
   if (error || !user) redirect('/login')
 
-  const qRaw        = (sp?.q ?? '').trim()
-  const statusParam = (sp?.status as ('Aktiv'|'Deaktiviert'|'Gelöscht'|'alle')) || 'alle'
-  const sort        = (sp?.sort as ('desc'|'asc')) || 'desc'
-  const page        = Math.max(1, Number(sp?.page ?? '1') || 1)
+  const qRaw = (sp?.q ?? '').trim()
+  const statusParam =
+    (sp?.status as 'Aktiv' | 'Deaktiviert' | 'Gelöscht' | 'alle') || 'alle'
+  const sort = (sp?.sort as 'desc' | 'asc') || 'desc'
+  const page = Math.max(1, Number(sp?.page ?? '1') || 1)
 
   const from = (page - 1) * PAGE_SIZE
-  const to   = from + PAGE_SIZE - 1
+  const to = from + PAGE_SIZE - 1
 
   // Query
   let query = supabase
     .from('employees')
-    .select(`
+    .select(
+      `
       id, first_name, last_name, email, phone,
       role, specialization, start_date, created_at, status,
       city, employment_type
-    `, { count: 'exact' })
+    `,
+      { count: 'exact' },
+    )
     .eq('user_id', user.id)
 
   if (statusParam !== 'alle') query = query.eq('status', statusParam)
@@ -48,26 +55,34 @@ export default async function MitarbeiterPage({
   if (qRaw) {
     const like = `%${qRaw}%`
     // Suche über Name, Kontakt, Rolle, Spezialisierung & Ort
-    query = query.or([
-      `first_name.ilike.${like}`,
-      `last_name.ilike.${like}`,
-      `email.ilike.${like}`,
-      `phone.ilike.${like}`,
-      `role.ilike.${like}`,
-      `specialization.ilike.${like}`,
-      `city.ilike.${like}`,
-      `employment_type.ilike.${like}`,
-    ].join(','))
+    query = query.or(
+      [
+        `first_name.ilike.${like}`,
+        `last_name.ilike.${like}`,
+        `email.ilike.${like}`,
+        `phone.ilike.${like}`,
+        `role.ilike.${like}`,
+        `specialization.ilike.${like}`,
+        `city.ilike.${like}`,
+        `employment_type.ilike.${like}`,
+      ].join(','),
+    )
   }
 
-  query = query.order('created_at', { ascending: sort === 'asc' }).range(from, to)
+  query = query
+    .order('created_at', { ascending: sort === 'asc' })
+    .range(from, to)
 
-  const { data: rows, count, error: qErr } = await query
+  const {
+    data: rows,
+    count,
+    error: qErr,
+  } = await query
   if (qErr) console.error(qErr)
 
-  const total      = count ?? 0
+  const total = count ?? 0
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE))
-  const safePage   = Math.min(page, totalPages)
+  const safePage = Math.min(page, totalPages)
 
   const hrefForPage = (p: number) => {
     const params = new URLSearchParams()
@@ -79,7 +94,7 @@ export default async function MitarbeiterPage({
   }
 
   const pageNums = (() => {
-    const list: (number|'…')[] = []
+    const list: (number | '…')[] = []
     const maxBtns = 7
     if (totalPages <= maxBtns) {
       for (let i = 1; i <= totalPages; i++) list.push(i)
@@ -97,20 +112,24 @@ export default async function MitarbeiterPage({
   })()
 
   return (
-    <div className="min-h-[100dvh] p-6 bg-[radial-gradient(1200px_350px_at_-10%_-30%,rgba(15,23,42,0.05),transparent_60%),radial-gradient(1200px_350px_at_110%_130%,rgba(88,101,242,0.08),transparent_60%),#e8edf5] text-slate-700">
+    <div className="min-h-[100dvh] bg-[radial-gradient(1200px_350px_at_-10%_-30%,rgba(15,23,42,0.05),transparent_60%),radial-gradient(1200px_350px_at_110%_130%,rgba(88,101,242,0.08),transparent_60%),#e8edf5] p-4 text-slate-700 sm:p-6">
       {/* HERO */}
-      <div className="relative mb-6 overflow-hidden rounded-2xl border border-white/50 bg-white/60 p-5 shadow-[0_10px_40px_rgba(2,6,23,0.12)] backdrop-blur-xl">
+      <div className="relative mb-6 overflow-hidden rounded-2xl border border-white/50 bg-white/60 p-4 shadow-[0_10px_40px_rgba(2,6,23,0.12)] backdrop-blur-xl sm:p-5">
         <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(800px_200px_at_-10%_-20%,rgba(15,23,42,0.08),transparent_60%),radial-gradient(800px_200px_at_110%_120%,rgba(88,101,242,0.10),transparent_60%)]" />
         <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-xs text-slate-700 backdrop-blur">
+            <div className="inline-flex items-center gap-2 rounded-full border border-white/60 bg-white/80 px-3 py-1 text-[11px] text-slate-700 backdrop-blur">
               <UsersIcon className="h-4 w-4 text-slate-900" />
               Mitarbeiter – Übersicht
             </div>
-            <h1 className="mt-3 text-2xl font-semibold tracking-tight text-slate-900">Team & Verwaltung</h1>
-            <p className="text-sm text-slate-600">Suchen, filtern, anlegen und Status verwalten.</p>
+            <h1 className="mt-3 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+              Team &amp; Verwaltung
+            </h1>
+            <p className="mt-1 text-xs text-slate-600 sm:text-sm">
+              Suchen, filtern, anlegen und Status verwalten.
+            </p>
           </div>
-          <div className="relative z-[1]">
+          <div className="relative z-[1] flex gap-2">
             <AddEmployeeModal />
           </div>
         </div>
@@ -123,24 +142,48 @@ export default async function MitarbeiterPage({
       <div className="relative mt-4 overflow-hidden rounded-2xl border border-white/60 bg-white/65 p-0 shadow-[0_10px_40px_rgba(2,6,23,0.10)] backdrop-blur-xl">
         <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(900px_220px_at_-10%_-20%,rgba(15,23,42,0.06),transparent_60%),radial-gradient(900px_220px_at_110%_120%,rgba(88,101,242,0.08),transparent_60%)]" />
         <div className="relative">
-          {/* Desktop */}
-          <div className="hidden md:block">
+          {/* Desktop (nur sehr große Screens) */}
+          <div className="hidden xl:block">
             <div className="overflow-x-auto">
               <table className="min-w-full text-left">
-                <thead className="bg-white/70 backdrop-blur sticky top-0 z-10">
+                <thead className="sticky top-0 z-10 bg-white/70 backdrop-blur">
                   <tr className="text-[12.5px] uppercase tracking-wide text-slate-700">
-                    {['Name','E-Mail','Telefon','Rolle','Spezialisierung','Ort','Anstellung','Eingestellt am','Status','Aktion'].map(h => (
-                      <th key={h} className="px-5 py-3 font-semibold">{h}</th>
+                    {[
+                      'Name',
+                      'E-Mail',
+                      'Telefon',
+                      'Rolle',
+                      'Spezialisierung',
+                      'Ort',
+                      'Anstellung',
+                      'Eingestellt am',
+                      'Status',
+                      'Aktion',
+                    ].map((h) => (
+                      <th key={h} className="px-5 py-3 font-semibold">
+                        {h}
+                      </th>
                     ))}
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-white/70">
                   {(rows ?? []).length === 0 && (
-                    <tr><td colSpan={10} className="py-12 text-center italic text-slate-600">Keine Treffer.</td></tr>
+                    <tr>
+                      <td
+                        colSpan={10}
+                        className="py-12 text-center italic text-slate-600"
+                      >
+                        Keine Treffer.
+                      </td>
+                    </tr>
                   )}
+
                   {(rows ?? []).map((emp: any) => (
-                    <tr key={emp.id} className="transition-colors hover:bg-white/80">
-                      <td className="px-5 py-4 whitespace-nowrap text-sm font-medium">
+                    <tr
+                      key={emp.id}
+                      className="transition-colors hover:bg-white/80"
+                    >
+                      <td className="whitespace-nowrap px-5 py-4 text-sm font-medium">
                         <Link
                           href={`/dashboard/mitarbeiter/${emp.id}`}
                           className="text-slate-900 no-underline outline-none ring-offset-2 focus-visible:ring-2 focus-visible:ring-indigo-300 hover:underline"
@@ -149,20 +192,41 @@ export default async function MitarbeiterPage({
                           {emp.first_name} {emp.last_name}
                         </Link>
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm">{emp.email || '–'}</td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm">{emp.phone || '–'}</td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm">{emp.role || '–'}</td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm">{emp.specialization || '–'}</td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm">{emp.city || '–'}</td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm">{emp.employment_type || '–'}</td>
-                      <td className="px-5 py-4 whitespace-nowrap text-sm italic">
-                        {emp.start_date ? new Date(emp.start_date).toLocaleDateString('de-DE') : new Date(emp.created_at).toLocaleDateString('de-DE')}
+                      <td className="whitespace-nowrap px-5 py-4 text-sm">
+                        {emp.email || '–'}
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
+                      <td className="whitespace-nowrap px-5 py-4 text-sm">
+                        {emp.phone || '–'}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-sm">
+                        {emp.role || '–'}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-sm">
+                        {emp.specialization || '–'}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-sm">
+                        {emp.city || '–'}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-sm">
+                        {emp.employment_type || '–'}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4 text-sm italic">
+                        {emp.start_date
+                          ? new Date(emp.start_date).toLocaleDateString(
+                              'de-DE',
+                            )
+                          : new Date(
+                              emp.created_at,
+                            ).toLocaleDateString('de-DE')}
+                      </td>
+                      <td className="whitespace-nowrap px-5 py-4">
                         <StatusBadge status={emp.status as Status} />
                       </td>
-                      <td className="px-5 py-4 whitespace-nowrap">
-                        <EmployeeRowActions id={emp.id} status={emp.status as Status} />
+                      <td className="whitespace-nowrap px-5 py-4">
+                        <EmployeeRowActions
+                          id={emp.id}
+                          status={emp.status as Status}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -171,28 +235,58 @@ export default async function MitarbeiterPage({
             </div>
           </div>
 
-          {/* Mobile */}
-          <div className="md:hidden">
-            {(!rows || rows.length === 0) ? (
-              <div className="p-6 text-center italic text-slate-700">Keine Treffer.</div>
+          {/* Mobile + Tablet + kleiner Desktop -> Kartenlayout */}
+          <div className="xl:hidden">
+            {!rows || rows.length === 0 ? (
+              <div className="p-6 text-center text-sm italic text-slate-700">
+                Keine Treffer.
+              </div>
             ) : (
               <ul className="divide-y divide-white/70">
                 {rows.map((emp: any) => (
-                  <li key={emp.id} className="p-4">
+                  <li key={emp.id} className="p-4 sm:p-5">
                     <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <Link href={`/dashboard/mitarbeiter/${emp.id}`} className="text-base font-semibold text-slate-900 no-underline hover:underline">
+                      <div className="min-w-0">
+                        <Link
+                          href={`/dashboard/mitarbeiter/${emp.id}`}
+                          className="line-clamp-1 text-base font-semibold text-slate-900 no-underline hover:underline"
+                        >
                           {emp.first_name} {emp.last_name}
                         </Link>
-                        <div className="mt-0.5 text-sm">{emp.role || '—'}{emp.specialization ? ` · ${emp.specialization}` : ''}</div>
-                        {emp.city && <div className="text-sm text-slate-600">{emp.city}</div>}
-                        <div className="mt-1 text-xs text-slate-500">
-                          Eingestellt am {emp.start_date ? new Date(emp.start_date).toLocaleDateString('de-DE') : new Date(emp.created_at).toLocaleDateString('de-DE')}
+                        <div className="mt-0.5 text-xs text-slate-600 sm:text-sm">
+                          {emp.role || '—'}
+                          {emp.specialization
+                            ? ` · ${emp.specialization}`
+                            : ''}
                         </div>
+                        {emp.city && (
+                          <div className="text-xs text-slate-500 sm:text-sm">
+                            {emp.city}
+                          </div>
+                        )}
+                        <div className="mt-1 text-[11px] text-slate-500 sm:text-xs">
+                          Eingestellt am{' '}
+                          {emp.start_date
+                            ? new Date(
+                                emp.start_date,
+                              ).toLocaleDateString('de-DE')
+                            : new Date(
+                                emp.created_at,
+                              ).toLocaleDateString('de-DE')}
+                        </div>
+                        {(emp.email || emp.phone) && (
+                          <div className="mt-1 text-[11px] text-slate-500 sm:text-xs">
+                            {emp.email || '–'}
+                            {emp.phone ? ` · ${emp.phone}` : ''}
+                          </div>
+                        )}
                       </div>
                       <div className="flex flex-col items-end gap-2">
                         <StatusBadge status={emp.status as Status} small />
-                        <EmployeeRowActions id={emp.id} status={emp.status as Status} />
+                        <EmployeeRowActions
+                          id={emp.id}
+                          status={emp.status as Status}
+                        />
                       </div>
                     </div>
                   </li>
@@ -202,32 +296,56 @@ export default async function MitarbeiterPage({
           </div>
 
           {/* Pager */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/60 bg-white/70 px-4 py-3 backdrop-blur">
-            <div className="text-xs text-slate-600">
-              Seite <strong>{safePage}</strong> von <strong>{totalPages}</strong> · {total} Einträge
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/60 bg-white/70 px-3 py-3 text-xs backdrop-blur sm:px-4">
+            <div className="text-[11px] text-slate-600 sm:text-xs">
+              Seite <strong>{safePage}</strong> von{' '}
+              <strong>{totalPages}</strong> · {total} Einträge
             </div>
             <nav className="flex items-center gap-1">
-              <Link href={hrefForPage(Math.max(1, safePage - 1))} aria-disabled={safePage === 1}
-                className={`rounded-lg border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow hover:bg-white ${safePage === 1 ? 'pointer-events-none opacity-40' : ''}`}>
+              <Link
+                href={hrefForPage(Math.max(1, safePage - 1))}
+                aria-disabled={safePage === 1}
+                className={`rounded-lg border border-white/60 bg-white/80 px-3 py-1.5 text-xs shadow hover:bg-white sm:text-sm ${
+                  safePage === 1
+                    ? 'pointer-events-none opacity-40'
+                    : ''
+                }`}
+              >
                 ← Zurück
               </Link>
               {pageNums.map((n, i) =>
                 n === '…' ? (
-                  <span key={`el-${i}`} className="px-2 text-slate-500">…</span>
+                  <span
+                    key={`el-${i}`}
+                    className="px-2 text-xs text-slate-500"
+                  >
+                    …
+                  </span>
                 ) : (
-                  <Link key={n} href={hrefForPage(n as number)} aria-current={n === safePage ? 'page' : undefined}
+                  <Link
+                    key={n}
+                    href={hrefForPage(n as number)}
+                    aria-current={n === safePage ? 'page' : undefined}
                     className={[
-                      'rounded-lg px-3 py-1.5 text-sm border shadow',
+                      'rounded-lg border px-3 py-1.5 text-xs shadow sm:text-sm',
                       n === safePage
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white/80 border-white/60 hover:bg-white'
-                    ].join(' ')}>
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-white/60 bg-white/80 hover:bg-white',
+                    ].join(' ')}
+                  >
                     {n}
                   </Link>
-                )
+                ),
               )}
-              <Link href={hrefForPage(Math.min(totalPages, safePage + 1))} aria-disabled={safePage === totalPages}
-                className={`rounded-lg border border-white/60 bg-white/80 px-3 py-1.5 text-sm shadow hover:bg-white ${safePage === totalPages ? 'pointer-events-none opacity-40' : ''}`}>
+              <Link
+                href={hrefForPage(Math.min(totalPages, safePage + 1))}
+                aria-disabled={safePage === totalPages}
+                className={`rounded-lg border border-white/60 bg-white/80 px-3 py-1.5 text-xs shadow hover:bg-white sm:text-sm ${
+                  safePage === totalPages
+                    ? 'pointer-events-none opacity-40'
+                    : ''
+                }`}
+              >
                 Weiter →
               </Link>
             </nav>
@@ -241,14 +359,19 @@ export default async function MitarbeiterPage({
 function StatusBadge({ status, small }: { status: Status; small?: boolean }) {
   const size = small ? 'text-[11px]' : 'text-xs'
   const tone =
-    status === 'Aktiv'       ? 'bg-emerald-100 text-emerald-800 ring-emerald-200/60' :
-    status === 'Deaktiviert' ? 'bg-amber-100 text-amber-800 ring-amber-200/60' :
-                               'bg-rose-100 text-rose-800 ring-rose-200/60'
+    status === 'Aktiv'
+      ? 'bg-emerald-100 text-emerald-800 ring-emerald-200/60'
+      : status === 'Deaktiviert'
+      ? 'bg-amber-100 text-amber-800 ring-amber-200/60'
+      : 'bg-rose-100 text-rose-800 ring-rose-200/60'
   return (
-    <span className={[
-      'inline-flex items-center rounded-full px-2 py-1 font-medium ring-1 ring-inset',
-      size, tone
-    ].join(' ')}>
+    <span
+      className={[
+        'inline-flex items-center rounded-full px-2 py-1 font-medium ring-1 ring-inset',
+        size,
+        tone,
+      ].join(' ')}
+    >
       {status}
     </span>
   )

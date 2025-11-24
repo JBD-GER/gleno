@@ -1,7 +1,9 @@
+// src/components/offers/OfferCreateModal.tsx
 'use client'
 
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 
 function cls(...arr: Array<string | false | null | undefined>) {
   return arr.filter(Boolean).join(' ')
@@ -12,6 +14,7 @@ type Props = {
   onClose: () => void
   requestId: string
 }
+
 type DiscountType = 'percent' | 'fixed'
 
 export default function OfferCreateModal({ open, onClose, requestId }: Props) {
@@ -43,7 +46,7 @@ export default function OfferCreateModal({ open, onClose, requestId }: Props) {
     }
   }, [open, onClose])
 
-  // Brutto-Vorschau berechnen
+  // Brutto-Vorschau berechnen (Logik unverändert)
   React.useEffect(() => {
     const n = Number(net || 0)
     const t = Number(tax || 0)
@@ -125,25 +128,30 @@ export default function OfferCreateModal({ open, onClose, requestId }: Props) {
           'relative z-10 mt-8 w-full max-w-3xl',
           'max-h-[92vh] overflow-y-auto',
           'rounded-3xl border border-white/60 bg-white/90 backdrop-blur-xl',
-          'p-6 shadow-[0_10px_34px_rgba(2,6,23,0.12)] ring-1 ring-white/60',
+          'p-4 sm:p-6 shadow-[0_10px_34px_rgba(2,6,23,0.12)] ring-1 ring-white/60',
         )}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-medium text-slate-900">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="pr-4">
+            <h3 className="text-base sm:text-lg font-medium text-slate-900">
               Angebot anlegen
             </h3>
-            <p className="mt-1 text-xs text-slate-500">
+            <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
               Titel, Nettosumme, MwSt. und Rabatt definieren. Mindestens eine Datei anhängen.
             </p>
           </div>
+
+          {/* X oben rechts */}
           <button
             type="button"
             onClick={() => !busy && onClose()}
-            className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm"
+            disabled={busy}
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/95 shadow-sm
+                       hover:bg-slate-50 disabled:opacity-60 shrink-0"
+            aria-label="Schließen"
           >
-            Schließen
+            <XMarkIcon className="h-4 w-4 text-slate-500" />
           </button>
         </div>
 
@@ -309,12 +317,13 @@ export default function OfferCreateModal({ open, onClose, requestId }: Props) {
           )}
 
           {/* Actions */}
-          <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+          <div className="mt-4 flex flex-col-reverse sm:flex-row sm:flex-wrap sm:items-center sm:justify-end gap-2">
             <button
               type="button"
               disabled={busy}
               onClick={() => !busy && onClose()}
-              className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm disabled:opacity-60"
+              className="w-full sm:w-auto rounded-xl border border-white/60 bg-white px-3 py-2 text-sm
+                         hover:shadow-sm disabled:opacity-60"
             >
               Abbrechen
             </button>
@@ -330,7 +339,7 @@ export default function OfferCreateModal({ open, onClose, requestId }: Props) {
                 !discountLabel.trim()
               }
               className={cls(
-                'rounded-xl px-3 py-1.5 text-sm text-white',
+                'w-full sm:w-auto rounded-xl px-3 py-2 text-sm text-white',
                 'bg-slate-900 hover:opacity-90',
                 'disabled:opacity-60 disabled:cursor-not-allowed',
               )}

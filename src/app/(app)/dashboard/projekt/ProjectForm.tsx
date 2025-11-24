@@ -1,6 +1,11 @@
 'use client'
 
-import React, { useEffect, useState, type ComponentType, type SVGProps } from 'react'
+import React, {
+  useEffect,
+  useState,
+  type ComponentType,
+  type SVGProps,
+} from 'react'
 import { supabaseClient } from '@/lib/supabase-client'
 import {
   XMarkIcon,
@@ -12,10 +17,25 @@ import {
 } from '@heroicons/react/24/outline'
 
 /* ======================= Types ======================= */
-interface Customer { id: string; first_name: string; last_name: string }
-interface Offer { id: string; offer_number: string }
-interface Material { id: string; name: string; unit: string }
-interface Employee { id: string; first_name: string | null; last_name: string | null }
+interface Customer {
+  id: string
+  first_name: string
+  last_name: string
+}
+interface Offer {
+  id: string
+  offer_number: string
+}
+interface Material {
+  id: string
+  name: string
+  unit: string
+}
+interface Employee {
+  id: string
+  first_name: string | null
+  last_name: string | null
+}
 
 type RoomState = {
   name: string
@@ -97,9 +117,9 @@ export default function ProjectForm({
   const supa = supabaseClient()
 
   const [customers, setCustomers] = useState<Customer[]>([])
-  const [offers,   setOffers]    = useState<Offer[]>([])
-  const [materials, setMaterials]= useState<Material[]>([])
-  const [employees, setEmployees]= useState<Employee[]>([])
+  const [offers, setOffers] = useState<Offer[]>([])
+  const [materials, setMaterials] = useState<Material[]>([])
+  const [employees, setEmployees] = useState<Employee[]>([])
 
   const [customerId, setCustomerId] = useState('')
   const [title, setTitle] = useState('')
@@ -119,7 +139,8 @@ export default function ProjectForm({
   const [loading, setLoading] = useState(false)
 
   // Hilf: dedupe array of strings
-  const dedupe = (arr: string[]) => Array.from(new Set(arr.filter(Boolean)))
+  const dedupe = (arr: string[]) =>
+    Array.from(new Set(arr.filter(Boolean)))
 
   // Stammdaten laden (inkl. Company-Auflösung und gefilterten Mitarbeitern)
   useEffect(() => {
@@ -127,7 +148,9 @@ export default function ProjectForm({
     ;(async () => {
       try {
         // 1) User ermitteln
-        const { data: { user } } = await supa.auth.getUser()
+        const {
+          data: { user },
+        } = await supa.auth.getUser()
         if (!user) throw new Error('no user')
 
         // 2) Prüfen, ob User Mitarbeiter ist -> companyId = employees.user_id
@@ -140,24 +163,32 @@ export default function ProjectForm({
         const companyId = empRec?.user_id ?? user.id
 
         // 3) Stammdaten + gefilterte Mitarbeiter laden
-        const [{ data: custs }, { data: mats }, { data: emps }] = await Promise.all([
-          supa.from('customers').select('id, first_name, last_name'),
-          supa.from('materials').select('id, name, unit'),
-          supa.from('employees')
+        const [{ data: custs }, { data: mats }, { data: emps }] =
+          await Promise.all([
+            supa
+              .from('customers')
+              .select('id, first_name, last_name'),
+            supa.from('materials').select('id, name, unit'),
+            supa
+              .from('employees')
               .select('id, first_name, last_name')
-              .eq('user_id', companyId)                    // **nur Mitarbeiter der Firma**
+              .eq('user_id', companyId)
               .order('first_name', { ascending: true }),
-        ])
+          ])
         if (!alive) return
         setCustomers((custs as any) ?? [])
         setMaterials((mats as any) ?? [])
         setEmployees((emps as any) ?? [])
       } catch {
         if (!alive) return
-        setCustomers([]); setMaterials([]); setEmployees([])
+        setCustomers([])
+        setMaterials([])
+        setEmployees([])
       }
     })()
-    return () => { alive = false }
+    return () => {
+      alive = false
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -165,19 +196,30 @@ export default function ProjectForm({
   useEffect(() => {
     let alive = true
     ;(async () => {
-      if (!customerId) { setOffers([]); setOfferIds([]); return }
+      if (!customerId) {
+        setOffers([])
+        setOfferIds([])
+        return
+      }
       try {
-        const { data } = await supa.from('offers').select('id, offer_number').eq('customer_id', customerId)
+        const { data } = await supa
+          .from('offers')
+          .select('id, offer_number')
+          .eq('customer_id', customerId)
         if (!alive) return
         setOffers((data as any) ?? [])
-        setOfferIds([]) // reset Auswahl beim Kundenwechsel
+        setOfferIds([])
         setOfferQuery('')
       } catch {
         if (!alive) return
-        setOffers([]); setOfferIds([]); setOfferQuery('')
+        setOffers([])
+        setOfferIds([])
+        setOfferQuery('')
       }
     })()
-    return () => { alive = false }
+    return () => {
+      alive = false
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [customerId])
 
@@ -189,7 +231,8 @@ export default function ProjectForm({
       try {
         const { data } = await supa
           .from('projects')
-          .select(`
+          .select(
+            `
             id, customer_id, title, description, address, object_name, floor,
             project_offers ( offer_id ),
             project_rooms (
@@ -198,7 +241,8 @@ export default function ProjectForm({
               project_room_materials ( material_id, quantity, notes )
             ),
             assignees:project_assignees ( employee_id )
-          `)
+          `,
+          )
           .eq('id', projectId)
           .single()
 
@@ -210,33 +254,53 @@ export default function ProjectForm({
         setAddress(data.address ?? '')
         setObjectName(data.object_name ?? '')
         setFloor(data.floor ?? '')
-        setOfferIds((data.project_offers ?? []).map((x: any) => x.offer_id))
+        setOfferIds(
+          (data.project_offers ?? []).map((x: any) => x.offer_id),
+        )
 
-        // **dedupe** (falls Altbestände doppelte assignees liefern)
-        setAssigneeIds(dedupe((data.assignees ?? []).map((x: any) => x.employee_id)))
+        setAssigneeIds(
+          dedupe(
+            (data.assignees ?? []).map((x: any) => x.employee_id),
+          ),
+        )
 
-        setRooms((data.project_rooms ?? []).map((r: any) => ({
-          name: r.name,
-          width: r.width ?? null,
-          length: r.length ?? null,
-          notes: r.notes ?? '',
-          tasks: (r.project_room_tasks ?? []).map((t: any) => ({ work: t.work, description: t.description ?? '' })),
-          materials: (r.project_room_materials ?? []).map((m: any) => ({ material_id: m.material_id, quantity: m.quantity, notes: m.notes ?? '' })),
-        })))
+        setRooms(
+          (data.project_rooms ?? []).map((r: any) => ({
+            name: r.name,
+            width: r.width ?? null,
+            length: r.length ?? null,
+            notes: r.notes ?? '',
+            tasks: (r.project_room_tasks ?? []).map((t: any) => ({
+              work: t.work,
+              description: t.description ?? '',
+            })),
+            materials: (r.project_room_materials ?? []).map(
+              (m: any) => ({
+                material_id: m.material_id,
+                quantity: m.quantity,
+                notes: m.notes ?? '',
+              }),
+            ),
+          })),
+        )
       } catch {
         /* noop */
       }
     })()
-    return () => { alive = false }
+    return () => {
+      alive = false
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId])
 
   const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!customerId || !title) { alert('Bitte Kunde und Titel angeben.'); return }
+    if (!customerId || !title) {
+      alert('Bitte Kunde und Titel angeben.')
+      return
+    }
     setLoading(true)
 
-    // **Assignees dedupen** bevor es zur API geht
     const cleanAssignees = dedupe(assigneeIds)
 
     const payload = {
@@ -252,19 +316,26 @@ export default function ProjectForm({
     }
 
     try {
-      const res = await fetch(projectId ? `/api/projects/${projectId}` : '/api/projects', {
-        method: projectId ? 'PUT' : 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-        credentials: 'include',
-      })
+      const res = await fetch(
+        projectId ? `/api/projects/${projectId}` : '/api/projects',
+        {
+          method: projectId ? 'PUT' : 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+          credentials: 'include',
+        },
+      )
       if (!res.ok) {
         const err = await res.json().catch(() => ({}))
         throw new Error(err?.error ?? res.statusText)
       }
       onClose()
     } catch (err: any) {
-      alert(`Speichern fehlgeschlagen: ${err?.message ?? 'Unbekannter Fehler'}`)
+      alert(
+        `Speichern fehlgeschlagen: ${
+          err?.message ?? 'Unbekannter Fehler'
+        }`,
+      )
       setLoading(false)
     }
   }
@@ -272,22 +343,27 @@ export default function ProjectForm({
   // shared styles
   const inputBase =
     'w-full rounded-lg border bg-white/95 px-3 py-2.5 text-sm text-slate-900 outline-none focus:ring-4 transition'
-  const inputCls =
-    `${inputBase} border-slate-200/80 placeholder-slate-400 focus:border-slate-300 ring-indigo-200/60`
+  const inputCls = `${inputBase} border-slate-200/80 placeholder-slate-400 focus:border-slate-300 ring-indigo-200/60`
   const subtleBtn =
     'inline-flex items-center gap-2 rounded-lg border border-slate-200/80 bg-white/95 px-3 py-2 text-sm text-slate-900 shadow-sm hover:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-200/60'
 
-  const initials = (e: Employee) =>
-    `${(e.first_name ?? '').trim()[0] ?? ''}${(e.last_name ?? '').trim()[0] ?? ''}`.toUpperCase()
+  const initialsEmp = (e: Employee) =>
+    `${(e.first_name ?? '').trim()[0] ?? ''}${
+      (e.last_name ?? '').trim()[0] ?? ''
+    }`.toUpperCase()
 
   const toggleAssignee = (id: string) =>
-    setAssigneeIds(prev => {
-      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
+    setAssigneeIds((prev) => {
+      const next = prev.includes(id)
+        ? prev.filter((x) => x !== id)
+        : [...prev, id]
       return dedupe(next)
     })
 
-  const filteredEmployees = employees.filter(e =>
-    `${e.first_name ?? ''} ${e.last_name ?? ''}`.toLowerCase().includes(employeeQuery.trim().toLowerCase())
+  const filteredEmployees = employees.filter((e) =>
+    `${e.first_name ?? ''} ${e.last_name ?? ''}`
+      .toLowerCase()
+      .includes(employeeQuery.trim().toLowerCase()),
   )
 
   return (
@@ -295,21 +371,43 @@ export default function ProjectForm({
       <form
         onSubmit={onSubmit}
         onKeyDown={(e) => {
-          if (e.key === 'Enter' && (e.target as HTMLElement)?.tagName !== 'TEXTAREA') {
+          if (
+            e.key === 'Enter' &&
+            (e.target as HTMLElement)?.tagName !== 'TEXTAREA'
+          ) {
             e.preventDefault()
           }
         }}
         className="w-full max-w-[1000px] max-h-[92vh] overflow-hidden rounded-2xl border border-slate-200/70 bg-white/90 shadow-[0_20px_80px_rgba(2,6,23,0.35)] backdrop-blur-xl"
       >
         {/* Header */}
-        <div className="sticky top-0 z-10 border-b border-slate-200/70 bg-white/85 px-4 py-4 sm:px-6 backdrop-blur">
-          <div className="flex flex-wrap items-center justify-between gap-2">
+        <div className="sticky top-0 z-10 border-b border-slate-200/70 bg-white/85 px-4 py-4 backdrop-blur sm:px-6">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-lg font-medium text-slate-900">
               {projectId ? 'Projekt bearbeiten' : 'Neues Projekt'}
             </h2>
             <div className="flex items-center gap-2">
-              <button type="button" onClick={onClose} className={subtleBtn}>Abbrechen</button>
-              <button type="submit" disabled={loading} className={`${subtleBtn} font-medium disabled:opacity-60`}>
+              {/* X innen im Header */}
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Schließen"
+                className="grid h-9 w-9 place-content-center rounded-full border border-slate-200/80 bg-white/95 shadow-sm backdrop-blur hover:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-200/60"
+              >
+                <XMarkIcon className="h-5 w-5 text-slate-900" />
+              </button>
+              <button
+                type="button"
+                onClick={onClose}
+                className={subtleBtn}
+              >
+                Abbrechen
+              </button>
+              <button
+                type="submit"
+                disabled={loading}
+                className={`${subtleBtn} font-medium disabled:opacity-60`}
+              >
                 {loading ? 'Speichert…' : 'Speichern'}
               </button>
             </div>
@@ -317,37 +415,75 @@ export default function ProjectForm({
         </div>
 
         {/* Body */}
-        <div className="max-h-[72vh] overflow-auto px-4 py-5 sm:px-6 space-y-6">
+        <div className="max-h-[72vh] space-y-6 overflow-auto px-4 py-5 sm:px-6">
           {/* Allgemein */}
           <Section title="Allgemein" icon={ClipboardDocumentListIcon}>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
               <div className="md:col-span-6">
-                <label className="mb-1 block text-xs font-medium text-slate-600">Titel</label>
-                <input className={inputCls} value={title} onChange={(e) => setTitle(e.target.value)} required autoComplete="off" />
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Titel
+                </label>
+                <input
+                  className={inputCls}
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  autoComplete="off"
+                />
               </div>
 
               <div className="md:col-span-3">
-                <label className="mb-1 block text-xs font-medium text-slate-600">Objekt</label>
-                <input className={inputCls} value={objectName} onChange={(e) => setObjectName(e.target.value)} autoComplete="off" />
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Objekt
+                </label>
+                <input
+                  className={inputCls}
+                  value={objectName}
+                  onChange={(e) => setObjectName(e.target.value)}
+                  autoComplete="off"
+                />
               </div>
 
               <div className="md:col-span-3">
-                <label className="mb-1 block text-xs font-medium text-slate-600">Etage</label>
-                <input className={inputCls} value={floor} onChange={(e) => setFloor(e.target.value)} autoComplete="off" />
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Etage
+                </label>
+                <input
+                  className={inputCls}
+                  value={floor}
+                  onChange={(e) => setFloor(e.target.value)}
+                  autoComplete="off"
+                />
               </div>
 
               <div className="md:col-span-12">
-                <label className="mb-1 block text-xs font-medium text-slate-600">Adresse</label>
-                <input className={inputCls} value={address} onChange={(e) => setAddress(e.target.value)} autoComplete="off" />
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Adresse
+                </label>
+                <input
+                  className={inputCls}
+                  value={address}
+                  onChange={(e) => setAddress(e.target.value)}
+                  autoComplete="off"
+                />
               </div>
 
               <div className="md:col-span-12">
-                <label className="mb-1 block text-xs font-medium text-slate-600">Beschreibung</label>
-                <textarea className={inputCls} rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Beschreibung
+                </label>
+                <textarea
+                  className={inputCls}
+                  rows={3}
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                />
               </div>
 
               <div className="md:col-span-6">
-                <label className="mb-1 block text-xs font-medium text-slate-600">Kunde</label>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Kunde
+                </label>
                 <div className="relative">
                   <select
                     className={`${inputCls} appearance-none pr-9`}
@@ -357,7 +493,9 @@ export default function ProjectForm({
                   >
                     <option value="">— auswählen —</option>
                     {customers.map((c) => (
-                      <option key={c.id} value={c.id}>{c.first_name} {c.last_name}</option>
+                      <option key={c.id} value={c.id}>
+                        {c.first_name} {c.last_name}
+                      </option>
                     ))}
                   </select>
                   <ChevronDownIcon className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -370,7 +508,9 @@ export default function ProjectForm({
           <Section title="Mitarbeiter zuweisen" icon={BuildingOffice2Icon}>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
               <div className="md:col-span-8">
-                <label className="mb-1 block text-xs font-medium text-slate-600">Mitarbeiter</label>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Mitarbeiter
+                </label>
 
                 {/* Suche */}
                 <div className="mb-2 flex items-center gap-2">
@@ -381,7 +521,7 @@ export default function ProjectForm({
                     className="w-full rounded-lg border border-slate-200/80 bg-white/95 px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-400 focus:border-slate-300 focus:ring-4 ring-indigo-200/60 transition"
                     autoComplete="off"
                   />
-                  <div className="text-xs text-slate-500 whitespace-nowrap">
+                  <div className="whitespace-nowrap text-xs text-slate-500">
                     {assigneeIds.length} ausgewählt
                   </div>
                 </div>
@@ -390,7 +530,10 @@ export default function ProjectForm({
                 <div className="flex flex-wrap gap-2">
                   {filteredEmployees.map((e) => {
                     const active = assigneeIds.includes(e.id)
-                    const label = `${e.first_name ?? ''} ${e.last_name ?? ''}`.trim() || 'Unbenannt'
+                    const label =
+                      `${e.first_name ?? ''} ${
+                        e.last_name ?? ''
+                      }`.trim() || 'Unbenannt'
                     return (
                       <button
                         key={e.id}
@@ -398,21 +541,30 @@ export default function ProjectForm({
                         onClick={() => toggleAssignee(e.id)}
                         className={[
                           'inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition border backdrop-blur shadow-sm',
-                          active ? 'border-slate-900/10 bg-slate-900/90 text-white hover:bg-slate-900'
-                                 : 'border-slate-200/80 bg-white/95 text-slate-900 hover:bg-white',
+                          active
+                            ? 'border-slate-900/10 bg-slate-900/90 text-white hover:bg-slate-900'
+                            : 'border-slate-200/80 bg-white/95 text-slate-900 hover:bg-white',
                           'focus:outline-none focus:ring-4 focus:ring-indigo-200/60',
                         ].join(' ')}
                       >
                         <span className="font-medium">{label}</span>
-                        <span className={['h-5 w-5 grid place-content-center rounded-full text-[11px] font-semibold',
-                          active ? 'bg-white text-slate-900' : 'bg-slate-200 text-slate-700'].join(' ')}>
-                          {initials(e)}
+                        <span
+                          className={[
+                            'grid h-5 w-5 place-content-center rounded-full text-[11px] font-semibold',
+                            active
+                              ? 'bg-white text-slate-900'
+                              : 'bg-slate-200 text-slate-700',
+                          ].join(' ')}
+                        >
+                          {initialsEmp(e)}
                         </span>
                       </button>
                     )
                   })}
                   {employees.length === 0 && (
-                    <span className="text-sm text-slate-500">Keine Mitarbeiter gefunden.</span>
+                    <span className="text-sm text-slate-500">
+                      Keine Mitarbeiter gefunden.
+                    </span>
                   )}
                 </div>
 
@@ -421,7 +573,11 @@ export default function ProjectForm({
                   <button
                     type="button"
                     className={subtleBtn}
-                    onClick={() => setAssigneeIds(dedupe(employees.map(e => e.id)))}
+                    onClick={() =>
+                      setAssigneeIds(
+                        dedupe(employees.map((e) => e.id)),
+                      )
+                    }
                     disabled={employees.length === 0}
                   >
                     Alle auswählen
@@ -439,8 +595,10 @@ export default function ProjectForm({
 
               <div className="md:col-span-4">
                 <div className="rounded-xl border border-slate-200/70 bg-white/85 p-3 text-xs text-slate-600 backdrop-blur">
-                  Zugewiesene Mitarbeiter sehen das Projekt in ihrer Übersicht.  
-                  Sie können kommentieren sowie Dokumente und Vorher/Nachher-Bilder hochladen, aber keine Stammdaten ändern.
+                  Zugewiesene Mitarbeiter sehen das Projekt in ihrer
+                  Übersicht. Sie können kommentieren sowie Dokumente und
+                  Vorher/Nachher-Bilder hochladen, aber keine Stammdaten
+                  ändern.
                 </div>
               </div>
             </div>
@@ -450,7 +608,9 @@ export default function ProjectForm({
           <Section title="Angebote (optional)" icon={BuildingOffice2Icon}>
             <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
               <div className="md:col-span-8">
-                <label className="mb-1 block text-xs font-medium text-slate-600">Angebote auswählen</label>
+                <label className="mb-1 block text-xs font-medium text-slate-600">
+                  Angebote auswählen
+                </label>
 
                 {/* Suche */}
                 <div className="mb-2 flex items-center gap-2">
@@ -461,13 +621,19 @@ export default function ProjectForm({
                     className="w-full rounded-lg border border-slate-200/80 bg-white/95 px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-400 focus:border-slate-300 focus:ring-4 ring-indigo-200/60 transition"
                     autoComplete="off"
                   />
-                  <div className="text-xs text-slate-500 whitespace-nowrap">{offerIds.length} ausgewählt</div>
+                  <div className="whitespace-nowrap text-xs text-slate-500">
+                    {offerIds.length} ausgewählt
+                  </div>
                 </div>
 
                 {/* Chips */}
                 <div className="flex flex-wrap gap-2">
                   {offers
-                    .filter((o) => o.offer_number?.toLowerCase().includes(offerQuery.trim().toLowerCase()))
+                    .filter((o) =>
+                      o.offer_number
+                        ?.toLowerCase()
+                        .includes(offerQuery.trim().toLowerCase()),
+                    )
                     .map((o) => {
                       const active = offerIds.includes(o.id)
                       return (
@@ -477,23 +643,39 @@ export default function ProjectForm({
                           label={o.offer_number}
                           onClick={() => {
                             setOfferIds((prev) =>
-                              prev.includes(o.id) ? prev.filter((id) => id !== o.id) : [...prev, o.id]
+                              prev.includes(o.id)
+                                ? prev.filter((id) => id !== o.id)
+                                : [...prev, o.id],
                             )
                           }}
                         />
                       )
                     })}
                   {offers.length === 0 && (
-                    <span className="text-sm text-slate-500">Keine Angebote vorhanden (Kunde wählen?).</span>
+                    <span className="text-sm text-slate-500">
+                      Keine Angebote vorhanden (Kunde wählen?).
+                    </span>
                   )}
                 </div>
 
                 {/* Aktionen */}
                 <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button type="button" className={subtleBtn} onClick={() => setOfferIds(offers.map((o) => o.id))} disabled={offers.length === 0}>
+                  <button
+                    type="button"
+                    className={subtleBtn}
+                    onClick={() =>
+                      setOfferIds(offers.map((o) => o.id))
+                    }
+                    disabled={offers.length === 0}
+                  >
                     Alle auswählen
                   </button>
-                  <button type="button" className={subtleBtn} onClick={() => setOfferIds([])} disabled={offerIds.length === 0}>
+                  <button
+                    type="button"
+                    className={subtleBtn}
+                    onClick={() => setOfferIds([])}
+                    disabled={offerIds.length === 0}
+                  >
                     Keine
                   </button>
                 </div>
@@ -501,7 +683,8 @@ export default function ProjectForm({
 
               <div className="md:col-span-4">
                 <div className="rounded-xl border border-slate-200/70 bg-white/85 p-3 text-xs text-slate-600 backdrop-blur">
-                  Mehrfachauswahl möglich. Die gewählten Angebote werden mit dem Projekt verknüpft.
+                  Mehrfachauswahl möglich. Die gewählten Angebote werden
+                  mit dem Projekt verknüpft.
                 </div>
               </div>
             </div>
@@ -509,12 +692,27 @@ export default function ProjectForm({
 
           {/* Räume */}
           <Section title="Räume" icon={BuildingOffice2Icon}>
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs text-slate-600">Lege einen oder mehrere Räume mit Arbeiten & Materialien an.</p>
+            <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+              <p className="text-xs text-slate-600">
+                Lege einen oder mehrere Räume mit Arbeiten &amp;
+                Materialien an.
+              </p>
               <button
                 type="button"
                 className={subtleBtn}
-                onClick={() => setRooms((prev) => [...prev, { name: '', width: null, length: null, notes: '', tasks: [], materials: [] }])}
+                onClick={() =>
+                  setRooms((prev) => [
+                    ...prev,
+                    {
+                      name: '',
+                      width: null,
+                      length: null,
+                      notes: '',
+                      tasks: [],
+                      materials: [],
+                    },
+                  ])
+                }
               >
                 <PlusIcon className="h-4 w-4" /> Raum hinzufügen
               </button>
@@ -522,23 +720,35 @@ export default function ProjectForm({
 
             <div className="space-y-4">
               {rooms.map((r, idx) => (
-                <div key={idx} className="rounded-xl border border-slate-200/70 bg-white/85 p-4 backdrop-blur space-y-3">
+                <div
+                  key={idx}
+                  className="space-y-3 rounded-xl border border-slate-200/70 bg-white/85 p-4 backdrop-blur"
+                >
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-12">
                     <div className="md:col-span-6">
-                      <label className="mb-1 block text-xs font-medium text-slate-600">Raumname</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Raumname
+                      </label>
                       <input
                         className={inputCls}
                         value={r.name}
                         onChange={(e) => {
                           setRooms((prev) => {
-                            const arr = [...prev]; arr[idx] = { ...arr[idx], name: e.target.value }; return arr
+                            const arr = [...prev]
+                            arr[idx] = {
+                              ...arr[idx],
+                              name: e.target.value,
+                            }
+                            return arr
                           })
                         }}
                         autoComplete="off"
                       />
                     </div>
                     <div className="md:col-span-3">
-                      <label className="mb-1 block text-xs font-medium text-slate-600">Breite (m)</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Breite (m)
+                      </label>
                       <input
                         type="number"
                         step="0.01"
@@ -546,13 +756,22 @@ export default function ProjectForm({
                         value={r.width ?? ''}
                         onChange={(e) => {
                           setRooms((prev) => {
-                            const arr = [...prev]; arr[idx] = { ...arr[idx], width: e.target.value ? parseFloat(e.target.value) : null }; return arr
+                            const arr = [...prev]
+                            arr[idx] = {
+                              ...arr[idx],
+                              width: e.target.value
+                                ? parseFloat(e.target.value)
+                                : null,
+                            }
+                            return arr
                           })
                         }}
                       />
                     </div>
                     <div className="md:col-span-3">
-                      <label className="mb-1 block text-xs font-medium text-slate-600">Länge (m)</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Länge (m)
+                      </label>
                       <input
                         type="number"
                         step="0.01"
@@ -560,21 +779,35 @@ export default function ProjectForm({
                         value={r.length ?? ''}
                         onChange={(e) => {
                           setRooms((prev) => {
-                            const arr = [...prev]; arr[idx] = { ...arr[idx], length: e.target.value ? parseFloat(e.target.value) : null }; return arr
+                            const arr = [...prev]
+                            arr[idx] = {
+                              ...arr[idx],
+                              length: e.target.value
+                                ? parseFloat(e.target.value)
+                                : null,
+                            }
+                            return arr
                           })
                         }}
                       />
                     </div>
 
                     <div className="md:col-span-12">
-                      <label className="mb-1 block text-xs font-medium text-slate-600">Notizen</label>
+                      <label className="mb-1 block text-xs font-medium text-slate-600">
+                        Notizen
+                      </label>
                       <textarea
                         className={inputCls}
                         rows={2}
                         value={r.notes ?? ''}
                         onChange={(e) => {
                           setRooms((prev) => {
-                            const arr = [...prev]; arr[idx] = { ...arr[idx], notes: e.target.value }; return arr
+                            const arr = [...prev]
+                            arr[idx] = {
+                              ...arr[idx],
+                              notes: e.target.value,
+                            }
+                            return arr
                           })
                         }}
                       />
@@ -583,9 +816,14 @@ export default function ProjectForm({
 
                   {/* Arbeiten */}
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-slate-900">Arbeiten</div>
+                    <div className="text-sm font-medium text-slate-900">
+                      Arbeiten
+                    </div>
                     {r.tasks.map((t, i2) => (
-                      <div key={i2} className="grid grid-cols-1 gap-2 md:grid-cols-12">
+                      <div
+                        key={i2}
+                        className="grid grid-cols-1 gap-2 md:grid-cols-12"
+                      >
                         <div className="md:col-span-4">
                           <input
                             className={inputCls}
@@ -593,7 +831,14 @@ export default function ProjectForm({
                             value={t.work}
                             onChange={(e) => {
                               setRooms((prev) => {
-                                const arr = [...prev]; const tasks = [...arr[idx].tasks]; tasks[i2] = { ...tasks[i2], work: e.target.value }; arr[idx] = { ...arr[idx], tasks }; return arr
+                                const arr = [...prev]
+                                const tasks = [...arr[idx].tasks]
+                                tasks[i2] = {
+                                  ...tasks[i2],
+                                  work: e.target.value,
+                                }
+                                arr[idx] = { ...arr[idx], tasks }
+                                return arr
                               })
                             }}
                             autoComplete="off"
@@ -606,7 +851,14 @@ export default function ProjectForm({
                             value={t.description ?? ''}
                             onChange={(e) => {
                               setRooms((prev) => {
-                                const arr = [...prev]; const tasks = [...arr[idx].tasks]; tasks[i2] = { ...tasks[i2], description: e.target.value }; arr[idx] = { ...arr[idx], tasks }; return arr
+                                const arr = [...prev]
+                                const tasks = [...arr[idx].tasks]
+                                tasks[i2] = {
+                                  ...tasks[i2],
+                                  description: e.target.value,
+                                }
+                                arr[idx] = { ...arr[idx], tasks }
+                                return arr
                               })
                             }}
                             autoComplete="off"
@@ -618,7 +870,14 @@ export default function ProjectForm({
                             className="w-full rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 hover:bg-rose-100 focus:outline-none focus:ring-4 focus:ring-rose-200/60"
                             onClick={() => {
                               setRooms((prev) => {
-                                const arr = [...prev]; arr[idx] = { ...arr[idx], tasks: arr[idx].tasks.filter((_, j) => j !== i2) }; return arr
+                                const arr = [...prev]
+                                arr[idx] = {
+                                  ...arr[idx],
+                                  tasks: arr[idx].tasks.filter(
+                                    (_, j) => j !== i2,
+                                  ),
+                                }
+                                return arr
                               })
                             }}
                           >
@@ -632,7 +891,15 @@ export default function ProjectForm({
                       className={subtleBtn}
                       onClick={() => {
                         setRooms((prev) => {
-                          const arr = [...prev]; arr[idx] = { ...arr[idx], tasks: [...arr[idx].tasks, { work: '', description: '' }] }; return arr
+                          const arr = [...prev]
+                          arr[idx] = {
+                            ...arr[idx],
+                            tasks: [
+                              ...arr[idx].tasks,
+                              { work: '', description: '' },
+                            ],
+                          }
+                          return arr
                         })
                       }}
                     >
@@ -642,22 +909,39 @@ export default function ProjectForm({
 
                   {/* Materialien */}
                   <div className="space-y-2">
-                    <div className="text-sm font-medium text-slate-900">Materialien</div>
+                    <div className="text-sm font-medium text-slate-900">
+                      Materialien
+                    </div>
                     {r.materials.map((m, i3) => (
-                      <div key={i3} className="grid grid-cols-1 items-center gap-2 md:grid-cols-12">
+                      <div
+                        key={i3}
+                        className="grid grid-cols-1 items-center gap-2 md:grid-cols-12"
+                      >
                         <div className="md:col-span-5">
                           <select
                             className={inputCls}
                             value={m.material_id}
                             onChange={(e) => {
                               setRooms((prev) => {
-                                const arr = [...prev]; const mats = [...arr[idx].materials]; mats[i3] = { ...mats[i3], material_id: e.target.value }; arr[idx] = { ...arr[idx], materials: mats }; return arr
+                                const arr = [...prev]
+                                const mats = [...arr[idx].materials]
+                                mats[i3] = {
+                                  ...mats[i3],
+                                  material_id: e.target.value,
+                                }
+                                arr[idx] = {
+                                  ...arr[idx],
+                                  materials: mats,
+                                }
+                                return arr
                               })
                             }}
                           >
                             <option value="">— Material —</option>
                             {materials.map((mat) => (
-                              <option key={mat.id} value={mat.id}>{mat.name}</option>
+                              <option key={mat.id} value={mat.id}>
+                                {mat.name}
+                              </option>
                             ))}
                           </select>
                         </div>
@@ -670,7 +954,17 @@ export default function ProjectForm({
                             value={m.quantity}
                             onChange={(e) => {
                               setRooms((prev) => {
-                                const arr = [...prev]; const mats = [...arr[idx].materials]; mats[i3] = { ...mats[i3], quantity: Number(e.target.value || 0) }; arr[idx] = { ...arr[idx], materials: mats }; return arr
+                                const arr = [...prev]
+                                const mats = [...arr[idx].materials]
+                                mats[i3] = {
+                                  ...mats[i3],
+                                  quantity: Number(e.target.value || 0),
+                                }
+                                arr[idx] = {
+                                  ...arr[idx],
+                                  materials: mats,
+                                }
+                                return arr
                               })
                             }}
                           />
@@ -682,7 +976,17 @@ export default function ProjectForm({
                             value={m.notes ?? ''}
                             onChange={(e) => {
                               setRooms((prev) => {
-                                const arr = [...prev]; const mats = [...arr[idx].materials]; mats[i3] = { ...mats[i3], notes: e.target.value }; arr[idx] = { ...arr[idx], materials: mats }; return arr
+                                const arr = [...prev]
+                                const mats = [...arr[idx].materials]
+                                mats[i3] = {
+                                  ...mats[i3],
+                                  notes: e.target.value,
+                                }
+                                arr[idx] = {
+                                  ...arr[idx],
+                                  materials: mats,
+                                }
+                                return arr
                               })
                             }}
                             autoComplete="off"
@@ -694,7 +998,14 @@ export default function ProjectForm({
                             className="w-full rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 hover:bg-rose-100 focus:outline-none focus:ring-4 focus:ring-rose-200/60"
                             onClick={() => {
                               setRooms((prev) => {
-                                const arr = [...prev]; arr[idx] = { ...arr[idx], materials: arr[idx].materials.filter((_, j) => j !== i3) }; return arr
+                                const arr = [...prev]
+                                arr[idx] = {
+                                  ...arr[idx],
+                                  materials: arr[idx].materials.filter(
+                                    (_, j) => j !== i3,
+                                  ),
+                                }
+                                return arr
                               })
                             }}
                           >
@@ -708,7 +1019,19 @@ export default function ProjectForm({
                       className={subtleBtn}
                       onClick={() => {
                         setRooms((prev) => {
-                          const arr = [...prev]; arr[idx] = { ...arr[idx], materials: [...arr[idx].materials, { material_id: '', quantity: 0, notes: '' }] }; return arr
+                          const arr = [...prev]
+                          arr[idx] = {
+                            ...arr[idx],
+                            materials: [
+                              ...arr[idx].materials,
+                              {
+                                material_id: '',
+                                quantity: 0,
+                                notes: '',
+                              },
+                            ],
+                          }
+                          return arr
                         })
                       }}
                     >
@@ -721,16 +1044,6 @@ export default function ProjectForm({
           </Section>
         </div>
       </form>
-
-      {/* Close-Hitbox */}
-      <button
-        type="button"
-        aria-label="Schließen"
-        className="absolute right-4 top-4 grid h-10 w-10 place-content-center rounded-full border border-slate-200/80 bg-white/95 shadow backdrop-blur hover:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-200/60"
-        onClick={onClose}
-      >
-        <XMarkIcon className="h-5 w-5 text-slate-900" />
-      </button>
     </div>
   )
 }

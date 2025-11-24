@@ -1,4 +1,3 @@
-// src/app/(app)/dashboard/buchhaltung/auftrag/page.tsx
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { supabaseServer } from '@/lib/supabase-server'
@@ -56,7 +55,6 @@ type RowFromDb = Omit<Row, 'customers'> & {
 }
 
 const PAGE_SIZE = 10
-
 const clamp = (n: number) => (n < 0 ? 0 : n)
 
 /** Endbetrag inkl. USt. – berücksichtigt optionalen Rabatt der AB */
@@ -134,9 +132,7 @@ export default async function AuftragsbestaetigungenPage({
     .eq('user_id', user.id)
     .order('created_at', { ascending: sort === 'asc' })
 
-  // WICHTIG:
-  // - Bei Suche KEIN .range(), damit wir alle ABs haben und danach
-  //   auch nach Kundennamen filtern können.
+  // Bei Suche KEIN range, damit wir nach Kundennamen etc. filtern können
   if (!qRaw) {
     query = query.range(from, to)
   }
@@ -153,7 +149,7 @@ export default async function AuftragsbestaetigungenPage({
       : r.customers ?? null,
   }))
 
-  // --- Suche in JS: Nummer, Titel, Intro, Datum, Kundennamen, PLZ, Ort ---
+  // Suche in JS: Nummer, Titel, Intro, Datum, Kundennamen, PLZ, Ort
   let filteredRows: Row[]
   if (qRaw) {
     const needle = qRaw.toLowerCase()
@@ -212,33 +208,34 @@ export default async function AuftragsbestaetigungenPage({
       list.push(1)
       if (s > 2) list.push('…')
       for (let i = s; i <= e; i++) list.push(i)
-        if (e < totalPages - 1) list.push('…')
+      if (e < totalPages - 1) list.push('…')
       list.push(totalPages)
     }
     return list
   })()
 
   return (
-    <div className="min-h-[100dvh] p-6 bg-[radial-gradient(1200px_350px_at_-10%_-30%,rgba(15,23,42,0.05),transparent_60%),radial-gradient(1200px_350px_at_110%_130%,rgba(88,101,242,0.08),transparent_60%),#e8edf5] text-slate-700">
+    <div className="min-h-[100dvh] w-full bg-[radial-gradient(1200px_350px_at_-10%_-30%,rgba(15,23,42,0.05),transparent_60%),radial-gradient(1200px_350px_at_110%_130%,rgba(88,101,242,0.08),transparent_60%),#e8edf5] px-4 py-4 text-slate-700 sm:px-6 sm:py-6 lg:px-8">
       {/* HEADER */}
-      <div className="relative mb-6 overflow-hidden rounded-2xl border border-white/50 bg-white/60 p-5 shadow-[0_10px_40px_rgba(2,6,23,0.12)] backdrop-blur-xl">
+      <div className="relative mb-4 w-full overflow-hidden rounded-2xl border border-white/50 bg-white/60 p-4 text-left shadow-[0_10px_40px_rgba(2,6,23,0.12)] backdrop-blur-xl sm:p-5">
         <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(900px_220px_at_-10%_-20%,rgba(15,23,42,0.08),transparent_60%),radial-gradient(900px_220px_at_110%_120%,rgba(88,101,242,0.10),transparent_60%)]" />
         <div className="relative flex flex-col items-start justify-between gap-4 sm:flex-row sm:items-center">
           <div className="flex items-center gap-4">
             <div className="rounded-xl border border-white/60 bg-white/80 p-3 shadow">
               <ClipboardDocumentCheckIcon className="h-7 w-7 text-slate-900" />
             </div>
-            <div>
+            <div className="text-left">
               <h1 className="text-2xl font-medium tracking-tight text-slate-900">
                 Auftragsbestätigungen
               </h1>
               <p className="text-sm text-slate-600">
-                Direkter Überblick &amp; Weiterverarbeitung zur Rechnung.
+                Überblick über alle Aufträge – mit Beträgen &amp; Status im
+                Blick.
               </p>
             </div>
           </div>
 
-          <div className="relative z-[1] flex items-center gap-2">
+          <div className="relative z-[1] flex w-full items-center justify-start gap-2 sm:w-auto sm:justify-end">
             <Link
               href="/dashboard/buchhaltung/angebot"
               className="inline-flex items-center gap-2 rounded-lg border border-white/60 bg-white/80 px-3 py-1.5 text-sm font-medium text-slate-800 shadow hover:bg-white"
@@ -253,26 +250,28 @@ export default async function AuftragsbestaetigungenPage({
       <FilterBarOrders />
 
       {/* LISTE */}
-      <div className="relative mt-4 overflow-hidden rounded-2xl border border-white/60 bg-white/65 p-0 shadow-[0_10px_40px_rgba(2,6,23,0.10)] backdrop-blur-xl">
+      <div className="relative mt-4 w-full overflow-hidden rounded-2xl border border-white/60 bg-white/65 p-0 text-left shadow-[0_10px_40px_rgba(2,6,23,0.10)] backdrop-blur-xl">
         <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(900px_220px_at_-10%_-20%,rgba(15,23,42,0.06),transparent_60%),radial-gradient(900px_220px_at_110%_120%,rgba(88,101,242,0.08),transparent_60%)]" />
         <div className="relative">
-          {/* Desktop */}
-          <div className="hidden md:block">
-            <div className="overflow-x-auto [-webkit-overflow-scrolling:touch]">
-              <table className="w-full min-w-[1200px] lg:min-w-[1400px] text-left">
-                <thead className="sticky top-0 z-10 bg-white/70 backdrop-blur supports-[backdrop-filter]:bg-white/60">
-                  <tr className="text-[12.5px] uppercase tracking-wide text-slate-700">
-                    <th className="px-6 py-3 font-semibold">Nr.</th>
-                    <th className="px-6 py-3 font-semibold">Kunde</th>
-                    <th className="px-6 py-3 font-semibold">Datum</th>
-                    <th className="px-6 py-3 font-semibold">Betrag</th>
-                    <th className="px-6 py-3 font-semibold">Status</th>
-                    <th className="px-6 py-3 font-semibold text-right">
-                      Aktionen
-                    </th>
+          {/* Desktop-Tabelle ab XL */}
+          <div className="hidden xl:block">
+            <div className="w-full overflow-x-auto">
+              <table className="min-w-full table-fixed text-left align-middle">
+                <thead className="sticky top-0 z-10 bg-white/80 text-left text-xs text-slate-500 backdrop-blur supports-[backdrop-filter]:bg-white/70">
+                  <tr>
+                    {['Nr.', 'Kunde', 'Datum', 'Betrag', 'Status', 'Aktionen'].map(
+                      (h) => (
+                        <th
+                          key={h}
+                          className="px-4 py-2.5 text-left font-normal sm:px-5"
+                        >
+                          {h}
+                        </th>
+                      )
+                    )}
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-white/70">
+                <tbody className="divide-y divide-white/70 text-sm">
                   {rowsPage.map((r) => {
                     const c = r.customers
                     const grossTotal = computeGrossTotal(r)
@@ -280,12 +279,12 @@ export default async function AuftragsbestaetigungenPage({
                     return (
                       <tr
                         key={r.id}
-                        className="transition-colors hover:bg-white/80"
+                        className="align-middle transition-colors hover:bg-white/80"
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
+                        <td className="whitespace-nowrap px-4 py-3 text-left font-medium text-slate-900 sm:px-5">
                           {r.order_confirmation_number}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-900">
+                        <td className="whitespace-nowrap px-4 py-3 text-left text-slate-900 sm:px-5">
                           {c ? `${c.first_name} ${c.last_name}` : '—'}
                           {c?.postal_code && c?.city && (
                             <span className="ml-2 text-xs text-slate-600">
@@ -293,16 +292,16 @@ export default async function AuftragsbestaetigungenPage({
                             </span>
                           )}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-700">
+                        <td className="whitespace-nowrap px-4 py-3 text-left text-slate-700 sm:px-5">
                           {r.date}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-900">
+                        <td className="whitespace-nowrap px-4 py-3 text-left font-semibold text-slate-900 sm:px-5">
                           {EUR.format(grossTotal)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm">
+                        <td className="whitespace-nowrap px-4 py-3 text-left sm:px-5">
                           <StatusBadge status={r.status ?? 'Erstellt'} />
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                        <td className="whitespace-nowrap px-4 py-3 text-left sm:px-5">
                           <OrderActionsMenu
                             orderConfirmationNumber={
                               r.order_confirmation_number
@@ -319,7 +318,7 @@ export default async function AuftragsbestaetigungenPage({
                     <tr>
                       <td
                         colSpan={6}
-                        className="py-12 text-center italic text-slate-600"
+                        className="px-4 py-10 text-left text-sm italic text-slate-600 sm:px-5"
                       >
                         Keine Treffer.
                       </td>
@@ -330,10 +329,10 @@ export default async function AuftragsbestaetigungenPage({
             </div>
           </div>
 
-          {/* Mobile Cards */}
-          <div className="md:hidden">
+          {/* Mobile & Tablet: Karten-Ansicht bis < XL */}
+          <div className="xl:hidden">
             {rowsPage.length === 0 ? (
-              <div className="p-6 text-center italic text-slate-700">
+              <div className="p-4 text-left text-sm italic text-slate-700 sm:p-6">
                 Keine Treffer.
               </div>
             ) : (
@@ -343,32 +342,47 @@ export default async function AuftragsbestaetigungenPage({
                   const grossTotal = computeGrossTotal(r)
 
                   return (
-                    <li key={r.id} className="p-4">
-                      <div className="flex items-start justify-between gap-3">
-                        <div>
-                          <div className="text-base font-semibold text-slate-900">
-                            {r.order_confirmation_number}
-                          </div>
-                          {c && (
-                            <div className="text-sm text-slate-700">
-                              {c.first_name} {c.last_name}
+                    <li key={r.id} className="px-4 py-3 sm:px-5 sm:py-4">
+                      <div className="rounded-2xl border border-white/70 bg-white/95 px-4 py-3 shadow-sm">
+                        {/* Top: Nummer + Kunde links, Status + Betrag rechts */}
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold text-slate-900">
+                              {r.order_confirmation_number}
                             </div>
-                          )}
-                          <div className="mt-1 text-sm text-slate-700">
-                            {r.date}
+                            {c && (
+                              <div className="truncate text-xs text-slate-700 sm:text-sm">
+                                {c.first_name} {c.last_name}
+                              </div>
+                            )}
+                            {c?.postal_code && c?.city && (
+                              <div className="mt-0.5 text-[11px] text-slate-500">
+                                {c.postal_code} {c.city}
+                              </div>
+                            )}
+                            <div className="mt-1 text-xs text-slate-500">
+                              {r.date}
+                            </div>
                           </div>
-                          <div className="text-sm font-semibold text-slate-900">
-                            {EUR.format(grossTotal)}
-                          </div>
-                          <div className="mt-1">
+
+                          <div className="flex shrink-0 flex-col items-end gap-1">
                             <StatusBadge status={r.status ?? 'Erstellt'} />
+                            <div className="text-sm font-semibold text-slate-900 sm:text-base">
+                              {EUR.format(grossTotal)}
+                            </div>
                           </div>
                         </div>
-                        <div className="flex flex-col items-end gap-2">
+
+                        {/* Bottom: Aktionen + Meta */}
+                        <div className="mt-3 flex items-center justify-between gap-2">
+                          <div className="text-[11px] text-slate-400">
+                            Auftrag-ID:{' '}
+                            <span className="font-mono text-slate-600">
+                              {r.order_confirmation_number}
+                            </span>
+                          </div>
                           <OrderActionsMenu
-                            orderConfirmationNumber={
-                              r.order_confirmation_number
-                            }
+                            orderConfirmationNumber={r.order_confirmation_number}
                             pdfPath={r.pdf_path}
                             currentStatus={r.status}
                             redirectAfter="/dashboard/buchhaltung/rechnung"
@@ -383,12 +397,12 @@ export default async function AuftragsbestaetigungenPage({
           </div>
 
           {/* Pager */}
-          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/60 bg-white/70 px-4 py-3 backdrop-blur">
-            <div className="text-xs text-slate-600">
+          <div className="flex flex-wrap items-center justify-between gap-3 border-t border-white/60 bg-white/80 px-4 py-3 text-left text-xs text-slate-600 backdrop-blur">
+            <div>
               Seite <strong>{safePage}</strong> von{' '}
               <strong>{totalPages}</strong> · {total} Einträge
             </div>
-            <nav className="flex items-center gap-1">
+            <nav className="flex flex-wrap items-center gap-1">
               <Link
                 href={hrefForPage(Math.max(1, safePage - 1))}
                 aria-disabled={safePage === 1}
@@ -409,10 +423,10 @@ export default async function AuftragsbestaetigungenPage({
                     href={hrefForPage(n as number)}
                     aria-current={n === safePage ? 'page' : undefined}
                     className={[
-                      'rounded-lg px-3 py-1.5 text-sm border shadow',
+                      'rounded-lg border px-3 py-1.5 text-sm shadow',
                       n === safePage
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white/80 border-white/60 hover:bg-white',
+                        ? 'border-slate-900 bg-slate-900 text-white'
+                        : 'border-white/60 bg-white/80 hover:bg-white',
                     ].join(' ')}
                   >
                     {n}
@@ -435,8 +449,8 @@ export default async function AuftragsbestaetigungenPage({
         </div>
       </div>
 
-      <p className="mt-3 text-xs text-slate-600">
-        Beträge sind <strong>netto</strong> (nach Rabatt).
+      <p className="mt-3 text-left text-xs text-slate-600">
+        Beträge sind <strong>brutto</strong> inkl. Rabatt und Mehrwertsteuer.
       </p>
     </div>
   )

@@ -62,7 +62,8 @@ function CatalogModal({
     if (!open) return
     let ignore = false
     ;(async () => {
-      setLoading(true); setErr(null)
+      setLoading(true)
+      setErr(null)
       try {
         const res = await fetch('/api/catalog/items?q=' + encodeURIComponent(q))
         const data = await res.json()
@@ -74,7 +75,9 @@ function CatalogModal({
         if (!ignore) setLoading(false)
       }
     })()
-    return () => { ignore = true }
+    return () => {
+      ignore = true
+    }
   }, [open, q])
 
   // ESC schließt
@@ -92,7 +95,9 @@ function CatalogModal({
       <div className="absolute inset-0 bg-black/30" onClick={onClose} />
       <div className="relative z-[101] w-full max-w-2xl rounded-xl border border-gray-200 bg-white p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-semibold text-gray-900">Aus Katalog hinzufügen</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Aus Katalog hinzufügen
+          </h3>
           <button
             onClick={onClose}
             className="rounded-md px-2 py-1 text-sm text-gray-600 hover:bg-gray-100"
@@ -127,13 +132,15 @@ function CatalogModal({
                   <th className="px-3 py-2 text-left">Name</th>
                   <th className="px-3 py-2 text-left">Einheit</th>
                   <th className="px-3 py-2 text-right">Preis/Einheit</th>
-                  <th className="px-3 py-2"></th>
+                  <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {items.map((it) => (
                   <tr key={it.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2">{it.kind === 'service' ? 'Dienstleistung' : 'Produkt'}</td>
+                    <td className="px-3 py-2">
+                      {it.kind === 'service' ? 'Dienstleistung' : 'Produkt'}
+                    </td>
                     <td className="px-3 py-2">{it.name}</td>
                     <td className="px-3 py-2">{it.unit}</td>
                     <td className="px-3 py-2 text-right">
@@ -155,7 +162,10 @@ function CatalogModal({
         </div>
 
         <div className="mt-3 flex justify-end">
-          <button onClick={onClose} className="rounded-md border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50">
+          <button
+            onClick={onClose}
+            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
             Schließen
           </button>
         </div>
@@ -170,7 +180,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
     selectedCustomer,
     billingSettings,
     invoiceNumber,
-    setinvoiceNumber, // <<< nach Commit setzen
+    setinvoiceNumber,
     date,
     validUntil,
     title,
@@ -187,7 +197,8 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
 
   // idempotencyKey einmalig erzeugen (pro Page-Lebenszyklus stabil)
   const [idemKey] = useState<string>(() => {
-    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto) return crypto.randomUUID()
+    if (typeof crypto !== 'undefined' && 'randomUUID' in crypto)
+      return crypto.randomUUID()
     return Math.random().toString(36).slice(2)
   })
 
@@ -199,15 +210,15 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
   const displayName = (company || `${first} ${last}`.trim()).trim()
 
   // Adresszeilen – strukturierte Felder mit Fallback auf address
-  const street      = (sc.street ?? '').toString().trim()
+  const street = (sc.street ?? '').toString().trim()
   const houseNumber = (sc.house_number ?? '').toString().trim()
-  const postal      = (sc.postal_code ?? '').toString().trim()
-  const city        = (sc.city ?? '').toString().trim()
+  const postal = (sc.postal_code ?? '').toString().trim()
+  const city = (sc.city ?? '').toString().trim()
   const hasStructured = street || houseNumber || postal || city
 
   const line1 = displayName
-  const line2 = [street, houseNumber].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
-  const line3 = [postal, city].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
+  const line2 = [street, houseNumber].filter(Boolean).join(' ').trim()
+  const line3 = [postal, city].filter(Boolean).join(' ').trim()
   const addressLines = hasStructured
     ? [line1, line2, line3].filter(Boolean)
     : [line1, (sc.address ?? '').toString().trim()].filter(Boolean)
@@ -223,9 +234,14 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
   }, [])
 
   // Helpers
-  const removePos = (i: number) => setPositions(ps => ps.filter((_, idx) => idx !== i))
-  const updatePos = (i: number, key: keyof typeof positions[0], v: any) => {
-    setPositions(ps => {
+  const removePos = (i: number) =>
+    setPositions((ps) => ps.filter((_, idx) => idx !== i))
+  const updatePos = (
+    i: number,
+    key: keyof (typeof positions)[0],
+    v: any
+  ) => {
+    setPositions((ps) => {
       const c = [...ps]
       // @ts-ignore
       c[i][key] = v
@@ -237,7 +253,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
     if (!res.destination) return
     const from = res.source.index
     const to = res.destination.index
-    setPositions(ps => {
+    setPositions((ps) => {
       const arr = [...ps]
       const [m] = arr.splice(from, 1)
       arr.splice(to, 0, m)
@@ -253,10 +269,15 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
 
   // Summen + Rabatt
   const netSubtotal = useMemo(
-    () => positions.reduce(
-      (sum: number, p: any) => sum + (p.type === 'item' ? (p.quantity ?? 0) * (p.unitPrice ?? 0) : 0),
-      0
-    ),
+    () =>
+      positions.reduce(
+        (sum: number, p: any) =>
+          sum +
+          (p.type === 'item'
+            ? (p.quantity ?? 0) * (p.unitPrice ?? 0)
+            : 0),
+        0
+      ),
     [positions]
   )
 
@@ -279,7 +300,9 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
 
     if (discount.base === 'net') {
       let amount =
-        discount.type === 'percent' ? (netSubtotal * discount.value) / 100 : discount.value
+        discount.type === 'percent'
+          ? (netSubtotal * discount.value) / 100
+          : discount.value
       amount = Math.min(Math.max(0, amount), netSubtotal)
       const netAfter = clamp(netSubtotal - amount)
       const tax = netAfter * (taxFactor - 1)
@@ -293,7 +316,9 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
       }
     } else {
       let amount =
-        discount.type === 'percent' ? (grossBefore * discount.value) / 100 : discount.value
+        discount.type === 'percent'
+          ? (grossBefore * discount.value) / 100
+          : discount.value
       amount = Math.min(Math.max(0, amount), grossBefore)
       const grossAfter = clamp(grossBefore - amount)
       const netAfter = grossAfter / taxFactor
@@ -310,7 +335,10 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
 
   // --- Speichern & Weiter (COMMIT) ---
   const handleSaveAndNext = async () => {
-    if (!selectedCustomer) { onNext(); return }
+    if (!selectedCustomer) {
+      onNext()
+      return
+    }
 
     const isUpdate = Boolean((invoiceNumber ?? '').trim())
 
@@ -340,16 +368,34 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
     try {
       const res = await fetch('/api/rechnung/generate-invoice', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        },
         body: JSON.stringify(payload),
       })
-      if (!res.ok) { console.error('Fehler beim Speichern der Rechnung:', await res.text()); onNext(); return }
+      if (!res.ok) {
+        console.error(
+          'Fehler beim Speichern der Rechnung:',
+          await res.text()
+        )
+        onNext()
+        return
+      }
 
       const headerInv = res.headers.get('X-Invoice-Number') || ''
-      const serverInvoiceNumber = headerInv ? decodeURIComponent(headerInv).trim() : ''
-      const nextInvoiceNo = (isUpdate ? invoiceNumber : serverInvoiceNumber) || invoiceNumber
-      if (nextInvoiceNo && nextInvoiceNo !== invoiceNumber) setinvoiceNumber(nextInvoiceNo)
-      if (nextInvoiceNo) router.replace(`?invoiceNumber=${encodeURIComponent(nextInvoiceNo)}`, { scroll: false })
+      const serverInvoiceNumber = headerInv
+        ? decodeURIComponent(headerInv).trim()
+        : ''
+      const nextInvoiceNo =
+        (isUpdate ? invoiceNumber : serverInvoiceNumber) || invoiceNumber
+      if (nextInvoiceNo && nextInvoiceNo !== invoiceNumber)
+        setinvoiceNumber(nextInvoiceNo)
+      if (nextInvoiceNo)
+        router.replace(
+          `?invoiceNumber=${encodeURIComponent(nextInvoiceNo)}`,
+          { scroll: false }
+        )
       onNext()
     } catch (e) {
       console.error('Netzwerkfehler beim Speichern:', e)
@@ -360,7 +406,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
   // ====== NEU: Katalog-Button + Auswahl ======
   const [catalogOpen, setCatalogOpen] = useState(false)
   const handlePickFromCatalog = (it: CatalogItem) => {
-    setPositions(ps => {
+    setPositions((ps) => {
       const next = [...ps]
       // 1) Detailposition aus Katalog
       next.push({
@@ -396,42 +442,52 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
         </div>
         <div className="grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
           <div className="text-gray-600">Rechnungsnr.</div>
-          <div className="font-medium text-gray-900">{invoiceNumber || 'wird erzeugt'}</div>
+          <div className="font-medium text-gray-900">
+            {invoiceNumber || 'wird erzeugt'}
+          </div>
 
           <div className="text-gray-600">Kundennr.</div>
-          <div className="font-medium text-gray-900">{(sc as any).customer_number ?? '—'}</div>
+          <div className="font-medium text-gray-900">
+            {(sc as any).customer_number ?? '—'}
+          </div>
 
           <div className="text-gray-600">Datum</div>
           <div className="font-medium text-gray-900">{date || '—'}</div>
 
           <div className="text-gray-600">Zahlen bis</div>
-          <div className="font-medium text-gray-900">{validUntil || '—'}</div>
+          <div className="font-medium text-gray-900">
+            {validUntil || '—'}
+          </div>
 
           <div className="text-gray-600">Kontakt</div>
           <div className="font-medium text-gray-900">{displayName}</div>
         </div>
       </div>
 
-      {/* Titel */}
+      {/* Titel – jetzt mit gleicher „leichten Umrandung“ wie im Angebot */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <h3 className="mb-2 font-semibold text-gray-900">Titel</h3>
-        <input
-          type="text"
-          value={title}
-          onChange={e => setTitle(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
-        />
+        <div className="rounded-lg border border-gray-200 bg-gray-50">
+          <input
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            className="w-full rounded-lg border-0 bg-transparent px-3 py-2 text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
+          />
+        </div>
       </div>
 
-      {/* Einleitung */}
+      {/* Einleitung – gleiche Optik wie im Angebot */}
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <h3 className="mb-2 font-semibold text-gray-900">Einleitung</h3>
-        <textarea
-          value={intro}
-          onChange={e => setIntro(e.target.value)}
-          className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
-          rows={3}
-        />
+        <div className="rounded-lg border border-gray-200 bg-gray-50">
+          <textarea
+            value={intro}
+            onChange={(e) => setIntro(e.target.value)}
+            className="w-full resize-none rounded-lg border-0 bg-transparent px-3 py-2 text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
+            rows={3}
+          />
+        </div>
       </div>
 
       {/* Positionen */}
@@ -440,7 +496,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
           <h3 className="font-semibold text-gray-900">Positionen</h3>
           <div className="flex items-center gap-2">
             <AddMenu positions={positions} setPositions={setPositions} />
-            {/* NEU: Katalog Button */}
+            {/* Katalog Button */}
             <button
               type="button"
               onClick={() => setCatalogOpen(true)}
@@ -464,9 +520,17 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
             // ---------- MOBILE ----------
             <Droppable droppableId="pos-mobile">
               {(provided: DroppableProvided) => (
-                <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="space-y-3"
+                >
                   {positions.map((p, i) => (
-                    <Draggable key={did(i)} draggableId={did(i)} index={i}>
+                    <Draggable
+                      key={did(i)}
+                      draggableId={did(i)}
+                      index={i}
+                    >
                       {(prov: DraggableProvided) => (
                         <div
                           ref={prov.innerRef}
@@ -476,7 +540,12 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                           {/* Kopf */}
                           <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
                             <div
-                              style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none', cursor: 'grab' }}
+                              style={{
+                                touchAction: 'none',
+                                WebkitUserSelect: 'none',
+                                userSelect: 'none',
+                                cursor: 'grab',
+                              }}
                               className="flex items-center gap-2 text-xs text-gray-500"
                               {...prov.dragHandleProps}
                               title="Ziehen zum Sortieren"
@@ -498,55 +567,88 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                           {p.type === 'item' ? (
                             <div className="grid grid-cols-1 gap-3 p-3">
                               <label className="flex flex-col gap-1">
-                                <span className="text-xs text-gray-600">Bezeichnung</span>
+                                <span className="text-xs text-gray-600">
+                                  Bezeichnung
+                                </span>
                                 <input
                                   type="text"
                                   placeholder="Bezeichnung"
                                   value={(p as any).description ?? ''}
-                                  onChange={e => updatePos(i, 'description', e.target.value)}
+                                  onChange={(e) =>
+                                    updatePos(
+                                      i,
+                                      'description',
+                                      e.target.value
+                                    )
+                                  }
                                   className="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-sm outline-none ring-indigo-200/60 focus:ring-4"
                                 />
                               </label>
 
                               <div className="grid grid-cols-3 gap-2">
                                 <label className="flex flex-col gap-1">
-                                  <span className="text-xs text-gray-600">Anzahl</span>
+                                  <span className="text-xs text-gray-600">
+                                    Anzahl
+                                  </span>
                                   <input
                                     type="number"
                                     min={1}
                                     value={(p as any).quantity ?? 1}
-                                    onChange={e => updatePos(i, 'quantity', Number(e.target.value))}
+                                    onChange={(e) =>
+                                      updatePos(
+                                        i,
+                                        'quantity',
+                                        Number(e.target.value)
+                                      )
+                                    }
                                     className="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-right text-sm outline-none ring-indigo-200/60 focus:ring-4"
                                   />
                                 </label>
                                 <label className="flex flex-col gap-1">
-                                  <span className="text-xs text-gray-600">Einheit</span>
+                                  <span className="text-xs text-gray-600">
+                                    Einheit
+                                  </span>
                                   <input
                                     type="text"
                                     placeholder="z. B. Stk."
                                     value={(p as any).unit ?? ''}
-                                    onChange={e => updatePos(i, 'unit', e.target.value)}
+                                    onChange={(e) =>
+                                      updatePos(i, 'unit', e.target.value)
+                                    }
                                     className="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-center text-sm outline-none ring-indigo-200/60 focus:ring-4"
                                   />
                                 </label>
                                 <label className="flex flex-col gap-1">
-                                  <span className="text-xs text-gray-600">Preis</span>
+                                  <span className="text-xs text-gray-600">
+                                    Preis
+                                  </span>
                                   <input
                                     type="number"
                                     min={0}
                                     step={0.01}
                                     placeholder="0,00"
                                     value={(p as any).unitPrice ?? 0}
-                                    onChange={e => updatePos(i, 'unitPrice', Number(e.target.value))}
+                                    onChange={(e) =>
+                                      updatePos(
+                                        i,
+                                        'unitPrice',
+                                        Number(e.target.value)
+                                      )
+                                    }
                                     className="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-right text-sm outline-none ring-indigo-200/60 focus:ring-4"
                                   />
                                 </label>
                               </div>
 
                               <div className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-sm">
-                                <span className="text-gray-600">Total</span>
+                                <span className="text-gray-600">
+                                  Total
+                                </span>
                                 <span className="font-semibold text-gray-900">
-                                  {EUR(((p as any).quantity ?? 0) * ((p as any).unitPrice ?? 0))}
+                                  {EUR(
+                                    ((p as any).quantity ?? 0) *
+                                      ((p as any).unitPrice ?? 0)
+                                  )}
                                 </span>
                               </div>
                             </div>
@@ -556,7 +658,13 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                 <input
                                   type="text"
                                   value={(p as any).description ?? ''}
-                                  onChange={e => updatePos(i, 'description', e.target.value)}
+                                  onChange={(e) =>
+                                    updatePos(
+                                      i,
+                                      'description',
+                                      e.target.value
+                                    )
+                                  }
                                   className="w-full border-b border-black bg-transparent px-1 py-1 text-sm font-semibold outline-none"
                                   placeholder="Zwischenüberschrift"
                                 />
@@ -565,7 +673,13 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                               {p.type === 'description' && (
                                 <textarea
                                   value={(p as any).description ?? ''}
-                                  onChange={e => updatePos(i, 'description', e.target.value)}
+                                  onChange={(e) =>
+                                    updatePos(
+                                      i,
+                                      'description',
+                                      e.target.value
+                                    )
+                                  }
                                   className="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-sm outline-none ring-indigo-200/60 focus:ring-4"
                                   rows={3}
                                   placeholder="Beschreibungstext…"
@@ -574,15 +688,21 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
 
                               {p.type === 'subtotal' && (
                                 <div className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-sm font-semibold">
-                                  <span>{(p as any).description || 'Zwischensumme'}:</span>
+                                  <span>
+                                    {(p as any).description ||
+                                      'Zwischensumme'}
+                                    :
+                                  </span>
                                   <span>
                                     {EUR(
                                       positions
                                         .slice(0, i)
                                         .reduce(
                                           (s, pp: any) =>
-                                            s + (pp.type === 'item'
-                                              ? (pp.quantity ?? 0) * (pp.unitPrice ?? 0)
+                                            s +
+                                            (pp.type === 'item'
+                                              ? (pp.quantity ?? 0) *
+                                                (pp.unitPrice ?? 0)
                                               : 0),
                                           0
                                         )
@@ -617,7 +737,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                         <th className="px-3 py-2 text-left">Einheit</th>
                         <th className="px-3 py-2 text-left">Preis</th>
                         <th className="px-3 py-2 text-right">Total</th>
-                        <th className="px-3 py-2"></th>
+                        <th className="px-3 py-2" />
                       </tr>
                     </thead>
                     <tbody
@@ -626,7 +746,11 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                       className="divide-y divide-gray-100"
                     >
                       {positions.map((p, i) => (
-                        <Draggable key={did(i)} draggableId={did(i)} index={i}>
+                        <Draggable
+                          key={did(i)}
+                          draggableId={did(i)}
+                          index={i}
+                        >
                           {(prov: DraggableProvided) => (
                             <tr
                               ref={prov.innerRef}
@@ -641,7 +765,13 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                       type="text"
                                       placeholder="Bezeichnung"
                                       value={(p as any).description ?? ''}
-                                      onChange={e => updatePos(i, 'description', e.target.value)}
+                                      onChange={(e) =>
+                                        updatePos(
+                                          i,
+                                          'description',
+                                          e.target.value
+                                        )
+                                      }
                                       className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm outline-none ring-indigo-200/60 focus:ring-4"
                                     />
                                   </td>
@@ -650,7 +780,13 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                       type="number"
                                       min={1}
                                       value={(p as any).quantity ?? 1}
-                                      onChange={e => updatePos(i, 'quantity', Number(e.target.value))}
+                                      onChange={(e) =>
+                                        updatePos(
+                                          i,
+                                          'quantity',
+                                          Number(e.target.value)
+                                        )
+                                      }
                                       className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-right text-sm outline-none ring-indigo-200/60 focus:ring-4"
                                     />
                                   </td>
@@ -659,7 +795,13 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                       type="text"
                                       placeholder="Einheit"
                                       value={(p as any).unit ?? ''}
-                                      onChange={e => updatePos(i, 'unit', e.target.value)}
+                                      onChange={(e) =>
+                                        updatePos(
+                                          i,
+                                          'unit',
+                                          e.target.value
+                                        )
+                                      }
                                       className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-center text-sm outline-none ring-indigo-200/60 focus:ring-4"
                                     />
                                   </td>
@@ -670,12 +812,21 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                       step={0.01}
                                       placeholder="Preis"
                                       value={(p as any).unitPrice ?? 0}
-                                      onChange={e => updatePos(i, 'unitPrice', Number(e.target.value))}
+                                      onChange={(e) =>
+                                        updatePos(
+                                          i,
+                                          'unitPrice',
+                                          Number(e.target.value)
+                                        )
+                                      }
                                       className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-right text-sm outline-none ring-indigo-200/60 focus:ring-4"
                                     />
                                   </td>
                                   <td className="px-3 py-2 text-right align-top text-sm font-medium text-gray-900">
-                                    {EUR(((p as any).quantity ?? 0) * ((p as any).unitPrice ?? 0))}
+                                    {EUR(
+                                      ((p as any).quantity ?? 0) *
+                                        ((p as any).unitPrice ?? 0)
+                                    )}
                                   </td>
                                   <td className="px-3 py-2 align-top">
                                     <button
@@ -690,12 +841,21 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                 </>
                               ) : (
                                 <>
-                                  <td colSpan={5} className="px-3 py-2 align-top">
+                                  <td
+                                    colSpan={5}
+                                    className="px-3 py-2 align-top"
+                                  >
                                     {p.type === 'heading' && (
                                       <input
                                         type="text"
                                         value={(p as any).description ?? ''}
-                                        onChange={e => updatePos(i, 'description', e.target.value)}
+                                        onChange={(e) =>
+                                          updatePos(
+                                            i,
+                                            'description',
+                                            e.target.value
+                                          )
+                                        }
                                         className="w-full border-b border-black bg-transparent px-1 py-1 text-sm font-semibold outline-none"
                                       />
                                     )}
@@ -703,7 +863,13 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                     {p.type === 'description' && (
                                       <textarea
                                         value={(p as any).description ?? ''}
-                                        onChange={e => updatePos(i, 'description', e.target.value)}
+                                        onChange={(e) =>
+                                          updatePos(
+                                            i,
+                                            'description',
+                                            e.target.value
+                                          )
+                                        }
                                         className="w-full rounded-md border border-gray-200 bg-white px-2 py-1 text-sm outline-none ring-indigo-200/60 focus:ring-4"
                                         rows={2}
                                       />
@@ -711,15 +877,21 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
 
                                     {p.type === 'subtotal' && (
                                       <div className="flex items-center justify-between rounded-md bg-gray-50 px-3 py-2 text-sm font-semibold">
-                                        <span>{(p as any).description || 'Zwischensumme'}:</span>
+                                        <span>
+                                          {(p as any).description ||
+                                            'Zwischensumme'}
+                                          :
+                                        </span>
                                         <span>
                                           {EUR(
                                             positions
                                               .slice(0, i)
                                               .reduce(
                                                 (s, pp: any) =>
-                                                  s + (pp.type === 'item'
-                                                    ? (pp.quantity ?? 0) * (pp.unitPrice ?? 0)
+                                                  s +
+                                                  (pp.type === 'item'
+                                                    ? (pp.quantity ?? 0) *
+                                                      (pp.unitPrice ?? 0)
                                                     : 0),
                                                 0
                                               )
@@ -764,11 +936,13 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
             <h4 className="font-semibold text-gray-900">Rabatt</h4>
           </div>
 
-          <label className="flex items-center gap-2 md:col-span-3">
+          <label className="md:col-span-3 flex items-center gap-2">
             <input
               type="checkbox"
               checked={discount.enabled}
-              onChange={e => setDiscount(s => ({ ...s, enabled: e.target.checked }))}
+              onChange={(e) =>
+                setDiscount((s) => ({ ...s, enabled: e.target.checked }))
+              }
               className="h-4 w-4 rounded border-gray-300"
             />
             <span className="text-sm text-gray-800">Rabatt anwenden</span>
@@ -779,7 +953,9 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
             <input
               type="text"
               value={discount.label}
-              onChange={e => setDiscount(s => ({ ...s, label: e.target.value }))}
+              onChange={(e) =>
+                setDiscount((s) => ({ ...s, label: e.target.value }))
+              }
               className="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-sm outline-none ring-indigo-200/60 focus:ring-4"
               placeholder="z. B. Stammkundenrabatt"
             />
@@ -789,7 +965,9 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
             <span className="text-xs text-gray-600">Art</span>
             <select
               value={discount.type}
-              onChange={e => setDiscount(s => ({ ...s, type: e.target.value as any }))}
+              onChange={(e) =>
+                setDiscount((s) => ({ ...s, type: e.target.value as any }))
+              }
               className="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-sm outline-none ring-indigo-200/60 focus:ring-4"
             >
               <option value="percent">Prozent (%)</option>
@@ -801,7 +979,9 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
             <span className="text-xs text-gray-600">Basis</span>
             <select
               value={discount.base}
-              onChange={e => setDiscount(s => ({ ...s, base: e.target.value as any }))}
+              onChange={(e) =>
+                setDiscount((s) => ({ ...s, base: e.target.value as any }))
+              }
               className="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-sm outline-none ring-indigo-200/60 focus:ring-4"
             >
               <option value="net">Netto</option>
@@ -818,7 +998,12 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
               min={0}
               step={discount.type === 'percent' ? 0.1 : 0.01}
               value={discount.value}
-              onChange={e => setDiscount(s => ({ ...s, value: Math.max(0, Number(e.target.value)) }))}
+              onChange={(e) =>
+                setDiscount((s) => ({
+                  ...s,
+                  value: Math.max(0, Number(e.target.value)),
+                }))
+              }
               className="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-right text-sm outline-none ring-indigo-200/60 focus:ring-4"
             />
           </label>
@@ -829,19 +1014,29 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
           <div className="space-y-2 text-sm">
             <div className="text-gray-700">
               Zwischensumme netto:{' '}
-              <span className="font-medium text-gray-900">{EUR(netSubtotal)}</span>
+              <span className="font-medium text-gray-900">
+                {EUR(netSubtotal)}
+              </span>
             </div>
 
             {discount.enabled && discount.value > 0 && (
               <>
                 <div className="text-gray-700">
-                  {discount.label || 'Rabatt'} ({discount.base === 'net' ? 'auf Netto' : 'auf Brutto'}
-                  {discount.type === 'percent' ? ` ${discount.value}%` : ''}):{' '}
-                  <span className="font-medium text-gray-900">−{EUR(calc.discountAmount)}</span>
+                  {discount.label || 'Rabatt'} (
+                  {discount.base === 'net' ? 'auf Netto' : 'auf Brutto'}
+                  {discount.type === 'percent'
+                    ? ` ${discount.value}%`
+                    : ''}
+                  ):{' '}
+                  <span className="font-medium text-gray-900">
+                    −{EUR(calc.discountAmount)}
+                  </span>
                 </div>
                 <div className="text-gray-700">
                   Netto nach Rabatt:{' '}
-                  <span className="font-medium text-gray-900">{EUR(calc.netAfterDiscount)}</span>
+                  <span className="font-medium text-gray-900">
+                    {EUR(calc.netAfterDiscount)}
+                  </span>
                 </div>
               </>
             )}
@@ -850,19 +1045,26 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
               USt{' '}
               <select
                 value={taxRate}
-                onChange={e => setTaxRate(Number(e.target.value))}
+                onChange={(e) => setTaxRate(Number(e.target.value))}
                 className="ml-1 rounded-md border border-gray-200 bg-white px-2 py-1 outline-none ring-indigo-200/60 focus:ring-4"
               >
-                {[0, 7, 19].map(r => (
-                  <option key={r} value={r}>{r}%</option>
+                {[0, 7, 19].map((r) => (
+                  <option key={r} value={r}>
+                    {r}%
+                  </option>
                 ))}
               </select>
-              : <span className="font-medium text-gray-900">{EUR(calc.taxAmount)}</span>
+              :{' '}
+              <span className="font-medium text-gray-900">
+                {EUR(calc.taxAmount)}
+              </span>
             </div>
 
-            <div className="text-gray-900 font-semibold">
+            <div className="font-semibold text-gray-900">
               Gesamt brutto:{' '}
-              <span className="font-semibold text-gray-900">{EUR(calc.grossAfterDiscount)}</span>
+              <span className="font-semibold text-gray-900">
+                {EUR(calc.grossAfterDiscount)}
+              </span>
             </div>
           </div>
         </div>
@@ -881,13 +1083,13 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
         <div className="mt-4 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end sm:gap-3">
           <button
             onClick={() => router.push('/dashboard/buchhaltung')}
-            className="w-full sm:w-auto rounded-lg border border-gray-200 px-4 py-2 text-gray-800 hover:bg-gray-50"
+            className="w-full rounded-lg border border-gray-200 px-4 py-2 text-gray-800 hover:bg-gray-50 sm:w-auto"
           >
             Abbrechen
           </button>
           <button
             onClick={handleSaveAndNext}
-            className="w-full sm:w-auto rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary-dark"
+            className="w-full rounded-lg bg-primary px-4 py-2 text-white hover:bg-primary-dark sm:w-auto"
           >
             Speichern &amp; Weiter
           </button>

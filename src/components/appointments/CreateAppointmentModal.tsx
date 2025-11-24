@@ -1,7 +1,9 @@
+// src/components/appointments/CreateAppointmentModal.tsx
 'use client'
 
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 
 type Props = {
   open: boolean
@@ -103,6 +105,7 @@ export default function CreateAppointmentModal({
   const [phoneCustomer, setPhoneCustomer] = React.useState('')
   const [phonePartner, setPhonePartner] = React.useState('')
 
+  // ESC + Body Scroll Lock
   React.useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
@@ -188,37 +191,44 @@ export default function CreateAppointmentModal({
 
   const node = (
     <div className="fixed inset-0 z-[100000] flex items-start justify-center p-4">
+      {/* Overlay */}
       <div
         className="absolute inset-0 bg-slate-900/25 backdrop-blur-xl"
         onClick={() => !busy && onClose()}
       />
+
+      {/* Card */}
       <form
         onSubmit={submit}
         className={cls(
           'relative z-10 mt-8 w-full max-w-3xl',
           'max-h-[92vh] overflow-y-auto',
           'rounded-3xl border border-white/60 bg-white/90',
-          'backdrop-blur-xl p-6',
+          'backdrop-blur-xl p-4 sm:p-6',
           'shadow-[0_10px_34px_rgba(2,6,23,0.12)] ring-1 ring-white/60',
         )}
       >
         {/* Header */}
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-medium text-slate-900">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="pr-4">
+            <h3 className="text-base sm:text-lg font-medium text-slate-900">
               Termin anlegen
             </h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Art wählen, Datum/Uhrzeit setzen, optionale Notiz und
-              je nach Art Ort, Link oder Telefonnummern ergänzen.
+            <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
+              Art wählen, Datum/Uhrzeit setzen, optionale Notiz und je nach Art Ort, Link oder Telefonnummern ergänzen.
             </p>
           </div>
+
+          {/* X oben rechts */}
           <button
             type="button"
             onClick={() => !busy && onClose()}
-            className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm hover:shadow-sm"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/95 shadow-sm
+                       hover:bg-slate-50 disabled:opacity-60 shrink-0"
+            disabled={busy}
+            aria-label="Schließen"
           >
-            Schließen
+            <XMarkIcon className="h-4 w-4 text-slate-500" />
           </button>
         </div>
 
@@ -254,8 +264,7 @@ export default function CreateAppointmentModal({
                   type="button"
                   onClick={() => setKind(o.k as Kind)}
                   className={cls(
-                    'rounded-2xl border px-3 py-1.5 text-xs md:text-sm',
-                    'transition-shadow',
+                    'rounded-2xl border px-3 py-1.5 text-xs md:text-sm transition-shadow',
                     kind === o.k
                       ? 'bg-slate-900 text-white border-slate-900 shadow-sm'
                       : 'bg-white/90 border-white/60 text-slate-800 hover:shadow-sm',
@@ -330,11 +339,12 @@ export default function CreateAppointmentModal({
         </div>
 
         {/* Actions */}
-        <div className="mt-6 flex flex-wrap items-center justify-end gap-2">
+        <div className="mt-6 flex flex-col-reverse sm:flex-row sm:flex-wrap sm:items-center sm:justify-end gap-2">
           <button
             type="button"
             onClick={() => !busy && onClose()}
-            className="rounded-xl border border-white/60 bg-white px-4 py-2 text-sm hover:shadow-sm"
+            className="w-full sm:w-auto rounded-xl border border-white/60 bg-white px-4 py-2 text-sm hover:shadow-sm disabled:opacity-60"
+            disabled={busy}
           >
             Abbrechen
           </button>
@@ -342,7 +352,7 @@ export default function CreateAppointmentModal({
             type="submit"
             disabled={busy}
             className={cls(
-              'rounded-xl px-4 py-2 text-sm text-white',
+              'w-full sm:w-auto rounded-xl px-4 py-2 text-sm text-white',
               'bg-slate-900 hover:opacity-90',
               busy && 'opacity-60 cursor-default',
             )}

@@ -1,5 +1,6 @@
 'use client'
 
+// src/app/(app)/dashboard/buchhaltung/rechnung/rechnung-erstellen/RechnungContext.tsx
 import React, {
   createContext,
   useContext,
@@ -89,7 +90,9 @@ interface RechnungContextValue {
   setDiscount: Dispatch<SetStateAction<Discount>>
 }
 
-const RechnungContext = createContext<RechnungContextValue | undefined>(undefined)
+const RechnungContext = createContext<RechnungContextValue | undefined>(
+  undefined
+)
 
 export function useRechnung() {
   const ctx = useContext(RechnungContext)
@@ -116,9 +119,7 @@ export function RechnungProvider({
     initialData?.selectedCustomer ?? null
   )
 
-  const [title, setTitle] = useState(
-    initialData?.title ?? 'Rechnung – '
-  )
+  const [title, setTitle] = useState(initialData?.title ?? 'Rechnung – ')
   const [intro, setIntro] = useState(
     initialData?.intro ?? 'Wir haben folgende Leistungen zusammengestellt:'
   )
@@ -151,13 +152,15 @@ export function RechnungProvider({
       const company = (selectedCustomer?.company ?? '').trim()
       const displayName = company || `${first} ${last}`.trim()
 
-      setTitle(prev => (prev && prev !== 'Rechnung – ' ? prev : `Rechnung – ${displayName}`))
+      setTitle((prev) =>
+        prev && prev !== 'Rechnung – ' ? prev : `Rechnung – ${displayName}`
+      )
 
       const today = new Date()
-      setDate(d => d || today.toISOString().slice(0, 10))
+      setDate((d) => d || today.toISOString().slice(0, 10))
       const until = new Date(today)
       until.setDate(until.getDate() + 14)
-      setValidUntil(v => v || until.toISOString().slice(0, 10))
+      setValidUntil((v) => v || until.toISOString().slice(0, 10))
     }
   }, [isEdit, billingSettings, selectedCustomer])
 

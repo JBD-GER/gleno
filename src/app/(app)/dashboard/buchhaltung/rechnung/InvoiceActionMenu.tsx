@@ -1,4 +1,3 @@
-// src/app/(app)/dashboard/buchhaltung/rechnung/InvoiceActionMenu.tsx
 'use client'
 
 import {
@@ -327,7 +326,6 @@ function AutomationModal({
         setNotifyEnabled(false)
         setNotifyEmail('')
 
-        // 1) Automation & Invoice-Basisdaten
         const res = await fetch(
           `/api/rechnung/automation?invoiceNumber=${encodeURIComponent(
             invoiceNumber
@@ -393,13 +391,11 @@ function AutomationModal({
               setCustomerEmail(emailFromCust)
               setCustomerName(displayName)
 
-              // Zustand aus DB spiegeln:
               setNotifyEmail(emailFromCust)
               setNotifyEnabled(!!enabledFromCust && !!emailFromCust)
             }
           }
 
-          // Partner (Nutzer / Profil)
           const { data: prof } = await sb
             .from('profiles')
             .select('company_name, first_name, last_name')
@@ -432,7 +428,7 @@ function AutomationModal({
     }
   }, [open, invoiceNumber])
 
-  // ESC zum Schließen
+  // ESC schließt Modal
   useEffect(() => {
     if (!open) return
     const onEsc = (e: KeyboardEvent) => {
@@ -456,11 +452,7 @@ function AutomationModal({
           interval,
           unlimited,
           label: label || null,
-
-          // Flag landet in customers.auto_send_invoices
           autoSendInvoices: notifyEnabled,
-
-          // optionale Ziel-Adresse
           notifyEmail: notifyEnabled
             ? notifyEmail || customerEmail || null
             : null,
@@ -672,9 +664,7 @@ function AutomationModal({
                           value={notifyEmail}
                           onChange={(e) => setNotifyEmail(e.target.value)}
                           disabled={!notifyEnabled}
-                          placeholder={
-                            customerEmail || 'E-Mail-Adresse des Kunden'
-                          }
+                          placeholder={customerEmail || 'E-Mail-Adresse des Kunden'}
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-100"
                         />
                         {!customerEmail && (
@@ -742,7 +732,6 @@ function AutomationModal({
         </div>
       </div>
 
-      {/* E-Mail-Preview Modal (ohne Versand) */}
       <NotifyCustomerModal
         open={notifyOpen}
         onClose={() => setNotifyOpen(false)}
@@ -761,7 +750,7 @@ function AutomationModal({
 }
 
 /* -------------------------------------------------------------------------- */
-/* InvoiceActionsMenu                                                         */
+/* InvoiceActionsMenu – Button + Dropdown                                    */
 /* -------------------------------------------------------------------------- */
 
 export default function InvoiceActionsMenu({
@@ -852,11 +841,11 @@ export default function InvoiceActionsMenu({
           aria-haspopup="menu"
           aria-expanded={open}
           className={[
-            'group inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium transition',
-            'border border-slate-200 bg-white/80 text-slate-800 hover:bg-white',
-            'focus:outline-none ring-offset-2 focus:ring-2 focus:ring-slate-200',
+            'group inline-flex items-center gap-2 rounded-lg px-3 py-1.5 text-sm font-medium',
+            'border border-slate-200/70 bg-white text-slate-800 hover:bg-white',
+            'shadow transition',
+            'focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-300 focus-visible:ring-offset-0',
             'disabled:opacity-60 disabled:cursor-not-allowed',
-            'shadow',
           ].join(' ')}
         >
           {loading ? (
@@ -1180,7 +1169,7 @@ export default function InvoiceActionsMenu({
         )}
       </div>
 
-      {/* Modal für Automatisierung */}
+      {/* Modal für Automatisierung (auch mobil fullscreen) */}
       <AutomationModal
         invoiceNumber={invoiceNumber}
         open={automationOpen}
@@ -1191,5 +1180,5 @@ export default function InvoiceActionsMenu({
   )
 }
 
-// ⬇️ WICHTIG: hier der Named Export, damit wir das Modal auch an anderer Stelle nutzen können
+// Named Export für AutomationOverview
 export { AutomationModal }

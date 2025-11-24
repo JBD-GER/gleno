@@ -5,7 +5,9 @@ import ProjectsClient from './ProjectsClient'
 
 export default async function ProjektPage() {
   const supabase = await supabaseServer()
-  const { data: { user } } = await supabase.auth.getUser()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
   if (!user) redirect('/login')
   return <ProjectsClient userId={user.id} />
 }

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react'
 import { supabaseClient } from '@/lib/supabase-client'
-import { PencilSquareIcon } from '@heroicons/react/24/outline'
+import { PencilSquareIcon, XMarkIcon } from '@heroicons/react/24/outline'
 
 type Project = {
   id: string
@@ -55,16 +55,19 @@ const fmtDateOnly = (d: Date) =>
   })
 
 const fmtTime = (iso: string) =>
-  new Date(iso).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
+  new Date(iso).toLocaleTimeString('de-DE', {
+    hour: '2-digit',
+    minute: '2-digit',
+  })
 
 // ISO -> datetime-local input
 const isoToLocalInput = (iso: string | null) => {
   if (!iso) return ''
   const d = new Date(iso)
   if (isNaN(d.getTime())) return ''
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(
+    d.getDate(),
+  )}T${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
 
 // datetime-local input -> ISO
@@ -285,7 +288,7 @@ export default function TimeTrackerPage() {
 
       if (!ignore && empByAuth) {
         setEmployeeId(empByAuth.id)
-        setCompanyUserId(empByAuth.user_id) // Firmen-/Profil-ID
+        setCompanyUserId(empByAuth.user_id)
         return
       }
 
@@ -307,7 +310,7 @@ export default function TimeTrackerPage() {
       // 3. Fallback: User ist selbst die Firma (Owner)
       if (!ignore) {
         setCompanyUserId(user.id)
-        setEmployeeId(null) // kein expliziter Mitarbeiter-Datensatz
+        setEmployeeId(null)
       }
     })()
     return () => {
@@ -347,10 +350,14 @@ export default function TimeTrackerPage() {
       if (error) return
 
       const uniq = Array.from(
-        new Set((data ?? []).map((r) => String((r as any).work_date).slice(0, 7))), // YYYY-MM
+        new Set(
+          (data ?? []).map((r) =>
+            String((r as any).work_date).slice(0, 7),
+          ),
+        ),
       )
         .filter((m) => /^\d{4}-\d{2}$/.test(m))
-        .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0)) // neueste zuerst
+        .sort((a, b) => (a < b ? 1 : a > b ? -1 : 0))
 
       if (ignore) return
       setMonths(uniq)
@@ -397,7 +404,9 @@ export default function TimeTrackerPage() {
       const running = entries.find((e) => e.end_time === null)
       setRunningEntry(running ?? null)
       setElapsedSec(
-        running ? diffSeconds(running.start_time, new Date().toISOString()) : 0,
+        running
+          ? diffSeconds(running.start_time, new Date().toISOString())
+          : 0,
       )
 
       // Monatssumme + Monatsliste
@@ -408,8 +417,24 @@ export default function TimeTrackerPage() {
         mStart = new Date(y, m - 1, 1, 0, 0, 0, 0)
         mEnd = new Date(y, m, 0, 23, 59, 59, 999)
       } else {
-        mStart = new Date(date.getFullYear(), date.getMonth(), 1, 0, 0, 0, 0)
-        mEnd = new Date(date.getFullYear(), date.getMonth() + 1, 0, 23, 59, 59, 999)
+        mStart = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          1,
+          0,
+          0,
+          0,
+          0,
+        )
+        mEnd = new Date(
+          date.getFullYear(),
+          date.getMonth() + 1,
+          0,
+          23,
+          59,
+          59,
+          999,
+        )
       }
 
       const { data: monthRows } = await supa
@@ -464,12 +489,11 @@ export default function TimeTrackerPage() {
 
   /* ---------- Aktionen ---------- */
   const start = async () => {
-    // user_id MUSS authUserId sein, sonst knallt RLS
     if (!employeeId || !authUserId || runningEntry) return
 
     const now = new Date()
     const payload: any = {
-      user_id: authUserId, // 🔥 wichtig für RLS
+      user_id: authUserId,
       employee_id: employeeId,
       start_time: now.toISOString(),
       end_time: null,
@@ -526,7 +550,8 @@ export default function TimeTrackerPage() {
       if (statusFilter === 'laufend' && e.end_time) return false
       if (statusFilter === 'fertig' && !e.end_time) return false
       if (statusFilter === 'monat') return false
-      if (q && !(e.notes || '').toLowerCase().includes(q.toLowerCase())) return false
+      if (q && !(e.notes || '').toLowerCase().includes(q.toLowerCase()))
+        return false
       return true
     })
   }, [dayEntries, statusFilter, q])
@@ -535,7 +560,8 @@ export default function TimeTrackerPage() {
     return monthEntries.filter((e) => {
       if (statusFilter === 'laufend' && e.end_time) return false
       if (statusFilter === 'fertig' && !e.end_time) return false
-      if (q && !(e.notes || '').toLowerCase().includes(q.toLowerCase())) return false
+      if (q && !(e.notes || '').toLowerCase().includes(q.toLowerCase()))
+        return false
       return true
     })
   }, [monthEntries, statusFilter, q])
@@ -553,7 +579,8 @@ export default function TimeTrackerPage() {
   }, [dayEntries, runningEntry, elapsedSec])
 
   const groupedMonthEntries = useMemo(() => {
-    if (!isMonthlyView) return [] as { day: string; entries: Entry[]; totalSec: number }[]
+    if (!isMonthlyView)
+      return [] as { day: string; entries: Entry[]; totalSec: number }[]
 
     const groups: Record<string, Entry[]> = {}
     filteredMonthEntries.forEach((e) => {
@@ -561,7 +588,9 @@ export default function TimeTrackerPage() {
       groups[e.work_date].push(e)
     })
 
-    const days = Object.keys(groups).sort((a, b) => (a < b ? 1 : a > b ? -1 : 0))
+    const days = Object.keys(groups).sort((a, b) =>
+      a < b ? 1 : a > b ? -1 : 0,
+    )
 
     return days.map((day) => {
       const entries = groups[day]
@@ -595,10 +624,10 @@ export default function TimeTrackerPage() {
         setPauseMin(v)
       }}
       className={[
-        'rounded-lg border px-2.5 py-1 text-xs shadow transition',
+        'rounded-lg border px-2.5 py-1 text-xs shadow-sm transition',
         pauseChecked && pauseMin === v
           ? 'border-slate-900 bg-slate-900 text-white'
-          : 'border-white/60 bg-white/80 text-slate-800 hover:bg-white',
+          : 'border-slate-200 bg-white text-slate-800 hover:bg-slate-50',
       ].join(' ')}
       title={`${v} Minuten Pause ansetzen`}
     >
@@ -624,13 +653,15 @@ export default function TimeTrackerPage() {
           return (
             <li
               key={e.id}
-              className="group relative overflow-hidden rounded-xl border border-slate-100 bg-white/95 px-4 py-3 shadow-sm transition hover:border-slate-200 hover:shadow-md"
+              className="group relative overflow-hidden rounded-2xl border border-slate-100 bg-white/95 px-4 py-3 shadow-sm transition hover:border-slate-200 hover:shadow-md"
             >
               <div className="absolute inset-y-2 left-1 w-1 rounded-full bg-slate-200 group-hover:bg-slate-400" />
               <div className="ml-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                 <div className="space-y-1">
                   <div className="flex flex-wrap items-center gap-2 text-sm text-slate-800">
-                    <span className="font-mono">{fmtTime(e.start_time)}</span>
+                    <span className="font-mono">
+                      {fmtTime(e.start_time)}
+                    </span>
                     <span className="text-slate-400">–</span>
                     <span className="font-mono">
                       {e.end_time ? fmtTime(e.end_time) : 'läuft …'}
@@ -684,7 +715,7 @@ export default function TimeTrackerPage() {
     { key: 'alle', label: 'Alle' },
     { key: 'laufend', label: 'Laufend' },
     { key: 'fertig', label: 'Fertig' },
-    { key: 'monat', label: currentMonthLabel }, // Monats-Tab
+    { key: 'monat', label: currentMonthLabel },
   ]
 
   return (
@@ -692,28 +723,42 @@ export default function TimeTrackerPage() {
       <div className="flex w-full flex-col gap-6">
         {/* TOOLBAR */}
         <div
-          className="relative overflow-hidden rounded-2xl border border-white/60 bg-white/80 shadow-[0_18px_60px_rgba(15,23,42,0.25)] backdrop-blur-2xl"
+          className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/90 shadow-[0_24px_90px_rgba(15,23,42,0.35)] backdrop-blur-2xl"
           style={{
             backgroundImage:
               'radial-gradient(1200px 600px at 80% -20%, rgba(15,23,42,0.10), transparent)',
           }}
         >
-          <div className="relative p-4 sm:p-5">
-            <div className="mb-3 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h1 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
-                  Zeiterfassung
-                </h1>
-                <p className="text-sm text-slate-600">
+          <div className="relative px-4 py-4 sm:px-5 sm:py-5">
+            <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+              <div className="min-w-0 space-y-1">
+                <div className="flex flex-wrap items-center gap-2">
+                  <h1 className="truncate text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+                    Zeiterfassung
+                  </h1>
+                  <span className="inline-flex items-center gap-1 rounded-full bg-slate-900/90 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide text-white shadow-sm">
+                    Persönliche Zeiten
+                  </span>
+                </div>
+                <p className="text-xs text-slate-600 sm:text-sm">
                   {isMonthlyView
                     ? `Monatsansicht – ${currentMonthLabel}`
                     : fmtDateLong(currentDate)}
                 </p>
               </div>
-              <div className="flex items-center gap-3">
+
+              <div className="flex flex-wrap items-center justify-start gap-3 sm:justify-end">
                 <div className="hidden items-center rounded-full bg-slate-900/90 px-4 py-1.5 text-xs text-slate-50 shadow-sm sm:inline-flex">
                   Monat gesamt:
-                  <span className="ml-2 font-mono">{fmtHMS(monthTotalSec)}</span>
+                  <span className="ml-2 font-mono">
+                    {fmtHMS(monthTotalSec)}
+                  </span>
+                </div>
+                <div className="inline-flex items-center rounded-full bg-slate-50/90 px-3 py-1 text-[11px] text-slate-700 ring-1 ring-inset ring-slate-200 sm:hidden">
+                  Monat:
+                  <span className="ml-1 font-mono">
+                    {fmtHMS(monthTotalSec)}
+                  </span>
                 </div>
               </div>
             </div>
@@ -729,16 +774,19 @@ export default function TimeTrackerPage() {
                   ) : (
                     months.map((m) => {
                       const active = selectedMonth === m
-                      const label = new Date(m + '-01').toLocaleDateString('de-DE', {
-                        month: 'short',
-                        year: 'numeric',
-                      })
+                      const label = new Date(m + '-01').toLocaleDateString(
+                        'de-DE',
+                        {
+                          month: 'short',
+                          year: 'numeric',
+                        },
+                      )
                       return (
                         <button
                           key={m}
                           onClick={() => setSelectedMonth(m)}
                           className={[
-                            'whitespace-nowrap rounded-xl border px-3 py-1.5 text-sm shadow-sm transition',
+                            'whitespace-nowrap rounded-full border px-3 py-1.5 text-xs sm:text-sm shadow-sm transition',
                             active
                               ? 'border-slate-900 bg-slate-900 text-white'
                               : 'border-white/70 bg-white/90 text-slate-800 hover:bg-white',
@@ -753,11 +801,11 @@ export default function TimeTrackerPage() {
               </div>
 
               {/* Tages-Navi */}
-              <div className="flex items-center gap-2">
-                <div className="inline-flex overflow-hidden rounded-xl border border-white/60 bg-white/90 shadow-sm">
+              <div className="flex flex-wrap items-center justify-start gap-2 sm:justify-end">
+                <div className="inline-flex overflow-hidden rounded-full border border-white/70 bg-white/95 text-xs shadow-sm">
                   <button
                     onClick={() => goDay(-1)}
-                    className="px-3 py-2 text-xs text-slate-700 hover:bg-white"
+                    className="px-3 py-2 text-slate-700 hover:bg-slate-50"
                   >
                     ‹ Zurück
                   </button>
@@ -768,20 +816,16 @@ export default function TimeTrackerPage() {
                       setCurrentDate(t)
                       setStatusFilter('alle')
                     }}
-                    className="bg-slate-900 px-3 py-2 text-xs font-medium text-white"
+                    className="bg-slate-900 px-3 py-2 font-medium text-white"
                   >
                     Heute
                   </button>
                   <button
                     onClick={() => goDay(1)}
-                    className="px-3 py-2 text-xs text-slate-700 hover:bg-white"
+                    className="px-3 py-2 text-slate-700 hover:bg-slate-50"
                   >
                     Vorwärts ›
                   </button>
-                </div>
-                <div className="inline-flex items-center rounded-full bg-white/90 px-3 py-1 text-[11px] text-slate-600 ring-1 ring-inset ring-slate-200 sm:hidden">
-                  Monat:
-                  <span className="ml-1 font-mono">{fmtHMS(monthTotalSec)}</span>
                 </div>
               </div>
             </div>
@@ -789,7 +833,7 @@ export default function TimeTrackerPage() {
         </div>
 
         {/* TIMER + PROJEKT */}
-        <div className="rounded-2xl border border-white/60 bg-white/95 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.20)] backdrop-blur-2xl">
+        <div className="rounded-3xl border border-white/70 bg-white/95 px-4 py-4 shadow-[0_22px_80px_rgba(15,23,42,0.30)] backdrop-blur-2xl sm:px-5 sm:py-5">
           <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
             {/* Live-Timer + Projekt-Auswahl */}
             <div className="flex-1">
@@ -812,7 +856,6 @@ export default function TimeTrackerPage() {
                   )}
                 </div>
 
-                {/* Button: manuellen Eintrag erfassen */}
                 <button
                   type="button"
                   onClick={openManualCreate}
@@ -826,15 +869,16 @@ export default function TimeTrackerPage() {
                 </button>
               </div>
 
-              {/* Projekt-Auswahl */}
-              <div className="mt-5 max-w-xs space-y-1">
+              <div className="mt-5 w-full max-w-md space-y-1">
                 <label className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
                   Projekt (optional)
                 </label>
                 <select
                   value={selectedProjectId ?? ''}
                   onChange={(e) =>
-                    setSelectedProjectId(e.target.value ? e.target.value : null)
+                    setSelectedProjectId(
+                      e.target.value ? e.target.value : null,
+                    )
                   }
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
                   disabled={!!runningEntry || projects.length === 0}
@@ -873,7 +917,7 @@ export default function TimeTrackerPage() {
               </div>
 
               {runningEntry && (
-                <div className="rounded-xl border border-slate-100 bg-slate-50/70 px-3 py-2">
+                <div className="rounded-xl border border-slate-100 bg-slate-50/80 px-3 py-2">
                   <div className="flex flex-wrap items-center gap-2">
                     <label className="inline-flex items-center gap-2 text-xs text-slate-700">
                       <input
@@ -898,7 +942,9 @@ export default function TimeTrackerPage() {
                         step={5}
                         value={pauseMin}
                         onChange={(e) =>
-                          setPauseMin(Math.max(0, Number(e.target.value || 0)))
+                          setPauseMin(
+                            Math.max(0, Number(e.target.value || 0)),
+                          )
                         }
                         className="w-20 rounded-lg border border-slate-200 bg-white px-2 py-1 text-right text-xs text-slate-900 focus:border-slate-900 focus:outline-none focus:ring-1 focus:ring-slate-200 disabled:opacity-60"
                         disabled={!pauseChecked}
@@ -909,25 +955,25 @@ export default function TimeTrackerPage() {
                 </div>
               )}
 
-              <div className="mt-2 flex items-center gap-2">
+              <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
                 {!runningEntry ? (
                   <button
                     onClick={start}
                     disabled={!employeeId || !authUserId || loading}
-                    className="inline-flex items-center justify-center rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50"
+                    className="inline-flex w-full items-center justify-center rounded-xl bg-slate-900 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-black disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto sm:px-6"
                   >
                     Timer starten
                   </button>
                 ) : (
                   <button
                     onClick={stop}
-                    className="inline-flex items-center justify-center rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700"
+                    className="inline-flex w-full items-center justify-center rounded-xl bg-rose-600 px-5 py-2.5 text-sm font-medium text-white shadow-sm transition hover:bg-rose-700 sm:w-auto sm:px-6"
                   >
                     Timer stoppen
                   </button>
                 )}
 
-                <div className="ml-auto inline-flex items-center rounded-full bg-slate-50 px-3 py-1 text-[11px] text-slate-600 ring-1 ring-inset ring-slate-200">
+                <div className="inline-flex items-center justify-center rounded-full bg-slate-50 px-3 py-1 text-[11px] text-slate-600 ring-1 ring-inset ring-slate-200 sm:ml-auto">
                   Tagessumme:
                   <span className="ml-1 font-mono text-slate-900">
                     {fmtHMS(totalDaySec)}
@@ -940,16 +986,16 @@ export default function TimeTrackerPage() {
 
         {/* FILTER-ZEILE */}
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="inline-flex overflow-hidden rounded-xl border border-white/60 bg-white/90 shadow-sm">
+          <div className="inline-flex overflow-hidden rounded-full border border-white/70 bg-white/95 text-xs shadow-sm">
             {statusButtons.map(({ key, label }) => (
               <button
                 key={key}
                 onClick={() => setStatusFilter(key)}
                 className={[
-                  'px-3 py-2 text-xs font-medium transition',
+                  'px-3 py-2 font-medium transition',
                   statusFilter === key
                     ? 'bg-slate-900 text-white'
-                    : 'text-slate-800 hover:bg-white',
+                    : 'text-slate-800 hover:bg-slate-50',
                 ].join(' ')}
               >
                 {label}
@@ -960,12 +1006,12 @@ export default function TimeTrackerPage() {
             placeholder="Suche in Notizen …"
             value={q}
             onChange={(e) => setQ(e.target.value)}
-            className="w-full rounded-xl border border-white/60 bg-white/90 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200 sm:w-72"
+            className="w-full rounded-full border border-white/70 bg-white/95 px-3 py-2 text-sm text-slate-900 shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200 sm:w-72"
           />
         </div>
 
         {/* LISTE DER EINTRÄGE */}
-        <div className="rounded-2xl border border-white/60 bg-white/95 p-5 shadow-[0_18px_60px_rgba(15,23,42,0.18)] backdrop-blur-2xl">
+        <div className="rounded-3xl border border-white/70 bg-white/95 px-4 py-4 shadow-[0_22px_80px_rgba(15,23,42,0.28)] backdrop-blur-2xl sm:px-5 sm:py-5">
           <div className="mb-4 flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
             <div className="text-sm font-semibold text-slate-800">
               {isMonthlyView
@@ -981,9 +1027,16 @@ export default function TimeTrackerPage() {
           </div>
 
           {loading ? (
-            <div className="text-sm text-slate-500">Lade Zeiteinträge …</div>
+            <div className="space-y-2">
+              {Array.from({ length: 3 }).map((_, i) => (
+                <div
+                  key={i}
+                  className="h-16 animate-pulse rounded-2xl bg-gradient-to-r from-slate-100 via-slate-50 to-slate-100"
+                />
+              ))}
+            </div>
           ) : !employeeId ? (
-            <div className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+            <div className="rounded-xl border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
               Für deinen Account wurde kein Mitarbeiter-Datensatz gefunden.
             </div>
           ) : isMonthlyView ? (
@@ -1024,10 +1077,10 @@ export default function TimeTrackerPage() {
         </div>
       </div>
 
-      {/* MODAL: Manueller Eintrag (Neu / Bearbeiten) */}
+      {/* MODAL: Manueller Eintrag (Neu / Bearbeiten) – Style analog zu anderem Modal */}
       {manualOpen && (
-        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-2xl border border-white/70 bg-white/95 p-5 shadow-[0_20px_70px_rgba(15,23,42,0.55)]">
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/40 p-4 sm:p-6 backdrop-blur-sm">
+          <div className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl border border-white/70 bg-white/95 p-5 shadow-[0_20px_70px_rgba(15,23,42,0.55)]">
             <div className="mb-3 flex items-start justify-between gap-3">
               <div>
                 <h2 className="text-base font-semibold text-slate-900">
@@ -1044,9 +1097,10 @@ export default function TimeTrackerPage() {
               <button
                 type="button"
                 onClick={closeManual}
-                className="rounded-full px-2 py-1 text-xs text-slate-500 hover:bg-slate-100"
+                className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 shadow-sm hover:bg-slate-50 hover:text-slate-800"
+                aria-label="Schließen"
               >
-                Schließen
+                <XMarkIcon className="h-4 w-4" />
               </button>
             </div>
 
@@ -1067,7 +1121,10 @@ export default function TimeTrackerPage() {
                     type="date"
                     value={manualForm.date}
                     onChange={(e) =>
-                      setManualForm((s) => ({ ...s, date: e.target.value }))
+                      setManualForm((s) => ({
+                        ...s,
+                        date: e.target.value,
+                      }))
                     }
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
                   />
@@ -1079,7 +1136,10 @@ export default function TimeTrackerPage() {
                   <select
                     value={manualForm.project_id}
                     onChange={(e) =>
-                      setManualForm((s) => ({ ...s, project_id: e.target.value }))
+                      setManualForm((s) => ({
+                        ...s,
+                        project_id: e.target.value,
+                      }))
                     }
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
                   >
@@ -1103,7 +1163,10 @@ export default function TimeTrackerPage() {
                     type="datetime-local"
                     value={manualForm.start_local}
                     onChange={(e) =>
-                      setManualForm((s) => ({ ...s, start_local: e.target.value }))
+                      setManualForm((s) => ({
+                        ...s,
+                        start_local: e.target.value,
+                      }))
                     }
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
                   />
@@ -1116,7 +1179,10 @@ export default function TimeTrackerPage() {
                     type="datetime-local"
                     value={manualForm.end_local}
                     onChange={(e) =>
-                      setManualForm((s) => ({ ...s, end_local: e.target.value }))
+                      setManualForm((s) => ({
+                        ...s,
+                        end_local: e.target.value,
+                      }))
                     }
                     className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
                   />
@@ -1136,7 +1202,10 @@ export default function TimeTrackerPage() {
                   onChange={(e) =>
                     setManualForm((s) => ({
                       ...s,
-                      break_minutes: Math.max(0, Number(e.target.value || 0)),
+                      break_minutes: Math.max(
+                        0,
+                        Number(e.target.value || 0),
+                      ),
                     }))
                   }
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-right text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
@@ -1152,19 +1221,22 @@ export default function TimeTrackerPage() {
                   rows={3}
                   value={manualForm.notes}
                   onChange={(e) =>
-                    setManualForm((s) => ({ ...s, notes: e.target.value }))
+                    setManualForm((s) => ({
+                      ...s,
+                      notes: e.target.value,
+                    }))
                   }
                   className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:border-slate-900 focus:outline-none focus:ring-2 focus:ring-slate-200"
                   placeholder="Optionale Beschreibung der Tätigkeit …"
                 />
               </div>
 
-              <div className="mt-3 flex items-center justify-end gap-2">
+              <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:justify-end">
                 <button
                   type="button"
                   onClick={closeManual}
                   disabled={manualBusy}
-                  className="rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50"
+                  className="w-full rounded-full border border-slate-200 bg-white px-4 py-1.5 text-xs font-medium text-slate-700 shadow-sm hover:bg-slate-50 disabled:opacity-50 sm:w-auto"
                 >
                   Abbrechen
                 </button>
@@ -1172,7 +1244,7 @@ export default function TimeTrackerPage() {
                   type="button"
                   onClick={saveManual}
                   disabled={manualBusy}
-                  className="rounded-full bg-slate-900 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-black disabled:opacity-50"
+                  className="w-full rounded-full bg-slate-900 px-4 py-1.5 text-xs font-medium text-white shadow-sm hover:bg-black disabled:opacity-50 sm:w-auto"
                 >
                   {manualBusy
                     ? 'Speichert …'
@@ -1181,6 +1253,16 @@ export default function TimeTrackerPage() {
                     : 'Änderungen speichern'}
                 </button>
               </div>
+
+              {/* Extra-Schließen-Button unten für Mobile, wie beim anderen Modal */}
+              <button
+                type="button"
+                onClick={closeManual}
+                disabled={manualBusy}
+                className="mt-2 inline-flex w-full items-center justify-center rounded-full border border-slate-200 bg-white px-4 py-2 text-sm text-slate-900 shadow-sm hover:bg-slate-50 sm:hidden"
+              >
+                Schließen
+              </button>
             </div>
           </div>
         </div>

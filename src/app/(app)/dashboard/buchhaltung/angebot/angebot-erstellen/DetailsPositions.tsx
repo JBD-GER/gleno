@@ -1,9 +1,10 @@
 // src/app/(app)/dashboard/buchhaltung/angebot/angebot-erstellen/DetailsPositions.tsx
 'use client'
 
-import React, { useEffect, useMemo } from 'react'
+import React, { useEffect, useMemo, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAngebot } from './AngebotContext'
+import type { Position } from './AngebotContext'
 import AddMenu from './AddMenu'
 import {
   DragDropContext,
@@ -13,6 +14,7 @@ import {
   DroppableProvided,
   DraggableProvided,
 } from '@hello-pangea/dnd'
+import { normalizeDraft, replacePlaceholders, type AIDraft } from '@/lib/ai-draft'
 
 const EUR = (n: number) => `€${(Number.isFinite(n) ? n : 0).toFixed(2)}`
 
@@ -41,6 +43,24 @@ type CatalogItem = {
   updated_at: string
 }
 
+// KI-Draft -> Positions
+function draftToPositions(d: AIDraft, customer: any): Position[] {
+  return (d.positions ?? []).map((p: any) => {
+    const desc = replacePlaceholders(String(p.description ?? ''), customer)
+    const type: Position['type'] =
+      ['item', 'heading', 'description', 'subtotal', 'separator'].includes(p?.type)
+        ? p.type
+        : 'item'
+    return {
+      type,
+      description: desc,
+      quantity: Number.isFinite(p.quantity) ? Number(p.quantity) : undefined,
+      unit: p.unit,
+      unitPrice: Number.isFinite(p.unitPrice) ? Number(p.unitPrice) : undefined,
+    }
+  })
+}
+
 // Kleines Modal für Katalog-Auswahl
 function CatalogModal({
   open,
@@ -60,7 +80,8 @@ function CatalogModal({
     if (!open) return
     let ignore = false
     const load = async () => {
-      setLoading(true); setErr(null)
+      setLoading(true)
+      setErr(null)
       try {
         const res = await fetch('/api/catalog/items?q=' + encodeURIComponent(q))
         const data = await res.json()
@@ -130,16 +151,20 @@ function CatalogModal({
                   <th className="px-3 py-2 text-left">Name</th>
                   <th className="px-3 py-2 text-left">Einheit</th>
                   <th className="px-3 py-2 text-right">Preis/Einheit</th>
-                  <th className="px-3 py-2"></th>
+                  <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {items.map((it) => (
                   <tr key={it.id} className="hover:bg-gray-50">
-                    <td className="px-3 py-2">{it.kind === 'service' ? 'Dienstleistung' : 'Produkt'}</td>
+                    <td className="px-3 py-2">
+                      {it.kind === 'service' ? 'Dienstleistung' : 'Produkt'}
+                    </td>
                     <td className="px-3 py-2">{it.name}</td>
                     <td className="px-3 py-2">{it.unit}</td>
-                    <td className="px-3 py-2 text-right">{it.unit_price.toFixed(2).replace('.', ',')}</td>
+                    <td className="px-3 py-2 text-right">
+                      {it.unit_price.toFixed(2).replace('.', ',')}
+                    </td>
                     <td className="px-3 py-2 text-right">
                       <button
                         onClick={() => onPick(it)}
@@ -156,7 +181,10 @@ function CatalogModal({
         </div>
 
         <div className="mt-3 flex justify-end">
-          <button onClick={onClose} className="rounded-md border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50">
+          <button
+            onClick={onClose}
+            className="rounded-md border border-gray-200 px-3 py-1.5 text-sm hover:bg-gray-50"
+          >
             Schließen
           </button>
         </div>
@@ -197,10 +225,10 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
   const displayName = (company || `${first} ${last}`.trim()).trim()
 
   // Adresszeilen – strukturierte Felder
-  const street      = (sc.street ?? '').toString().trim()
+  const street = (sc.street ?? '').toString().trim()
   const houseNumber = (sc.house_number ?? '').toString().trim()
-  const postal      = (sc.postal_code ?? '').toString().trim()
-  const city        = (sc.city ?? '').toString().trim()
+  const postal = (sc.postal_code ?? '').toString().trim()
+  const city = (sc.city ?? '').toString().trim()
 
   const line1 = displayName
   const line2 = [street, houseNumber].filter(Boolean).join(' ').replace(/\s+/g, ' ').trim()
@@ -208,7 +236,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
   const addressLines = [line1, line2, line3].filter(Boolean)
 
   // responsive DnD
-  const [isMobile, setIsMobile] = React.useState(false)
+  const [isMobile, setIsMobile] = useState(false)
   useEffect(() => {
     const mql = window.matchMedia('(max-width: 767px)')
     const apply = () => setIsMobile(mql.matches)
@@ -217,7 +245,62 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
     return () => mql.removeEventListener?.('change', apply)
   }, [])
 
-  const removePos = (i: number) => setPositions(ps => ps.filter((_, idx) => idx !== i))
+  // KI-Hinweis für diese Seite (Step 2)
+  const [aiDraftExists, setAiDraftExists] = useState(false)
+  const [aiReApplied, setAiReApplied] = useState(false)
+  const [aiError, setAiError] = useState<string | null>(null)
+
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem('ai_offer_draft')
+      setAiDraftExists(!!raw)
+    } catch {
+      setAiDraftExists(false)
+    }
+  }, [])
+
+  const applyAIDraftFromDetails = useCallback(() => {
+    if (!selectedCustomer) return
+    try {
+      const raw = sessionStorage.getItem('ai_offer_draft')
+      if (!raw) {
+        setAiError('Kein KI-Entwurf mehr vorhanden.')
+        return
+      }
+      const parsed = normalizeDraft(JSON.parse(raw) as AIDraft)
+
+      const title = parsed.title
+        ? replacePlaceholders(parsed.title, selectedCustomer)
+        : ''
+      const intro = parsed.intro
+        ? replacePlaceholders(parsed.intro, selectedCustomer)
+        : ''
+
+      setTitle(title)
+      setIntro(intro)
+      setTaxRate(Number.isFinite(parsed.tax_rate) ? Number(parsed.tax_rate) : 19)
+      setPositions(draftToPositions(parsed, selectedCustomer))
+
+      if (parsed.discount) {
+        setDiscount({
+          enabled: !!parsed.discount.enabled,
+          label: parsed.discount.label || 'Rabatt',
+          type: parsed.discount.type === 'amount' ? 'amount' : 'percent',
+          base: parsed.discount.base === 'gross' ? 'gross' : 'net',
+          value: Number.isFinite(parsed.discount.value) ? Number(parsed.discount.value) : 0,
+        })
+      }
+
+      setAiReApplied(true)
+      setAiError(null)
+    } catch {
+      setAiError('KI-Entwurf konnte nicht geladen werden.')
+    }
+  }, [selectedCustomer, setTitle, setIntro, setTaxRate, setPositions, setDiscount])
+
+  const removePos = (i: number) =>
+    setPositions(ps => ps.filter((_, idx) => idx !== i))
+
   const updatePos = (i: number, key: keyof typeof positions[0], v: any) => {
     setPositions(ps => {
       const c = [...ps]
@@ -226,6 +309,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
       return c
     })
   }
+
   const onDragEnd = (res: DropResult) => {
     if (!res.destination) return
     const from = res.source.index
@@ -358,7 +442,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
     }
   }
 
-  // ====== NEU: Katalog-Button + Picker ======
+  // Katalog-Button + Picker
   const [catalogOpen, setCatalogOpen] = React.useState(false)
   const handlePickFromCatalog = (it: CatalogItem) => {
     setPositions(ps => {
@@ -387,6 +471,55 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
         2. Details &amp; Positionen
       </h2>
 
+      {/* KI-Hinweis für Step 2 */}
+      {aiDraftExists && (
+        <div className="rounded-lg border border-indigo-200 bg-indigo-50/70 p-3 text-sm text-indigo-900">
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <div className="font-medium">KI-Entwurf für dieses Angebot vorhanden</div>
+              <p className="mt-1 text-xs sm:text-sm text-indigo-800">
+                Dieses Angebot hat einen gespeicherten KI-Entwurf. Wenn du das Angebot noch einmal
+                komplett auf Basis des KI-Vorschlags befüllen möchtest, kannst du ihn hier erneut
+                anwenden. Bestehende Felder (Titel, Einleitung, Positionen &amp; Rabatt) werden
+                überschrieben.
+              </p>
+              {aiReApplied && (
+                <p className="mt-1 text-xs text-emerald-700">
+                  KI-Entwurf wurde erneut übernommen. Bitte Inhalte prüfen, bevor du das Angebot
+                  verschickst.
+                </p>
+              )}
+              {aiError && (
+                <p className="mt-1 text-xs text-rose-700">
+                  {aiError}
+                </p>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-2 pt-1 sm:pt-0">
+              <button
+                type="button"
+                onClick={applyAIDraftFromDetails}
+                className="inline-flex items-center justify-center rounded-lg bg-slate-900 px-3 py-1.5 text-xs sm:text-sm font-medium text-white hover:bg-slate-800"
+              >
+                KI-Entwurf anwenden
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  try {
+                    sessionStorage.removeItem('ai_offer_draft')
+                  } catch {}
+                  setAiDraftExists(false)
+                }}
+                className="inline-flex items-center justify-center rounded-lg border border-indigo-200 bg-white px-3 py-1.5 text-xs sm:text-sm font-medium text-indigo-700 hover:bg-indigo-50"
+              >
+                Hinweis ausblenden
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Obere Box */}
       <div className="grid grid-cols-1 gap-6 rounded-xl border border-gray-200 bg-white p-4 shadow-sm md:grid-cols-2">
         {/* Kunde */}
@@ -395,7 +528,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
           <textarea
             readOnly
             value={addressLines.join('\n')}
-            className="h-24 w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 outline-none"
+            className="h-24 w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none"
           />
         </div>
 
@@ -425,7 +558,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
           type="text"
           value={title}
           onChange={e => setTitle(e.target.value)}
-          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
+          className="w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
         />
       </div>
 
@@ -435,7 +568,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
         <textarea
           value={intro}
           onChange={e => setIntro(e.target.value)}
-          className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
+          className="w-full resize-none rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 outline-none ring-indigo-200/60 focus:ring-4"
           rows={3}
         />
       </div>
@@ -444,9 +577,9 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
       <div className="rounded-xl border border-gray-200 bg-white p-4 shadow-sm">
         <div className="mb-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h3 className="font-semibold text-gray-900">Positionen</h3>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <AddMenu positions={positions} setPositions={setPositions} />
-            {/* NEU: Katalog Button */}
+            {/* Katalog Button */}
             <button
               type="button"
               onClick={() => setCatalogOpen(true)}
@@ -470,7 +603,11 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
             // ---------- MOBILE ----------
             <Droppable droppableId="pos-mobile">
               {(provided: DroppableProvided) => (
-                <div ref={provided.innerRef} {...provided.droppableProps} className="space-y-3">
+                <div
+                  ref={provided.innerRef}
+                  {...provided.droppableProps}
+                  className="space-y-3"
+                >
                   {positions.map((p, i) => (
                     <Draggable key={did(i)} draggableId={did(i)} index={i}>
                       {(prov: DraggableProvided) => (
@@ -482,7 +619,12 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                           {/* Kopf */}
                           <div className="flex items-center justify-between border-b border-gray-100 px-3 py-2">
                             <div
-                              style={{ touchAction: 'none', WebkitUserSelect: 'none', userSelect: 'none', cursor: 'grab' }}
+                              style={{
+                                touchAction: 'none',
+                                WebkitUserSelect: 'none',
+                                userSelect: 'none',
+                                cursor: 'grab',
+                              }}
                               className="flex items-center gap-2 text-xs text-gray-500"
                               {...prov.dragHandleProps}
                               title="Ziehen zum Sortieren"
@@ -587,7 +729,8 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                         .slice(0, i)
                                         .reduce(
                                           (s, pp: any) =>
-                                            s + (pp.type === 'item'
+                                            s +
+                                            (pp.type === 'item'
                                               ? (pp.quantity ?? 0) * (pp.unitPrice ?? 0)
                                               : 0),
                                           0
@@ -597,7 +740,9 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                 </div>
                               )}
 
-                              {p.type === 'separator' && <hr className="my-2 border-t-2 border-gray-200" />}
+                              {p.type === 'separator' && (
+                                <hr className="my-2 border-t-2 border-gray-200" />
+                              )}
                             </div>
                           )}
                         </div>
@@ -609,11 +754,11 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
               )}
             </Droppable>
           ) : (
-            // ---------- DESKTOP ----------
+            // ---------- DESKTOP / TABLET ----------
             <div className="overflow-hidden rounded-lg border border-gray-200">
               <Droppable droppableId="pos-desktop">
                 {(provided: DroppableProvided) => (
-                  <table className="w-full table-auto border-collapse">
+                  <table className="w-full table-auto border-collapse text-sm">
                     <thead className="bg-gray-50 text-[13px] uppercase tracking-wide text-gray-600">
                       <tr className="border-b border-gray-200">
                         <th className="px-3 py-2 text-left">Position</th>
@@ -621,7 +766,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                         <th className="px-3 py-2 text-left">Einheit</th>
                         <th className="px-3 py-2 text-left">Preis</th>
                         <th className="px-3 py-2 text-right">Total</th>
-                        <th className="px-3 py-2"></th>
+                        <th className="px-3 py-2" />
                       </tr>
                     </thead>
                     <tbody
@@ -722,7 +867,8 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                               .slice(0, i)
                                               .reduce(
                                                 (s, pp: any) =>
-                                                  s + (pp.type === 'item'
+                                                  s +
+                                                  (pp.type === 'item'
                                                     ? (pp.quantity ?? 0) * (pp.unitPrice ?? 0)
                                                     : 0),
                                                 0
@@ -732,7 +878,9 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
                                       </div>
                                     )}
 
-                                    {p.type === 'separator' && <hr className="my-2 border-t-2 border-gray-200" />}
+                                    {p.type === 'separator' && (
+                                      <hr className="my-2 border-t-2 border-gray-200" />
+                                    )}
                                   </td>
 
                                   <td className="px-3 py-2 align-top">
@@ -766,7 +914,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
             <h4 className="font-semibold text-gray-900">Rabatt</h4>
           </div>
 
-          <label className="flex items-center gap-2 md:col-span-3">
+          <label className="md:col-span-3 flex items-center gap-2">
             <input
               type="checkbox"
               checked={discount.enabled}
@@ -820,7 +968,9 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
               min={0}
               step={discount.type === 'percent' ? 0.1 : 0.01}
               value={discount.value}
-              onChange={e => setDiscount(s => ({ ...s, value: Math.max(0, Number(e.target.value)) }))}
+              onChange={e =>
+                setDiscount(s => ({ ...s, value: Math.max(0, Number(e.target.value)) }))
+              }
               className="w-full rounded-md border border-gray-200 bg-white px-2 py-2 text-right text-sm outline-none ring-indigo-200/60 focus:ring-4"
             />
           </label>
@@ -830,19 +980,25 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
         <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
           <div className="space-y-2 text-sm">
             <div className="text-gray-700">
-              Zwischensumme netto: <span className="font-medium text-gray-900">{EUR(netSubtotal)}</span>
+              Zwischensumme netto:{' '}
+              <span className="font-medium text-gray-900">{EUR(netSubtotal)}</span>
             </div>
 
             {discount.enabled && discount.value > 0 && (
               <>
                 <div className="text-gray-700">
-                  {discount.label || 'Rabatt'} ({discount.base === 'net' ? 'auf Netto' : 'auf Brutto'}
+                  {discount.label || 'Rabatt'}{' '}
+                  ({discount.base === 'net' ? 'auf Netto' : 'auf Brutto'}
                   {discount.type === 'percent' ? ` ${discount.value}%` : ''}):{' '}
-                  <span className="font-medium text-gray-900">−{EUR(calc.discountAmount)}</span>
+                  <span className="font-medium text-gray-900">
+                    −{EUR(calc.discountAmount)}
+                  </span>
                 </div>
                 <div className="text-gray-700">
                   Netto nach Rabatt:{' '}
-                  <span className="font-medium text-gray-900">{EUR(calc.netAfterDiscount)}</span>
+                  <span className="font-medium text-gray-900">
+                    {EUR(calc.netAfterDiscount)}
+                  </span>
                 </div>
               </>
             )}
@@ -852,17 +1008,23 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
               <select
                 value={taxRate}
                 onChange={e => setTaxRate(Number(e.target.value))}
-                className="ml-1 rounded-md border border-gray-200 bg-white px-2 py-1 outline-none ring-indigo-200/60 focus:ring-4"
+                className="ml-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-sm outline-none ring-indigo-200/60 focus:ring-4"
               >
                 {[0, 7, 19].map(r => (
                   <option key={r} value={r}>{r}%</option>
                 ))}
               </select>
-              : <span className="font-medium text-gray-900">{EUR(calc.taxAmount)}</span>
+              :{' '}
+              <span className="font-medium text-gray-900">
+                {EUR(calc.taxAmount)}
+              </span>
             </div>
 
-            <div className="text-gray-900 font-semibold">
-              Gesamt brutto: <span className="font-semibold text-gray-900">{EUR(calc.grossAfterDiscount)}</span>
+            <div className="font-semibold text-gray-900">
+              Gesamt brutto:{' '}
+              <span className="font-semibold text-gray-900">
+                {EUR(calc.grossAfterDiscount)}
+              </span>
             </div>
           </div>
         </div>
@@ -871,7 +1033,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
           <textarea
             readOnly
             value="Wir freuen uns über Ihre Auftragsbestätigung"
-            className="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-gray-900 outline-none"
+            className="w-full resize-none rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 text-sm text-gray-900 outline-none"
             rows={2}
           />
         </div>
@@ -880,7 +1042,7 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
         <div className="mt-4 grid grid-cols-1 gap-2 sm:flex sm:flex-wrap sm:justify-end sm:gap-3">
           <button
             onClick={() => router.push('/dashboard/buchhaltung')}
-            className="w-full sm:w-auto rounded-lg border border-gray-200 px-4 py-2 text-gray-800 hover:bg-gray-50"
+            className="w-full rounded-lg border border-gray-200 px-4 py-2 text-sm text-gray-800 hover:bg-gray-50 sm:w-auto"
           >
             Abbrechen
           </button>
@@ -888,7 +1050,9 @@ export default function DetailsPositions({ onNext }: { onNext: () => void }) {
           <button
             onClick={handleSaveAndNext}
             disabled={saving}
-            className={`w-full sm:w-auto rounded-lg px-4 py-2 text-white ${saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark'}`}
+            className={`w-full rounded-lg px-4 py-2 text-sm text-white sm:w-auto ${
+              saving ? 'bg-gray-400 cursor-not-allowed' : 'bg-primary hover:bg-primary-dark'
+            }`}
           >
             {saving ? 'Speichere…' : 'Speichern & Weiter'}
           </button>

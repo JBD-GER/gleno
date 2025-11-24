@@ -3,6 +3,7 @@
 
 import * as React from 'react'
 import { createPortal } from 'react-dom'
+import { XMarkIcon } from '@heroicons/react/24/outline'
 
 type Props = {
   open: boolean
@@ -67,72 +68,63 @@ export default function InvoiceUploadModal({ open, onClose, requestId }: Props) 
   }
 
   const node = (
-    <div className="fixed inset-0 z-[100] flex items-start justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-start justify-center p-3 sm:p-4">
       <div
         className="absolute inset-0 bg-slate-900/20 backdrop-blur-xl"
         onClick={() => !busy && onClose()}
       />
       <div
-        className="relative z-10 mt-8 w-full max-w-lg max-h-[92vh] overflow-y-auto
-                   rounded-3xl border border-white/60 bg-white/80 backdrop-blur-xl p-6
+        className="relative z-10 mt-6 sm:mt-10 w-full max-w-lg max-h-[92vh] overflow-y-auto
+                   rounded-3xl border border-white/60 bg-white/80 backdrop-blur-xl p-4 sm:p-6
                    shadow-[0_10px_34px_rgba(2,6,23,0.12)] ring-1 ring-white/60"
       >
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <h3 className="text-lg font-medium text-slate-900">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
+          <div className="min-w-0">
+            <h3 className="text-sm sm:text-lg font-medium text-slate-900 truncate">
               Rechnung hochladen
             </h3>
-            <p className="mt-1 text-xs text-slate-500">
-              Lade hier deine Rechnung (PDF oder Bild) hoch. Der Status ist
-              zunächst <b>„Erstellt“</b> und kann später in der Dokumenten-Cloud
-              angepasst werden.
+            <p className="mt-1 text-[11px] sm:text-xs text-slate-500">
+              Lade hier Ihre Rechnung (PDF oder Bild) hoch. Der Status ist zunächst{' '}
+              <b>„Erstellt“</b> und kann später in der Dokumenten-Cloud angepasst werden.
             </p>
           </div>
           <button
             type="button"
             onClick={() => !busy && onClose()}
-            className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm"
+            className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-white/60 bg-white/90 text-slate-500 hover:text-slate-700 hover:bg-white shadow-sm disabled:opacity-60"
+            disabled={busy}
+            aria-label="Schließen"
           >
-            Schließen
+            <XMarkIcon className="h-4 w-4" />
           </button>
         </div>
 
         <form onSubmit={onSubmit} className="mt-4 space-y-3">
           <label className="block text-sm">
-            <span className="block text-xs text-slate-600 mb-1">
-              Datei auswählen
-            </span>
+            <span className="block text-xs text-slate-600 mb-1">Datei auswählen</span>
             <input
               type="file"
               accept=".pdf,image/*"
               className="block w-full rounded-xl border border-white/60 bg-white/90 px-3 py-2 text-sm outline-none"
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              onChange={e => setFile(e.target.files?.[0] || null)}
             />
           </label>
 
-          {error && (
-            <div className="text-xs text-rose-600">
-              {error}
-            </div>
-          )}
-          {okMsg && (
-            <div className="text-xs text-emerald-600">
-              {okMsg}
-            </div>
-          )}
+          {error && <div className="text-xs text-rose-600">{error}</div>}
+          {okMsg && <div className="text-xs text-emerald-600">{okMsg}</div>}
 
-          <div className="pt-1 flex items-center justify-end gap-2">
+          <div className="pt-1 flex flex-col-reverse sm:flex-row sm:justify-end items-stretch sm:items-center gap-2 sm:gap-3">
             <button
               type="button"
               onClick={() => !busy && onClose()}
-              className="rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm"
+              className="w-full sm:w-auto rounded-xl border border-white/60 bg-white px-3 py-1.5 text-sm"
             >
               Abbrechen
             </button>
             <button
               type="submit"
               disabled={!file || busy}
-              className="rounded-xl bg-slate-900 px-3 py-1.5 text-sm text-white hover:opacity-90 disabled:opacity-50"
+              className="w-full sm:w-auto rounded-xl bg-slate-900 px-3 py-1.5 text-sm text-white hover:opacity-90 disabled:opacity-50"
             >
               {busy ? 'Lädt…' : 'Hochladen'}
             </button>

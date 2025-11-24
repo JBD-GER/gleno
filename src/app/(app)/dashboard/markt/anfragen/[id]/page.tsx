@@ -46,7 +46,7 @@ type MyPartner = {
   status: string
   display_name: string | null
   company_name: string | null
-  branch_id: string | null // historisch; Relevanz jetzt beim Backend
+  branch_id: string | null
   city: string | null
 }
 
@@ -54,7 +54,6 @@ export default function PartnerRequestDetailPage() {
   const params = useParams<{ id: string }>()
   const sp = useSearchParams()
 
-  // Partner-Kontext aus der URL (von der Liste kommend)
   const partnerIdFromUrl = sp.get('partner_id') || ''
 
   const [loading, setLoading] = useState(true)
@@ -64,18 +63,13 @@ export default function PartnerRequestDetailPage() {
   const [partnersLoading, setPartnersLoading] = useState(true)
   const [myPartners, setMyPartners] = useState<MyPartner[]>([])
 
-  // Welches Profil ist im UI gewählt?
   const [selectedPartnerId, setSelectedPartnerId] = useState<string>('')
-  // Welches Profil verwenden wir für die API-Abfrage?
-  // (kann aus URL kommen oder aus Auswahl)
   const [requestPartnerId, setRequestPartnerId] = useState<string>(
     partnerIdFromUrl || ''
   )
 
   const [expanded, setExpanded] = useState(false)
   const [applyOpen, setApplyOpen] = useState(false)
-
-  /* ----------------------------- Helpers ----------------------------- */
 
   const introPreview = (t?: string | null) => {
     if (!t) return ''
@@ -121,8 +115,7 @@ export default function PartnerRequestDetailPage() {
     }
   }
 
-  /* ----------------------------- Partner laden ----------------------------- */
-
+  /* Partner laden */
   useEffect(() => {
     let canceled = false
     ;(async () => {
@@ -137,10 +130,6 @@ export default function PartnerRequestDetailPage() {
 
         setMyPartners(list)
 
-        // Priorität:
-        // 1) partner_id aus URL
-        // 2) erstes eigenes Profil
-        // 3) sonst leer
         let initialId = partnerIdFromUrl
         if (!initialId && list.length > 0) initialId = list[0].id
 
@@ -149,8 +138,6 @@ export default function PartnerRequestDetailPage() {
       } catch {
         if (canceled) return
         setMyPartners([])
-        // Wenn URL einen Partner vorgibt, behalten wir ihn als Kontext,
-        // auch wenn /mine gerade nichts liefert (Backend entscheidet dann).
         setSelectedPartnerId(partnerIdFromUrl || '')
         setRequestPartnerId(partnerIdFromUrl || '')
       } finally {
@@ -163,17 +150,15 @@ export default function PartnerRequestDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [partnerIdFromUrl])
 
-  /* ----------------------------- Detail laden ----------------------------- */
-
-  // Wenn Partner-Kontext feststeht oder sich ändert → Detail nachziehen
+  /* Detail laden, wenn Partner-Kontext steht */
   useEffect(() => {
     if (!params.id) return
-    if (partnersLoading) return // warten, bis Partner geladen
+    if (partnersLoading) return
     fetchDetail()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [params.id, requestPartnerId, partnersLoading])
 
-  // Auto-Refresh alle 20s (mit aktuellem Partner-Kontext)
+  /* Auto-Refresh alle 20s */
   useEffect(() => {
     const id = setInterval(() => {
       fetchDetail({ silent: true })
@@ -182,12 +167,10 @@ export default function PartnerRequestDetailPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [requestPartnerId, params.id])
 
-  /* ----------------------------- UI ----------------------------- */
-
   return (
     <div className={shellBg}>
       {/* HEADER */}
-      <header className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <header className="mb-6 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="space-y-1">
           <div className="inline-flex items-center gap-2 rounded-full bg-white/95 px-3 py-1 text-[10px] font-medium text-slate-900 ring-1 ring-white/80 backdrop-blur">
             <span>GLENO Markt</span>
@@ -242,7 +225,7 @@ export default function PartnerRequestDetailPage() {
             onChange={(e) => {
               const newId = e.target.value
               setSelectedPartnerId(newId)
-              setRequestPartnerId(newId) // ⬅ Partner-Wechsel → API-Kontext & Reload
+              setRequestPartnerId(newId)
             }}
           >
             {myPartners.map((p) => (
@@ -411,11 +394,11 @@ export default function PartnerRequestDetailPage() {
 
 function Field({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between gap-2 rounded-2xl border border-slate-200/70 bg-white/95 px-3 py-2">
+    <div className="flex flex-col gap-0.5 rounded-2xl border border-slate-200/70 bg-white/95 px-3 py-2">
       <span className="text-[10px] sm:text-xs text-slate-500">
         {label}
       </span>
-      <span className="text-xs sm:text-sm font-medium text-slate-900 text-right">
+      <span className="text-xs sm:text-sm font-medium text-slate-900">
         {value}
       </span>
     </div>

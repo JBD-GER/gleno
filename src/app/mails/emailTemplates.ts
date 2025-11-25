@@ -405,6 +405,137 @@ export function renderInvoiceAutomationMail(opts: {
 }
 
 /* -------------------------------------------------------------------------- */
+/* NEU: Zoom-Beratungs-Termine                                                */
+/* -------------------------------------------------------------------------- */
+
+export function renderZoomBookingCustomerMail(opts: {
+  name?: string
+  email: string
+  startTimeFormatted: string
+  joinUrl: string
+}) {
+  const pre = 'Ihr GLENO Zoom-Beratungstermin – Zugangsdaten & Kalenderlink.'
+  const title = 'Ihr GLENO Zoom-Beratungstermin'
+
+  const greetingName = opts.name?.trim() || 'Guten Tag'
+
+  const content = `
+  <tr>
+    <td align="center" style="padding:8px 28px 0 28px;">
+      <h1 style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:22px;line-height:1.35;color:#0b1220;font-weight:800;">
+        Ihr GLENO Beratungstermin per Zoom
+      </h1>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:12px 28px 4px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        ${escapeHtml(greetingName)},
+      </p>
+      <p style="margin:8px 0 0 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        vielen Dank für Ihre Buchung. Hier finden Sie die Daten zu Ihrem persönlichen GLENO-Beratungstermin:
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:10px 28px 4px 28px;">
+      <table role="presentation" cellpadding="0" cellspacing="0" width="100%" style="border-collapse:collapse;">
+        <tr>
+          <td style="padding:10px 14px;background:#f9fafb;border-radius:12px;border:1px solid #e5e7eb;">
+            <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#0b1220;">
+              <b>Datum &amp; Uhrzeit:</b> ${escapeHtml(opts.startTimeFormatted)} (Europe/Berlin)<br/>
+              <b>Format:</b> Online-Beratung per Zoom
+            </p>
+            <p style="margin:10px 0 0 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;">
+              <a href="${escapeHtml(
+                opts.joinUrl
+              )}" style="display:inline-block;padding:10px 18px;margin-top:2px;border-radius:999px;background:#0a1b40;color:#ffffff;text-decoration:none;font-size:13px;font-weight:600;">
+                Zoom-Meeting betreten
+              </a>
+            </p>
+            <p style="margin:10px 0 0 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:12px;line-height:1.6;color:#64748b;">
+              Hinweis: Der Termin ist zusätzlich als Kalenderdatei (.ics) im Anhang hinterlegt. Sie können diese in Ihren Kalender (z.&nbsp;B. Outlook, Google Kalender, Apple Kalender) importieren.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:12px 28px 22px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:13px;line-height:1.6;color:#64748b;">
+        Falls Sie den Termin verschieben oder stornieren möchten, antworten Sie einfach auf diese E-Mail.
+      </p>
+    </td>
+  </tr>`
+
+  return baseWrap(pre, title, content)
+}
+
+export function renderZoomBookingInternalMail(opts: {
+  name?: string
+  email: string
+  phone?: string
+  note?: string
+  startTimeFormatted: string
+  joinUrl: string
+  meetingId: string | number
+}) {
+  const pre = 'Neue GLENO-Zoom-Beratung über die öffentliche Buchungsseite.'
+  const title = 'Neue Zoom-Beratung gebucht'
+
+  const content = `
+  <tr>
+    <td align="center" style="padding:8px 28px 0 28px;">
+      <h1 style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:22px;line-height:1.35;color:#0b1220;font-weight:800;">
+        Neue GLENO Zoom-Beratung
+      </h1>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:12px 28px 8px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        Es wurde ein neuer Termin über die öffentliche Beratungsseite gebucht.
+      </p>
+    </td>
+  </tr>
+
+  <tr>
+    <td style="padding:8px 28px 8px 28px;">
+      <p style="margin:0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        <b>Kontakt:</b><br/>
+        Name: ${opts.name ? escapeHtml(opts.name) : '–'}<br/>
+        E-Mail: ${escapeHtml(opts.email)}<br/>
+        Telefon: ${opts.phone ? escapeHtml(opts.phone) : '–'}
+      </p>
+      <p style="margin:10px 0 0 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        <b>Termin:</b><br/>
+        Datum &amp; Uhrzeit: ${escapeHtml(opts.startTimeFormatted)} (Europe/Berlin)<br/>
+        Meeting-ID: ${escapeHtml(String(opts.meetingId))}<br/>
+        Zoom-Link: <a href="${escapeHtml(
+          opts.joinUrl
+        )}" style="color:#0a1b40;text-decoration:underline;">Meeting öffnen</a>
+      </p>
+      ${
+        opts.note
+          ? `<p style="margin:10px 0 0 0;font-family:ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;font-size:14px;line-height:1.6;color:#334155;">
+        <b>Notiz / Anliegen:</b><br/>
+        ${escapeHtml(opts.note).replace(/\n/g, '<br/>')}
+      </p>`
+          : ''
+      }
+    </td>
+  </tr>`
+
+  return baseWrap(pre, title, content)
+}
+
+
+/* -------------------------------------------------------------------------- */
 
 function escapeHtml(s: string) {
   return s.replace(/[&<>"]/g, (c) =>

@@ -183,6 +183,9 @@ export async function POST(req: Request) {
   const vat_number   = norm(body.vat_number)
   const website      = norm(body.website)
   const payment_method = norm(body.payment_method) || 'invoice'
+    // 👉 Beta-Einladung (dauerhaft kostenlos)
+  const beta_invite = Boolean(body.beta_invite)
+
 
   const accept_terms    = Boolean(body.accept_terms)
   const accept_privacy  = Boolean(body.accept_privacy)
@@ -258,8 +261,14 @@ export async function POST(req: Request) {
   const ua      = req.headers.get('user-agent')?.slice(0, 1024) || null
   const ip      = firstIP(req)
   const ip_hash = ip ? sha256Hex(`${LEGAL_IP_SALT}|${ip}`) : null
+  // 👉 Normale Testphase (z. B. 7 Tage) aus ENV
   const trialMs = (parseInt(process.env.NEXT_PUBLIC_TRIAL_DAYS || '7', 10)) * 24 * 60 * 60 * 1000
-  const trialEndsAt = new Date(Date.now() + trialMs).toISOString()
+
+  // 👉 Wenn Beta-Einladung: Testphase künstlich bis ins Jahr 2999 verlängern
+  const trialEndsAt = beta_invite
+    ? new Date('2999-12-31T23:59:59.000Z').toISOString()
+    : new Date(Date.now() + trialMs).toISOString()
+
 
   const { error: upErr } = await adminClient
     .from('profiles')

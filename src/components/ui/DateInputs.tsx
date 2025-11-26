@@ -1,6 +1,8 @@
+// src/components/ui/DateInputs.tsx
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { CalendarDaysIcon } from '@heroicons/react/24/outline'
 
 /* ---------- Helper ---------- */
@@ -51,11 +53,13 @@ export type DateInputWithCalendarProps = {
   value: string
   onChange: (value: string) => void
   placeholder?: string
-  /** zusätzliche Klassen für das Input-Element */
   inputClassName?: string
-  /** optional disabled */
   disabled?: boolean
+  /** Optional: zusätzliche Klassen für den Wrapper um das Input */
+  wrapperClassName?: string
 }
+
+type PopupPos = { left: number; top: number }
 
 export function DateInputWithCalendar({
   value,
@@ -63,13 +67,130 @@ export function DateInputWithCalendar({
   placeholder = 'tt.mm.jjjj',
   inputClassName = '',
   disabled = false,
+  wrapperClassName = '',
 }: DateInputWithCalendarProps) {
   const [open, setOpen] = useState(false)
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const popupRef = useRef<HTMLDivElement | null>(null)
+  const [popupPos, setPopupPos] = useState<PopupPos | null>(null)
+  const [portalEl, setPortalEl] = useState<HTMLElement | null>(null)
 
-  const initialDate = parseIsoDate(value) ?? new Date()
+  const today = new Date()
+  const todayIso = toIsoDate(today)
+
+  const initialDate = parseIsoDate(value) ?? today
   const [currentMonth, setCurrentMonth] = useState<Date>(
     new Date(initialDate.getFullYear(), initialDate.getMonth(), 1),
   )
+
+  // Portal für den Kalender (immer ganz oben im DOM, unabhängig von Overflows)
+  useEffect(() => {
+    const el = document.createElement('div')
+    document.body.appendChild(el)
+    setPortalEl(el)
+    return () => {
+      document.body.removeChild(el)
+    }
+  }, [])
+
+  // Month sync mit value
+  useEffect(() => {
+    const parsed = parseIsoDate(value)
+    if (parsed) {
+      setCurrentMonth(
+        new Date(parsed.getFullYear(), parsed.getMonth(), 1),
+      )
+    }
+  }, [value])
+
+  // Outside-Click & ESC schließen (inkl. Portal-Content)
+  useEffect(() => {
+    if (!open) return
+
+    const handleClick = (event: MouseEvent | TouchEvent) => {
+      const target = event.target as Node | null
+      const inContainer =
+        containerRef.current &&
+        target &&
+        containerRef.current.contains(target)
+      const inPopup =
+        popupRef.current && target && popupRef.current.contains(target)
+
+      if (!inContainer && !inPopup) {
+        setOpen(false)
+      }
+    }
+
+    const handleKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setOpen(false)
+    }
+
+    document.addEventListener('mousedown', handleClick, true)
+    document.addEventListener('touchstart', handleClick, true)
+    document.addEventListener('keydown', handleKey)
+
+    return () => {
+      document.removeEventListener('mousedown', handleClick, true)
+      document.removeEventListener('touchstart', handleClick, true)
+      document.removeEventListener('keydown', handleKey)
+    }
+  }, [open])
+
+  // Popup-Position: immer innerhalb des Viewports halten
+  useEffect(() => {
+    if (!open || !containerRef.current) return
+
+    const updatePosition = () => {
+      if (!containerRef.current) return
+
+      const rect = containerRef.current.getBoundingClientRect()
+      const margin = 8 // Abstand zum Viewport-Rand
+      const calendarWidth = 280 // feste Breite des Kalenders
+      const viewportWidth = window.innerWidth
+      const viewportHeight = window.innerHeight
+
+      let left = rect.left
+
+      // Rechts-Clamping
+      if (left + calendarWidth > viewportWidth - margin) {
+        left = viewportWidth - calendarWidth - margin
+      }
+
+      // Links-Clamping
+      if (left < margin) {
+        left = margin
+      }
+
+      // Standard: unterhalb des Inputs
+      let top = rect.bottom + 6
+      const approxCalendarHeight = 320
+
+      // Wenn zu wenig Platz nach unten: oberhalb anzeigen
+      if (top + approxCalendarHeight > viewportHeight - margin) {
+        const alternativeTop = rect.top - approxCalendarHeight - 6
+        if (alternativeTop >= margin) {
+          top = alternativeTop
+        } else {
+          // Notbremse: im Viewport klemmen
+          top = viewportHeight - approxCalendarHeight - margin
+          if (top < margin) top = margin
+        }
+      }
+
+      setPopupPos({ left, top })
+    }
+
+    updatePosition()
+
+    // Auf alle Scrolls reagieren (auch in verschachtelten Scroll-Containern)
+    window.addEventListener('resize', updatePosition)
+    window.addEventListener('scroll', updatePosition, true)
+
+    return () => {
+      window.removeEventListener('resize', updatePosition)
+      window.removeEventListener('scroll', updatePosition, true)
+    }
+  }, [open])
 
   const displayValue = value ? formatDisplayDate(value) : ''
 
@@ -119,17 +240,20 @@ export function DateInputWithCalendar({
   }
 
   return (
-    <div className="relative inline-block">
-      <div className="relative">
+    <div
+      ref={containerRef}
+      className={`relative inline-flex items-center ${wrapperClassName}`}
+    >
+      <div className="relative ml-2">
         <input
           type="text"
           readOnly
           disabled={disabled}
           value={displayValue}
           placeholder={placeholder}
-          onClick={() => !disabled && setOpen((o) => !o)}
+          onClick={() => !disabled && setOpen(true)}
           className={[
-            'w-[108px] rounded-full border border-slate-200 bg-white px-3 py-1 pr-7 text-[11px] text-slate-600 shadow-sm outline-none placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-50',
+            'w-[130px] sm:w-[140px] rounded-full border border-slate-200 bg-white px-3 py-1.5 pr-8 text-[11px] text-slate-600 shadow-sm outline-none placeholder:text-slate-300 focus:ring-2 focus:ring-indigo-200 disabled:cursor-not-allowed disabled:bg-slate-50',
             inputClassName,
           ].join(' ')}
         />
@@ -143,98 +267,121 @@ export function DateInputWithCalendar({
         </button>
       </div>
 
-      {open && !disabled && (
-        <div className="absolute right-0 z-40 mt-2 w-64 rounded-2xl border border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.18)]">
-          <div className="flex items-center justify-between px-3 pt-2 pb-1">
-            <span className="text-xs font-medium text-slate-900">
-              {MONTH_NAMES[currentMonth.getMonth()]}{' '}
-              {currentMonth.getFullYear()}
-            </span>
-            <div className="flex items-center gap-1">
+      {open && !disabled && popupPos && portalEl &&
+        createPortal(
+          <div
+            ref={popupRef}
+            className="z-[9999] w-[280px] max-w-[92vw] rounded-2xl border border-slate-200 bg-white shadow-[0_20px_45px_rgba(15,23,42,0.18)]"
+            style={{
+              position: 'fixed',
+              left: popupPos.left,
+              top: popupPos.top,
+              maxHeight: '80vh',
+              overflow: 'hidden',
+            }}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between px-3 pt-2 pb-1">
+              <span className="text-xs font-medium text-slate-900">
+                {MONTH_NAMES[currentMonth.getMonth()]}{' '}
+                {currentMonth.getFullYear()}
+              </span>
+              <div className="flex items-center gap-1">
+                <button
+                  type="button"
+                  onClick={goPrevMonth}
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  ‹
+                </button>
+                <button
+                  type="button"
+                  onClick={goNextMonth}
+                  className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                >
+                  ›
+                </button>
+              </div>
+            </div>
+
+            {/* Wochentage */}
+            <div className="grid grid-cols-7 gap-1 px-3 pb-1 pt-1 text-[10px] text-slate-400">
+              {WEEKDAYS_SHORT.map((w) => (
+                <div key={w} className="flex items-center justify-center">
+                  {w}
+                </div>
+              ))}
+            </div>
+
+            {/* Tage */}
+            <div className="grid grid-cols-7 gap-1 px-3 pb-3 text-[11px]">
+              {weeks.map((week, wi) =>
+                week.map((day, di) => {
+                  const inCurrentMonth =
+                    day.getMonth() === currentMonth.getMonth()
+                  const iso = toIsoDate(day)
+                  const isSelected =
+                    selected &&
+                    day.getFullYear() === selected.getFullYear() &&
+                    day.getMonth() === selected.getMonth() &&
+                    day.getDate() === selected.getDate()
+                  const isToday = iso === todayIso
+
+                  return (
+                    <button
+                      key={`${wi}-${di}`}
+                      type="button"
+                      onClick={() => handleSelect(day)}
+                      className={[
+                        'flex h-7 w-7 items-center justify-center rounded-full transition',
+                        inCurrentMonth
+                          ? 'text-slate-700'
+                          : 'text-slate-300',
+                        isSelected
+                          ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/50'
+                          : isToday
+                          ? 'ring-1 ring-slate-900/40 font-semibold'
+                          : 'hover:bg-slate-100',
+                      ].join(' ')}
+                    >
+                      {day.getDate()}
+                    </button>
+                  )
+                }),
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2 text-[10px] text-slate-500">
               <button
                 type="button"
-                onClick={goPrevMonth}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                onClick={() => {
+                  onChange('')
+                  setOpen(false)
+                }}
+                className="rounded-full px-2 py-1 hover:bg-slate-100 hover:text-slate-700"
               >
-                ‹
+                Löschen
               </button>
               <button
                 type="button"
-                onClick={goNextMonth}
-                className="flex h-6 w-6 items-center justify-center rounded-full text-slate-500 hover:bg-slate-100 hover:text-slate-900"
+                onClick={() => {
+                  const t = new Date()
+                  const iso = toIsoDate(t)
+                  onChange(iso)
+                  setCurrentMonth(
+                    new Date(t.getFullYear(), t.getMonth(), 1),
+                  )
+                  setOpen(false)
+                }}
+                className="rounded-full px-2 py-1 text-slate-700 hover:bg-slate-100"
               >
-                ›
+                Heute
               </button>
             </div>
-          </div>
-
-          <div className="grid grid-cols-7 gap-1 px-3 pb-1 pt-1 text-[10px] text-slate-400">
-            {WEEKDAYS_SHORT.map((w) => (
-              <div key={w} className="flex items-center justify-center">
-                {w}
-              </div>
-            ))}
-          </div>
-
-          <div className="grid grid-cols-7 gap-1 px-3 pb-3 text-[11px]">
-            {weeks.map((week, wi) =>
-              week.map((day, di) => {
-                const inCurrentMonth =
-                  day.getMonth() === currentMonth.getMonth()
-                const isSelected =
-                  selected &&
-                  day.getFullYear() === selected.getFullYear() &&
-                  day.getMonth() === selected.getMonth() &&
-                  day.getDate() === selected.getDate()
-
-                return (
-                  <button
-                    key={`${wi}-${di}`}
-                    type="button"
-                    onClick={() => handleSelect(day)}
-                    className={[
-                      'flex h-7 w-7 items-center justify-center rounded-full transition',
-                      inCurrentMonth ? 'text-slate-700' : 'text-slate-300',
-                      isSelected
-                        ? 'bg-slate-900 text-white shadow-sm shadow-slate-900/50'
-                        : 'hover:bg-slate-100',
-                    ].join(' ')}
-                  >
-                    {day.getDate()}
-                  </button>
-                )
-              }),
-            )}
-          </div>
-
-          <div className="flex items-center justify-between border-t border-slate-100 px-3 py-2 text-[10px] text-slate-500">
-            <button
-              type="button"
-              onClick={() => {
-                onChange('')
-                setOpen(false)
-              }}
-              className="rounded-full px-2 py-1 hover:bg-slate-100 hover:text-slate-700"
-            >
-              Löschen
-            </button>
-            <button
-              type="button"
-              onClick={() => {
-                const today = new Date()
-                onChange(toIsoDate(today))
-                setCurrentMonth(
-                  new Date(today.getFullYear(), today.getMonth(), 1),
-                )
-                setOpen(false)
-              }}
-              className="rounded-full px-2 py-1 text-slate-700 hover:bg-slate-100"
-            >
-              Heute
-            </button>
-          </div>
-        </div>
-      )}
+          </div>,
+          portalEl,
+        )}
     </div>
   )
 }
@@ -242,10 +389,8 @@ export function DateInputWithCalendar({
 /* ---------- Datum + Zeit daneben ---------- */
 
 export type DateTimeInputWithCalendarProps = {
-  /** ISO Datum: yyyy-mm-dd */
   dateValue: string
   onDateChange: (value: string) => void
-  /** Zeit im Format HH:MM (oder leer) */
   timeValue: string
   onTimeChange: (value: string) => void
   disabled?: boolean
@@ -259,7 +404,7 @@ export function DateTimeInputWithCalendar({
   disabled = false,
 }: DateTimeInputWithCalendarProps) {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2">
       <DateInputWithCalendar
         value={dateValue}
         onChange={onDateChange}

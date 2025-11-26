@@ -28,6 +28,9 @@ import {
   ClockIcon,
   BookOpenIcon,
   GlobeAltIcon,
+  LockClosedIcon,  
+  QueueListIcon,   
+  ListBulletIcon,
   // Markt
   MapIcon,
   BoltIcon,
@@ -205,6 +208,12 @@ export default function Sidebar({ userEmail }: SidebarProps) {
       label: 'Tools',
       icon: WrenchScrewdriverIcon,
       children: [
+            {
+      href: '/dashboard/vault',
+      label: 'Tresor',
+      icon: LockClosedIcon,
+      badge: { text: 'Neu', tone: 'indigo' },
+    },
         {
           href: '/dashboard/website',
           label: 'Website',
@@ -216,6 +225,17 @@ export default function Sidebar({ userEmail }: SidebarProps) {
           label: 'Dokumenten-Cloud',
           icon: ClipboardDocumentListIcon,
         },
+            {
+      href: '/dashboard/todo',
+      label: 'To-dos',
+      icon: ListBulletIcon,      // 👈 neues Icon
+    },
+            {
+      href: '/dashboard/aktivitaeten',
+      label: 'Aktivitäten',
+      icon: QueueListIcon,
+    },
+
       ],
     },
 

@@ -15,6 +15,9 @@ import {
   MegaphoneIcon,
   ArrowRightIcon,
   XMarkIcon,
+  DocumentTextIcon,
+  ShieldCheckIcon,
+  BellAlertIcon,
 } from '@heroicons/react/24/outline'
 import {
   Chart as ChartJS,
@@ -156,6 +159,217 @@ function toLocalIsoForSlot(date: Date, hhmm: string) {
 
 type SeriesPoint = { month: string; count: number }
 type RevenuePoint = { month: string; amount: number }
+
+/* ---------- Helpers für Vault-KPIs (Verträge & Lizenzen) ------------ */
+
+type DashboardContract = {
+  id: string
+  end_date: string | null
+  auto_renew: boolean | null
+  monthly_cost: number | null
+  status: string | null
+  created_at?: string | null
+}
+
+type DashboardLicense = {
+  id: string
+  valid_until: string | null
+  auto_renew: boolean | null
+  monthly_cost: number | null
+  status: string | null
+  created_at?: string | null
+}
+
+type ContractStatus = 'active' | 'expired' | 'notice' | 'canceled' | 'unknown'
+type LicenseStatusSimple = 'active' | 'expired' | 'pending' | 'unknown'
+
+type ContractSummaryResult = {
+  totalMonthly: number
+  active: number
+  expiring: number
+  expired: number
+  nextInDays: number | null
+  increaseLast7: number
+}
+
+type LicenseSummaryResult = {
+  totalMonthly: number
+  active: number
+  expiring: number
+  expired: number
+  nextInDays: number | null
+  increaseLast7: number
+}
+
+type VaultMetrics = {
+  contractsMonthly: number
+  contractsActive: number
+  contractsExpiringSoon: number
+  contractsExpired: number
+  contractsNextInDays: number | null
+  licensesMonthly: number
+  licensesActive: number
+  licensesExpiringSoon: number
+  licensesExpired: number
+  licensesNextInDays: number | null
+  costsIncreaseLast7: number
+}
+
+function computeDashboardContractStatus(
+  c: DashboardContract,
+  todayIso: string,
+): ContractStatus {
+  const base = (c.status || '').toLowerCase()
+
+  if (base === 'gekündigt' || base === 'gekuendigt' || base === 'canceled') {
+    return 'canceled'
+  }
+  if (base === 'abgelaufen') return 'expired'
+
+  if (!c.end_date) {
+    // kein Enddatum -> wenn nicht explizit abgelaufen, dann aktiv
+    return 'active'
+  }
+
+  const diffDays =
+    (new Date(c.end_date).getTime() - new Date(todayIso).getTime()) /
+    (1000 * 60 * 60 * 24)
+
+  const auto = !!c.auto_renew
+
+  if (!auto) {
+    if (diffDays < 0) return 'expired'
+    if (diffDays <= 90) return 'notice'
+    return 'active'
+  }
+
+  if (diffDays <= 90 && diffDays >= 0) return 'notice'
+  if (diffDays < 0) return 'expired'
+  return 'active'
+}
+
+function computeDashboardLicenseStatus(
+  lic: DashboardLicense,
+  todayIso: string,
+): LicenseStatusSimple {
+  const base = (lic.status || '').toLowerCase()
+
+  if (!lic.valid_until) {
+    if (base === 'abgelaufen' || base === 'expired') return 'expired'
+    if (base === 'pending') return 'pending'
+    return 'active'
+  }
+
+  const diffDays =
+    (new Date(lic.valid_until).getTime() - new Date(todayIso).getTime()) /
+    (1000 * 60 * 60 * 24)
+
+  const auto = !!lic.auto_renew
+
+  if (!auto) {
+    if (diffDays < 0) return 'expired'
+    if (diffDays <= 30) return 'pending'
+    return 'active'
+  }
+
+  if (diffDays <= 30 && diffDays >= 0) return 'pending'
+  if (diffDays < 0) return 'expired'
+  return 'active'
+}
+
+function summarizeContracts(
+  contracts: DashboardContract[],
+  todayIso: string,
+): ContractSummaryResult {
+  let totalMonthly = 0
+  let active = 0
+  let expiring = 0
+  let expired = 0
+  let nextInDays: number | null = null
+  let increaseLast7 = 0
+
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+  for (const c of contracts) {
+    const status = computeDashboardContractStatus(c, todayIso)
+
+    if (c.monthly_cost != null) {
+      totalMonthly += Number(c.monthly_cost)
+    }
+
+    if (status === 'active') active++
+    else if (status === 'notice') expiring++
+    else if (status === 'expired' || status === 'canceled') expired++
+
+    if (c.end_date) {
+      const diffDays = Math.round(
+        (new Date(c.end_date).getTime() - new Date(todayIso).getTime()) /
+          (1000 * 60 * 60 * 24),
+      )
+      if (diffDays >= 0 && (nextInDays === null || diffDays < nextInDays)) {
+        nextInDays = diffDays
+      }
+    }
+
+    if (
+      c.created_at &&
+      c.monthly_cost != null &&
+      new Date(c.created_at) >= sevenDaysAgo
+    ) {
+      increaseLast7 += Number(c.monthly_cost)
+    }
+  }
+
+  return { totalMonthly, active, expiring, expired, nextInDays, increaseLast7 }
+}
+
+function summarizeLicenses(
+  licenses: DashboardLicense[],
+  todayIso: string,
+): LicenseSummaryResult {
+  let totalMonthly = 0
+  let active = 0
+  let expiring = 0
+  let expired = 0
+  let nextInDays: number | null = null
+  let increaseLast7 = 0
+
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+
+  for (const lic of licenses) {
+    const status = computeDashboardLicenseStatus(lic, todayIso)
+
+    if (lic.monthly_cost != null) {
+      totalMonthly += Number(lic.monthly_cost)
+    }
+
+    if (status === 'active') active++
+    else if (status === 'pending') expiring++
+    else if (status === 'expired') expired++
+
+    if (lic.valid_until) {
+      const diffDays = Math.round(
+        (new Date(lic.valid_until).getTime() - new Date(todayIso).getTime()) /
+          (1000 * 60 * 60 * 24),
+      )
+      if (diffDays >= 0 && (nextInDays === null || diffDays < nextInDays)) {
+        nextInDays = diffDays
+      }
+    }
+
+    if (
+      lic.created_at &&
+      lic.monthly_cost != null &&
+      new Date(lic.created_at) >= sevenDaysAgo
+    ) {
+      increaseLast7 += Number(lic.monthly_cost)
+    }
+  }
+
+  return { totalMonthly, active, expiring, expired, nextInDays, increaseLast7 }
+}
 
 /* ------------------------- SetupCall Modal --------------------------- */
 
@@ -320,7 +534,7 @@ function SetupCallModal({
       onClick={onClose}
     >
       <div
-        className="relative flex w-full max-w-xl max-h-[min(680px,100vh-3rem)] flex-col overflow-y-auto rounded-3xl border border-white/70 bg-white/95 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.35)] ring-1 ring-white/60 sm:p-6"
+        className="relative flex w-full max-w-xl max-h-[min(680px,100vh-3rem)] flex-col overflow-y-auto rounded-3xl border border-white/70 bg-white/95 p-4 shadow-[0_18px_50px_rgba(15,23,42,0.35)] ring-1 ring-white/60 sm:px-6 sm:py-6"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Close-Button */}
@@ -508,7 +722,7 @@ function SetupCallModal({
             />
             <p className="mt-1 text-[10px] text-slate-400">
               Diese Notiz senden wir automatisch mit, damit klar ist, dass es
-              um Fragen zu Einrichtung & Nutzung als aktiver Partner geht.
+              um Fragen zu Einrichtung &amp; Nutzung als aktiver Partner geht.
             </p>
           </div>
 
@@ -549,6 +763,32 @@ function SetupCallModal({
 
 /* --------------------------- Dashboard ------------------------------ */
 
+type GrowthMode = 'positive' | 'negative'
+
+function formatPctLabel(value: number): string {
+  if (!Number.isFinite(value) || value === 0) return '0%'
+  const sign = value > 0 ? '+' : ''
+  return `${sign}${value.toFixed(1)}%`
+}
+
+function growthClasses(mode: GrowthMode, value: number): string {
+  if (!Number.isFinite(value) || value === 0) {
+    return 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
+  }
+  const isPositive = value > 0
+
+  if (mode === 'positive') {
+    return isPositive
+      ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+      : 'bg-rose-50 text-rose-700 ring-1 ring-rose-200'
+  }
+
+  // mode === 'negative' -> Zuwachs ist schlecht (Kosten)
+  return isPositive
+    ? 'bg-rose-50 text-rose-700 ring-1 ring-rose-200'
+    : 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200'
+}
+
 export default function DashboardClient({
   userEmail,
   kpis,
@@ -561,14 +801,29 @@ export default function DashboardClient({
   kpis: {
     employees: number
     customers: number
+    customersLast7?: number
     projects: number
     invoices: number
     revenueYTD: number
+    revenueLast7?: number
   }
-  series: { customers: SeriesPoint[]; projects: SeriesPoint[]; revenue: RevenuePoint[] }
+  series: {
+    customers: SeriesPoint[]
+    projects: SeriesPoint[]
+    revenue: RevenuePoint[]
+  }
   alerts: {
-    lowMaterials: { id: string; name: string; quantity: number; critical_quantity: number }[]
-    dueFleet: { id: string; license_plate: string; inspection_due_date: string | null }[]
+    lowMaterials: {
+      id: string
+      name: string
+      quantity: number
+      critical_quantity: number
+    }[]
+    dueFleet: {
+      id: string
+      license_plate: string
+      inspection_due_date: string | null
+    }[]
     dueTools: { id: string; name: string; next_inspection_due: string | null }[]
   }
   appointments: {
@@ -584,7 +839,81 @@ export default function DashboardClient({
   const [range, setRange] = useState<3 | 6 | 12>(12)
   const [setupOpen, setSetupOpen] = useState(false)
 
-  /* Datenaufbereitung */
+  // "Heute" als ISO für Vault-Berechnungen
+  const todayIso = useMemo(
+    () => new Date().toISOString().slice(0, 10),
+    [],
+  )
+
+  const [vaultMetrics, setVaultMetrics] = useState<VaultMetrics>({
+    contractsMonthly: 0,
+    contractsActive: 0,
+    contractsExpiringSoon: 0,
+    contractsExpired: 0,
+    contractsNextInDays: null,
+    licensesMonthly: 0,
+    licensesActive: 0,
+    licensesExpiringSoon: 0,
+    licensesExpired: 0,
+    licensesNextInDays: null,
+    costsIncreaseLast7: 0,
+  })
+  const [vaultLoading, setVaultLoading] = useState(false)
+
+  // Vault-KPIs aus aktuellen Vertrags- und Lizenzdaten holen
+  useEffect(() => {
+    let isCancelled = false
+
+    async function loadVaultMetrics() {
+      try {
+        setVaultLoading(true)
+        const [contractsRes, licensesRes] = await Promise.all([
+          fetch('/api/vault/contracts'),
+          fetch('/api/vault/licenses'),
+        ])
+
+        const contracts: DashboardContract[] = contractsRes.ok
+          ? await contractsRes.json()
+          : []
+        const licenses: DashboardLicense[] = licensesRes.ok
+          ? await licensesRes.json()
+          : []
+
+        const contractSummary = summarizeContracts(contracts, todayIso)
+        const licenseSummary = summarizeLicenses(licenses, todayIso)
+
+        if (isCancelled) return
+
+        const costsIncreaseLast7 =
+          contractSummary.increaseLast7 + licenseSummary.increaseLast7
+
+        setVaultMetrics({
+          contractsMonthly: contractSummary.totalMonthly,
+          contractsActive: contractSummary.active,
+          contractsExpiringSoon: contractSummary.expiring,
+          contractsExpired: contractSummary.expired,
+          contractsNextInDays: contractSummary.nextInDays,
+          licensesMonthly: licenseSummary.totalMonthly,
+          licensesActive: licenseSummary.active,
+          licensesExpiringSoon: licenseSummary.expiring,
+          licensesExpired: licenseSummary.expired,
+          licensesNextInDays: licenseSummary.nextInDays,
+          costsIncreaseLast7,
+        })
+      } catch (err) {
+        console.error('Fehler beim Laden der Vault-KPIs', err)
+      } finally {
+        if (!isCancelled) setVaultLoading(false)
+      }
+    }
+
+    loadVaultMetrics()
+    return () => {
+      isCancelled = true
+    }
+  }, [todayIso])
+
+  /* Datenaufbereitung für Charts */
   const m = useMemo(() => {
     const take = <T,>(arr: T[]) => arr.slice(-range)
     const labels = take(series.customers).map((p) => p.month)
@@ -603,6 +932,56 @@ export default function DashboardClient({
       maximumFractionDigits: 0,
     }).format(v || 0)
 
+  const formatDaysLabel = (days: number | null) => {
+    if (days == null) return '–'
+    if (days === 0) return 'heute'
+    if (days > 0) return `in ${days} Tagen`
+    return `vor ${Math.abs(days)} Tagen`
+  }
+
+  // --- Zuwachs letzte 7 Tage (Kunden, Umsatz, Kosten) ---
+  // Kunden-Zuwachs: Anteil der Kunden, die in den letzten 7 Tagen entstanden sind,
+  // gemessen an der aktuellen Gesamtkundenzahl.
+  // Umsatz-Zuwachs: Anteil des Umsatzes der letzten 7 Tage am Gesamtumsatz YTD.
+
+  const totalCustomers = Math.max(0, Number(kpis.customers ?? 0))
+  const customersLast7 = Math.max(0, Number(kpis.customersLast7 ?? 0))
+
+  const customerGrowthPct =
+    totalCustomers > 0 && customersLast7 > 0 && customersLast7 <= totalCustomers
+      ? (customersLast7 / totalCustomers) * 100
+      : 0
+
+  const totalRevenue = Math.max(0, Number(kpis.revenueYTD ?? 0))
+  const revenueLast7 = Math.max(0, Number(kpis.revenueLast7 ?? 0))
+
+  const revenueGrowthPct =
+    totalRevenue > 0 && revenueLast7 > 0 && revenueLast7 <= totalRevenue
+      ? (revenueLast7 / totalRevenue) * 100
+      : 0
+
+  const fixedCostsMonthly =
+    vaultMetrics.contractsMonthly + vaultMetrics.licensesMonthly
+
+  // Fixkosten vor 7 Tagen = aktuelle Fixkosten - Zuwachs im Zeitraum
+  const baseCostsBefore7 =
+    fixedCostsMonthly - vaultMetrics.costsIncreaseLast7
+  const fixedCostsGrowthPct =
+    baseCostsBefore7 > 0 && vaultMetrics.costsIncreaseLast7 > 0
+      ? (vaultMetrics.costsIncreaseLast7 / baseCostsBefore7) * 100
+      : 0
+
+  const nextDueDays =
+    vaultMetrics.contractsNextInDays != null &&
+    vaultMetrics.licensesNextInDays != null
+      ? Math.min(
+          vaultMetrics.contractsNextInDays,
+          vaultMetrics.licensesNextInDays,
+        )
+      : vaultMetrics.contractsNextInDays ?? vaultMetrics.licensesNextInDays
+
+  const nextDueLabel = formatDaysLabel(nextDueDays)
+
   /* Charts */
   const lineData = {
     labels: m.labels,
@@ -620,7 +999,12 @@ export default function DashboardClient({
           const { chart } = ctx
           const { ctx: c, chartArea } = chart
           if (!chartArea) return 'rgba(10,27,64,0.10)'
-          const grad = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+          const grad = c.createLinearGradient(
+            0,
+            chartArea.top,
+            0,
+            chartArea.bottom,
+          )
           grad.addColorStop(0, 'rgba(10,27,64,0.18)')
           grad.addColorStop(1, 'rgba(10,27,64,0.02)')
           return grad
@@ -640,7 +1024,12 @@ export default function DashboardClient({
           const { chart } = ctx
           const { ctx: c, chartArea } = chart
           if (!chartArea) return 'rgba(37,99,235,0.10)'
-          const grad = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+          const grad = c.createLinearGradient(
+            0,
+            chartArea.top,
+            0,
+            chartArea.bottom,
+          )
           grad.addColorStop(0, 'rgba(37,99,235,0.18)')
           grad.addColorStop(1, 'rgba(37,99,235,0.02)')
           return grad
@@ -686,7 +1075,11 @@ export default function DashboardClient({
       y: {
         beginAtZero: true,
         grid: { color: 'rgba(148,163,184,0.15)', drawTicks: false },
-        ticks: { color: '#64748b', font: { size: 11 }, precision: 0 as number | undefined },
+        ticks: {
+          color: '#64748b',
+          font: { size: 11 },
+          precision: 0 as number | undefined,
+        },
       },
     },
   }
@@ -703,7 +1096,12 @@ export default function DashboardClient({
           const { chart } = ctx
           const { ctx: c, chartArea } = chart
           if (!chartArea) return 'rgba(10,27,64,0.75)'
-          const grad = c.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
+          const grad = c.createLinearGradient(
+            0,
+            chartArea.top,
+            0,
+            chartArea.bottom,
+          )
           grad.addColorStop(0, 'rgba(10,27,64,0.9)')
           grad.addColorStop(1, 'rgba(10,27,64,0.35)')
           return grad
@@ -728,7 +1126,9 @@ export default function DashboardClient({
         padding: 10,
         callbacks: {
           label: (ctx: any) =>
-            ` ${new Intl.NumberFormat('de-DE').format(Number(ctx.parsed.y || 0))} €`,
+            ` ${new Intl.NumberFormat('de-DE').format(
+              Number(ctx.parsed.y || 0),
+            )} €`,
         },
       },
     },
@@ -750,22 +1150,86 @@ export default function DashboardClient({
     },
   }
 
-  /* UI-Helfer: flachere KPI-Card */
-  const kpiCard = (title: string, value: string | number, Icon: any) => (
-    <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:px-3.5 sm:py-3">
-      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm sm:h-10 sm:w-10">
-        <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+  /* UI-Helfer: KPI-Card mit optionalem Growth-Badge */
+  const kpiCard = (
+    title: string,
+    value: string | number,
+    Icon: any,
+    growth?: { pct: number; mode: GrowthMode },
+  ) => {
+    const showGrowth = !!growth
+    const growthLabel = growth ? formatPctLabel(growth.pct) : ''
+    const growthClass = growth
+      ? growthClasses(growth.mode, growth.pct)
+      : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
+
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2.5 shadow-sm sm:px-3.5 sm:py-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm sm:h-10 sm:w-10">
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 sm:text-[11px]">
+            {title}
+          </p>
+          <div className="flex items-baseline gap-2">
+            <p className="truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
+              {value}
+            </p>
+            {showGrowth && (
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${growthClass}`}
+              >
+                {growthLabel}
+              </span>
+            )}
+          </div>
+        </div>
       </div>
-      <div className="min-w-0">
-        <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 sm:text-[11px]">
-          {title}
-        </p>
-        <p className="truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
-          {value}
-        </p>
+    )
+  }
+
+  const vaultKpiCard = (
+    title: string,
+    value: string | number,
+    subtitle: string,
+    Icon: any,
+    growth?: { pct: number; mode: GrowthMode },
+  ) => {
+    const showGrowth = !!growth
+    const growthLabel = growth ? formatPctLabel(growth.pct) : ''
+    const growthClass = growth
+      ? growthClasses(growth.mode, growth.pct)
+      : 'bg-slate-100 text-slate-600 ring-1 ring-slate-200'
+
+    return (
+      <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50/80 px-3 py-2.5 shadow-sm">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-900 text-white shadow-sm sm:h-10 sm:w-10">
+          <Icon className="h-4 w-4 sm:h-5 sm:w-5" />
+        </div>
+        <div className="min-w-0">
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-slate-500 sm:text-[11px]">
+            {title}
+          </p>
+          <div className="flex items-baseline gap-2">
+            <p className="truncate text-lg font-semibold tracking-tight text-slate-900 sm:text-xl">
+              {value}
+            </p>
+            {showGrowth && (
+              <span
+                className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium ${growthClass}`}
+              >
+                {growthLabel}
+              </span>
+            )}
+          </div>
+          <p className="mt-0.5 text-[10px] text-slate-500 sm:text-[11px]">
+            {subtitle}
+          </p>
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   /* Render */
   return (
@@ -782,21 +1246,65 @@ export default function DashboardClient({
                 Eingeloggt als <span className="font-medium">{userEmail}</span>
               </p>
               <p className="text-xs text-slate-500 sm:text-sm">
-                Behalten Sie Mitarbeiter, Kunden, Projekte und Ihren Umsatz jederzeit im Blick.
+                Behalten Sie Mitarbeiter, Kunden, Projekte und Ihren Umsatz
+                jederzeit im Blick.
               </p>
             </div>
           </div>
         </div>
 
-        {/* KPIs */}
+        {/* KPIs – Kernzahlen */}
         <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
           <div>{kpiCard('Mitarbeiter', kpis.employees, UserGroupIcon)}</div>
-          <div>{kpiCard('Kunden', kpis.customers, UserGroupIcon)}</div>
+
+          <div>
+            {kpiCard('Kunden', kpis.customers, UserGroupIcon, {
+              pct: customerGrowthPct,
+              mode: 'positive',
+            })}
+          </div>
+
           <div>{kpiCard('Projekte', kpis.projects, BriefcaseIcon)}</div>
           <div>{kpiCard('Rechnungen', kpis.invoices, DocumentChartBarIcon)}</div>
+
           <div className="col-span-2 md:col-span-1">
-            {kpiCard('Umsatz YTD', euro(kpis.revenueYTD), BanknotesIcon)}
+            {kpiCard('Umsatz YTD', euro(kpis.revenueYTD), BanknotesIcon, {
+              pct: revenueGrowthPct,
+              mode: 'positive',
+            })}
           </div>
+        </div>
+
+        {/* KPIs – Verträge & Lizenzen */}
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+          {vaultKpiCard(
+            'Fixkosten (Monat)',
+            euro(fixedCostsMonthly),
+            vaultLoading ? 'Verträge & Lizenzen – lädt …' : 'Verträge & Lizenzen',
+            BanknotesIcon,
+            {
+              pct: fixedCostsGrowthPct,
+              mode: 'negative', // Zuwachs = schlecht -> rot
+            },
+          )}
+          {vaultKpiCard(
+            'Aktive Verträge',
+            vaultMetrics.contractsActive,
+            `${vaultMetrics.contractsExpiringSoon} im Kündigungsfenster (≤ 90 Tage)`,
+            DocumentTextIcon,
+          )}
+          {vaultKpiCard(
+            'Aktive Lizenzen',
+            vaultMetrics.licensesActive,
+            `${vaultMetrics.licensesExpiringSoon} laufen ≤ 30 Tage ab`,
+            ShieldCheckIcon,
+          )}
+          {vaultKpiCard(
+            'Nächster Ablauf',
+            nextDueLabel,
+            'Nächster Vertrag oder Lizenz, der ausläuft',
+            BellAlertIcon,
+          )}
         </div>
 
         {/* KUNDEN-WERBEN-KUNDEN */}
@@ -811,14 +1319,16 @@ export default function DashboardClient({
                   Kunden werben Kunden
                 </p>
                 <h2 className="text-base font-semibold leading-snug text-white sm:text-lg md:text-xl">
-                  Empfehlen Sie GLENO weiter & sichern Sie sich{' '}
-                  <span className="text-emerald-300">59 € Gutschrift</span> pro geworbenem
-                  Unternehmen.
+                  Empfehlen Sie GLENO weiter &amp; sichern Sie sich{' '}
+                  <span className="text-emerald-300">59 € Gutschrift</span> pro
+                  geworbenem Unternehmen.
                 </h2>
                 <p className="text-xs text-slate-200 sm:text-[13px]">
-                  Für jedes Unternehmen, das über Ihren Link startet und mindestens{' '}
-                  <span className="font-semibold">3 Monate aktiv Kunde</span> bleibt, schreiben wir
-                  Ihnen <span className="font-semibold">59 € gut</span>.
+                  Für jedes Unternehmen, das über Ihren Link startet und
+                  mindestens{' '}
+                  <span className="font-semibold">3 Monate aktiv Kunde</span>{' '}
+                  bleibt, schreiben wir Ihnen{' '}
+                  <span className="font-semibold">59 € gut</span>.
                 </p>
 
                 {/* CTA – auf Mobile direkt unter dem Text */}
@@ -840,7 +1350,9 @@ export default function DashboardClient({
               <ul className="mt-1 list-inside list-disc space-y-0.5">
                 <li>Persönlichen Empfehlungslink aus Ihrem Profil kopieren</li>
                 <li>Mit befreundeten Unternehmen teilen</li>
-                <li>Unternehmen bleibt 3 Monate aktiv – Sie erhalten 59 € Gutschrift</li>
+                <li>
+                  Unternehmen bleibt 3 Monate aktiv – Sie erhalten 59 € Gutschrift
+                </li>
               </ul>
               <Link
                 href="/dashboard/kunden-werben-kunden"
@@ -859,7 +1371,7 @@ export default function DashboardClient({
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between gap-2">
               <h3 className="text-sm font-semibold text-slate-800">
-                Kunden- & Projektentwicklung
+                Kunden- &amp; Projektentwicklung
               </h3>
               <div className="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-slate-50 text-xs">
                 {[3, 6, 12].map((n) => (
@@ -885,7 +1397,9 @@ export default function DashboardClient({
           {/* Umsatz pro Monat */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-slate-800">Umsatz pro Monat</h3>
+              <h3 className="text-sm font-semibold text-slate-800">
+                Umsatz pro Monat
+              </h3>
               <span className="text-xs text-slate-500">
                 Netto nach Rabatt – letzte {range} Monate
               </span>
@@ -901,7 +1415,9 @@ export default function DashboardClient({
           {/* Termine heute */}
           <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
             <div className="mb-3 flex items-center justify-between gap-2">
-              <h3 className="text-sm font-semibold text-slate-800">Heutige Termine</h3>
+              <h3 className="text-sm font-semibold text-slate-800">
+                Heutige Termine
+              </h3>
               <span className="text-xs text-slate-500">
                 {appointments.length === 0
                   ? 'Keine Termine'
@@ -911,12 +1427,15 @@ export default function DashboardClient({
 
             {appointments.length === 0 ? (
               <p className="text-sm text-slate-500">
-                Heute ist frei – perfekt für Angebote, Rechnungen oder Organisation.
+                Heute ist frei – perfekt für Angebote, Rechnungen oder
+                Organisation.
               </p>
             ) : (
               <ul className="space-y-2">
                 {appointments.map((a) => {
-                  const dateYmd = new Date(a.start_time).toISOString().slice(0, 10)
+                  const dateYmd = new Date(a.start_time)
+                    .toISOString()
+                    .slice(0, 10)
                   return (
                     <li key={a.id}>
                       <Link
@@ -958,8 +1477,8 @@ export default function DashboardClient({
                   {contacts.name}
                 </p>
                 <p className="text-xs text-slate-500">
-                  Gründer von GLENO & erster Ansprechpartner für Einrichtung, Fragen zur Software
-                  und neue Ideen.
+                  Gründer von GLENO &amp; erster Ansprechpartner für
+                  Einrichtung, Fragen zur Software und neue Ideen.
                 </p>
                 <ul className="mt-1 space-y-0.5 text-xs text-slate-600">
                   <li>• Unterstützung bei der Einrichtung</li>
@@ -1008,7 +1527,9 @@ export default function DashboardClient({
           <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
             {/* Materialbestand */}
             <div>
-              <p className="text-xs font-medium text-slate-600">Materialbestand niedrig</p>
+              <p className="text-xs font-medium text-slate-600">
+                Materialbestand niedrig
+              </p>
               {alerts.lowMaterials.length === 0 ? (
                 <p className="mt-1 text-xs text-slate-500">
                   Aktuell alles im grünen Bereich.
@@ -1032,7 +1553,9 @@ export default function DashboardClient({
 
             {/* TÜV */}
             <div>
-              <p className="text-xs font-medium text-slate-600">TÜV (Fuhrpark)</p>
+              <p className="text-xs font-medium text-slate-600">
+                TÜV (Fuhrpark)
+              </p>
               {alerts.dueFleet.length === 0 ? (
                 <p className="mt-1 text-xs text-slate-500">
                   Keine Fälligkeiten innerhalb der nächsten 30 Tage.
@@ -1056,7 +1579,9 @@ export default function DashboardClient({
 
             {/* Werkzeugprüfungen */}
             <div>
-              <p className="text-xs font-medium text-slate-600">Werkzeug-Prüfungen</p>
+              <p className="text-xs font-medium text-slate-600">
+                Werkzeug-Prüfungen
+              </p>
               {alerts.dueTools.length === 0 ? (
                 <p className="mt-1 text-xs text-slate-500">
                   Keine Prüfungen in den nächsten 30 Tagen fällig.

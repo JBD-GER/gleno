@@ -351,7 +351,6 @@ export default function TodoClient({ employees, projects }: Props) {
                 Fällig bis
               </label>
               <div className="flex items-center gap-2">
-                <CalendarDaysIcon className="h-4 w-4 text-slate-400" />
                 <div className="w-[120px] sm:w-[130px]">
                   <DateInputWithCalendar value={dueDate} onChange={setDueDate} />
                 </div>

@@ -11,7 +11,8 @@ function ym(d: Date) {
 }
 function firstDayOfMonth(d = new Date()) {
   const x = new Date(d)
-  x.setDate(1); x.setHours(0, 0, 0, 0)
+  x.setDate(1)
+  x.setHours(0, 0, 0, 0)
   return x
 }
 function startOfDay(d = new Date()) {
@@ -55,12 +56,18 @@ function num(v: any): number {
 function parseMaybeJsonArray(val: unknown): any[] {
   if (Array.isArray(val)) return val
   if (typeof val === 'string') {
-    try { const a = JSON.parse(val); return Array.isArray(a) ? a : [] } catch { return [] }
+    try {
+      const a = JSON.parse(val)
+      return Array.isArray(a) ? a : []
+    } catch {
+      return []
+    }
   }
   return []
 }
 function lineTotal(p: any): number {
-  const direct = num(p.total) || num(p.line_total) || num(p.amount) || num(p.subtotal) || 0
+  const direct =
+    num(p.total) || num(p.line_total) || num(p.amount) || num(p.subtotal) || 0
   if (direct) return direct
   const qty = num(p.quantity ?? p.qty ?? p.q ?? 1)
   const unit = num(p.unit_price ?? p.price ?? p.unitPrice ?? p.unit ?? 0)
@@ -97,7 +104,10 @@ type InvoiceLite = {
 }
 
 function computeNetAfter(inv: InvoiceLite): number {
-  if (typeof inv.net_after_discount === 'number' && isFinite(inv.net_after_discount)) {
+  if (
+    typeof inv.net_after_discount === 'number' &&
+    isFinite(inv.net_after_discount)
+  ) {
     return inv.net_after_discount
   }
 
@@ -125,7 +135,10 @@ function computeNetAfter(inv: InvoiceLite): number {
 
 /* ===== Umsatz (nur NETTO nach Rabatt) ===== */
 type RevenuePoint2 = RevenuePoint
-function sumRevenueByMonth(invoices: InvoiceLite[], months: string[]): RevenuePoint2[] {
+function sumRevenueByMonth(
+  invoices: InvoiceLite[],
+  months: string[],
+): RevenuePoint2[] {
   const map = new Map(months.map((m) => [m, 0]))
   for (const inv of invoices) {
     const key = ym(new Date(inv.date))
@@ -134,7 +147,12 @@ function sumRevenueByMonth(invoices: InvoiceLite[], months: string[]): RevenuePo
   }
   return months.map((m) => ({ month: m, amount: map.get(m) || 0 }))
 }
-function sumRevenueBetween(invoices: InvoiceLite[], fromIncl: Date, toIncl: Date): number {
+
+function sumRevenueBetween(
+  invoices: InvoiceLite[],
+  fromIncl: Date,
+  toIncl: Date,
+): number {
   const from = fromIncl.getTime()
   const to = toIncl.getTime()
   let total = 0
@@ -148,7 +166,10 @@ function sumRevenueBetween(invoices: InvoiceLite[], fromIncl: Date, toIncl: Date
 
 export default async function DashboardPage() {
   const supabase = await supabaseServer()
-  const { data: { user }, error } = await supabase.auth.getUser()
+  const {
+    data: { user },
+    error,
+  } = await supabase.auth.getUser()
   if (error || !user) redirect('/login')
 
   const { data: profile } = await supabase
@@ -166,23 +187,54 @@ export default async function DashboardPage() {
   const months = lastNMonths(12)
   const today = new Date()
   const todayIso = today.toISOString().slice(0, 10)
-  const in30Iso = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10)
+  const in30Iso = new Date(Date.now() + 30 * 24 * 3600 * 1000)
+    .toISOString()
+    .slice(0, 10)
 
-  // KPIs
+  /* ========= KPIs (Anzahl) ========= */
+
   const [{ count: employeesCount }] = await Promise.all([
-    supabase.from('employees').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-  ])
-  const [{ count: customersCount }] = await Promise.all([
-    supabase.from('customers').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-  ])
-  const [{ count: projectsCount }] = await Promise.all([
-    supabase.from('projects').select('id', { count: 'exact', head: true }).eq('user_id', userId),
-  ])
-  const [{ count: invoicesCount }] = await Promise.all([
-    supabase.from('invoices').select('id', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase
+      .from('employees')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
   ])
 
-  // Zeitreihen
+  const [{ count: customersCount }] = await Promise.all([
+    supabase
+      .from('customers')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
+  ])
+
+  const [{ count: projectsCount }] = await Promise.all([
+    supabase
+      .from('projects')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
+  ])
+
+  const [{ count: invoicesCount }] = await Promise.all([
+    supabase
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId),
+  ])
+
+  // ➜ Kunden der letzten 7 Tage (inkl. heute)
+  const last7StartDate = startOfDay(new Date())
+  last7StartDate.setDate(last7StartDate.getDate() - 6)
+
+  const [{ count: customersLast7 }] = await Promise.all([
+    supabase
+      .from('customers')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', userId)
+      .gte('created_at', last7StartDate.toISOString()),
+  ])
+
+  /* ========= Zeitreihen Kunden/Projekte ========= */
+
   const since12m = new Date(firstDayOfMonth())
   since12m.setMonth(since12m.getMonth() - 11)
   const since12mIso = since12m.toISOString()
@@ -209,13 +261,15 @@ export default async function DashboardPage() {
     months,
   )
 
-  // Umsatz (NETTO nach Rabatt)
+  /* ========= Umsatz (NETTO nach Rabatt) ========= */
+
   const earliestMonthIso = (() => {
     const [y, m] = months[0].split('-').map((x) => Number(x))
     const d = new Date(y, m - 1, 1)
     return d.toISOString().slice(0, 10)
   })()
 
+  // Für Charts (12 Monate)
   const invoicesForChartRes = await supabase
     .from('invoices')
     .select('date, positions, tax_rate, discount, net_after_discount')
@@ -225,7 +279,9 @@ export default async function DashboardPage() {
   const chartInvoices = (invoicesForChartRes.data ?? []) as InvoiceLite[]
   const revenueByMonth = sumRevenueByMonth(chartInvoices, months)
 
+  // Für YTD + letzte 7 Tage
   const startOfYear = new Date(new Date().getFullYear(), 0, 1)
+
   const invoicesForYtdRes = await supabase
     .from('invoices')
     .select('date, positions, tax_rate, discount, net_after_discount')
@@ -234,9 +290,23 @@ export default async function DashboardPage() {
     .lte('date', todayIso)
 
   const ytdInvoices = (invoicesForYtdRes.data ?? []) as InvoiceLite[]
-  const revenueYTD = sumRevenueBetween(ytdInvoices, startOfYear, endOfDay(today))
+  const revenueYTD = sumRevenueBetween(
+    ytdInvoices,
+    startOfYear,
+    endOfDay(today),
+  )
 
-  // Termine HEUTE
+  // ➜ Umsatz der letzten 7 Tage (inkl. heute)
+  const last7StartForRevenue = startOfDay(new Date())
+  last7StartForRevenue.setDate(last7StartForRevenue.getDate() - 6)
+  const revenueLast7 = sumRevenueBetween(
+    ytdInvoices,
+    last7StartForRevenue,
+    endOfDay(today),
+  )
+
+  /* ========= Termine HEUTE ========= */
+
   const todayStart = startOfDay(today)
   const todayEnd = endOfDay(today)
   const todaysAppointmentsRes = await supabase
@@ -256,7 +326,8 @@ export default async function DashboardPage() {
     reason: string | null
   }[]
 
-  // Warnungen
+  /* ========= WARNUNGEN ========= */
+
   const materialsRes = await supabase
     .from('materials')
     .select('id, name, quantity, critical_quantity')
@@ -312,9 +383,11 @@ export default async function DashboardPage() {
         kpis={{
           employees: employeesCount ?? 0,
           customers: customersCount ?? 0,
+          customersLast7: customersLast7 ?? 0, // ➜ NEU
           projects: projectsCount ?? 0,
           invoices: invoicesCount ?? 0,
           revenueYTD,
+          revenueLast7, // ➜ NEU
         }}
         series={{
           customers: seriesCustomers,

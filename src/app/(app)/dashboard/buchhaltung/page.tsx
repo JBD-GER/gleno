@@ -251,12 +251,19 @@ export default async function BuchhaltungPage() {
     )
     .slice(0, 10)
 
-  const fmt = (v: number) =>
-    `€ ${v.toFixed(2).replace('.', ',')}`
+  const fmt = (v: number) => {
+    if (!Number.isFinite(v)) v = 0
+
+    const [intPart, decPart] = v.toFixed(2).split('.')
+    const intWithDots = intPart.replace(/\B(?=(\d{3})+(?!\d))/g, '.')
+
+    return `€ ${intWithDots},${decPart}`
+  }
+
 
   return (
     <div className="min-h-[100dvh] bg-[radial-gradient(circle_at_top,_rgba(15,23,42,0.06),transparent_60%)] px-3 py-4 sm:px-4 sm:py-6 lg:px-6">
-      <div className="mx-auto w-full max-w-6xl space-y-5 sm:space-y-6">
+      <div className="mx-auto w-full space-y-5 sm:space-y-6">
         {/* HERO */}
         <div className="relative overflow-hidden rounded-2xl border border-slate-200 bg-gradient-to-br from-white to-slate-50 p-4 text-slate-900 shadow-[0_8px_30px_rgba(2,6,23,0.06)] sm:p-5">
           <div className="pointer-events-none absolute inset-0 rounded-2xl bg-[radial-gradient(1200px_350px_at_-10%_-30%,rgba(15,23,42,0.08),transparent_60%),radial-gradient(1200px_350px_at_110%_130%,rgba(15,23,42,0.06),transparent_60%)]" />

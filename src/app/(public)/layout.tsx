@@ -9,12 +9,16 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://gleno.de'
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    default: 'GLENO – Marktplatz, CRM & Website in einem',
+    // Neuer Fokus: Unternehmenssoftware statt „Marktplatz, CRM & Website“
+    default:
+      'GLENO – Cloudbasierte All-in-One Unternehmenssoftware für Dienstleister & KMU',
     template: '%s | GLENO',
   },
+  // Kurzbeschreibung mit Fokus auf Auftrags-/Projekt-/Rechnungsmanagement etc.
   description:
-    'GLENO vereint Marktplatz, CRM und Website in einer Plattform.',
-  alternates: { canonical: '/' },
+    'GLENO ist die cloudbasierte All-in-One Unternehmenssoftware für Dienstleister und KMU. Auftragsmanagement, Projektmanagement, Rechnungsmanagement, Zeiterfassung, Termine & Team – alles in einer Plattform statt Tool-Chaos.',
+  // Canonical lieber auf die echte Domain legen
+  alternates: { canonical: siteUrl },
   robots: {
     index: true,
     follow: true,
@@ -30,19 +34,28 @@ export const metadata: Metadata = {
     type: 'website',
     url: siteUrl,
     siteName: 'GLENO',
-    title: 'GLENO – Marktplatz, CRM & Website in einem',
+    // Neuer OG-Titel mit Unternehmenssoftware-Fokus
+    title:
+      'GLENO – Cloudbasierte All-in-One Unternehmenssoftware für Dienstleister & KMU',
+    // Neue OG-Description mit deinen Kernfunktionen
     description:
-      'Angebote, Aufträge, Rechnungen & Projekte – alles in einem Tool.',
+      'Weniger Aufwand, weniger Kosten, mehr Zeit: GLENO bündelt Auftragsmanagement, Projektmanagement, Rechnungsmanagement, Zeiterfassung, Termine & Team in einer cloudbasierten Unternehmenssoftware.',
     images: [
-      { url: '/og.png', width: 1200, height: 630, alt: 'GLENO' },
+      {
+        url: `${siteUrl}/og.png`, // absoluter Pfad, Bildname bleibt wie gehabt
+        width: 1200,
+        height: 630,
+        alt: 'GLENO – All-in-One Unternehmenssoftware für Dienstleister & KMU',
+      },
     ],
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'GLENO – Marktplatz, CRM & Website in einem',
+    title:
+      'GLENO – Cloudbasierte All-in-One Unternehmenssoftware für Dienstleister & KMU',
     description:
-      'Angebote, Aufträge, Rechnungen & Projekte – alles in einem Tool.',
-    images: ['/og.png'],
+      'Auftragsmanagement, Projektmanagement, Rechnungsmanagement, Zeiterfassung & Termine – mit GLENO arbeiten Dienstleister & KMU strukturierter und mit mehr Ruhe im Alltag.',
+    images: [`${siteUrl}/og.png`],
   },
   icons: {
     icon: [

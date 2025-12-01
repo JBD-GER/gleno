@@ -1,136 +1,268 @@
+// src/app/api/projects/[id]/rooms/[roomId]/route.ts
 import { NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
-export async function PUT(req: Request, ctx: { params: Promise<{ id: string; roomId: string }> }) {
-  const { roomId } = await ctx.params
-  const supa = await supabaseServer()
-  const { data: { user }, error: authErr } = await supa.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-
-  // Raum -> Projekt holen & Owner prüfen
-  const { data: roomRow, error: rErr } = await supa
-    .from('project_rooms')
-    .select('project_id')
-    .eq('id', roomId)
-    .single()
-  if (rErr || !roomRow) return NextResponse.json({ error: rErr?.message ?? 'Room not found' }, { status: 404 })
-
-  const { data: isOwner } = await supa.rpc('is_project_owner', { p_project_id: roomRow.project_id })
-  if (!isOwner) return NextResponse.json({ error: 'Only owner' }, { status: 403 })
-
-  const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
-
-  const { name, width, length, notes, tasks = [], materials = [] } = body as {
-    name: string; width?: number|null; length?: number|null; notes?: string|null;
-    tasks?: { id?: string; work: string; description?: string }[];
-    materials?: { id?: string; material_id: string; quantity?: number; notes?: string }[];
-  }
-
-  // Raum updaten
-  const { error: uErr } = await supa
-    .from('project_rooms')
-    .update({ name, width: width ?? null, length: length ?? null, notes: notes ?? null })
-    .eq('id', roomId)
-  if (uErr) return NextResponse.json({ error: uErr.message }, { status: 400 })
-
-  // ===== Tasks: upsert + diff-delete =====
-  const { data: existingTasks } =
-    await supa.from('project_room_tasks').select('id').eq('room_id', roomId)
-
-  const keepTaskIds = new Set<string>()
-  const upsertTasks = (tasks ?? [])
-    .filter(t => (t.work ?? '').trim().length > 0)
-    .map(t => {
-      const row: any = {
-        room_id: roomId,
-        work: t.work,
-        description: t.description ?? ''
-      }
-      if (t.id) { row.id = t.id; keepTaskIds.add(t.id) }  // <-- id nur setzen, wenn vorhanden
-      return row
-    })
-
-  if (upsertTasks.length) {
-    const { error } = await supa
-      .from('project_room_tasks')
-      .upsert(upsertTasks, { onConflict: 'id' })
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  }
-
-  const toDeleteTaskIds = (existingTasks ?? [])
-    .map(t => t.id)
-    .filter((id: string) => !keepTaskIds.has(id))
-
-  if (toDeleteTaskIds.length) {
-    const { error } = await supa
-      .from('project_room_tasks')
-      .delete()
-      .in('id', toDeleteTaskIds)
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  }
-
-  // ===== Materials: upsert + diff-delete =====
-  const { data: existingMats } =
-    await supa.from('project_room_materials').select('id').eq('room_id', roomId)
-
-  const keepMatIds = new Set<string>()
-  const upsertMats = (materials ?? [])
-    .filter(m => (m.material_id ?? '') !== '')
-    .map(m => {
-      const row: any = {
-        room_id: roomId,
-        material_id: m.material_id,
-        quantity: m.quantity ?? 0,
-        notes: m.notes ?? ''
-      }
-      if (m.id) { row.id = m.id; keepMatIds.add(m.id) }    // <-- id nur setzen, wenn vorhanden
-      return row
-    })
-
-  if (upsertMats.length) {
-    const { error } = await supa
-      .from('project_room_materials')
-      .upsert(upsertMats, { onConflict: 'id' })
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  }
-
-  const toDeleteMatIds = (existingMats ?? [])
-    .map(m => m.id)
-    .filter((id: string) => !keepMatIds.has(id))
-
-  if (toDeleteMatIds.length) {
-    const { error } = await supa
-      .from('project_room_materials')
-      .delete()
-      .in('id', toDeleteMatIds)
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  }
-
-  return NextResponse.json({ ok: true })
+type RouteParams = {
+  params: Promise<{ id: string; roomId: string }>
 }
 
-export async function DELETE(_req: Request, ctx: { params: Promise<{ id: string; roomId: string }> }) {
-  const { roomId } = await ctx.params
-  const supa = await supabaseServer()
-  const { data: { user }, error: authErr } = await supa.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+type TaskPayload = {
+  work: string
+  description?: string | null
+}
 
-  const { data: roomRow, error: rErr } = await supa
-    .from('project_rooms')
-    .select('project_id')
-    .eq('id', roomId)
-    .single()
-  if (rErr || !roomRow) return NextResponse.json({ error: rErr?.message ?? 'Room not found' }, { status: 404 })
+type MaterialPayload = {
+  material_id: string
+  quantity?: number | null
+  notes?: string | null
+}
 
-  const { data: isOwner } = await supa.rpc('is_project_owner', { p_project_id: roomRow.project_id })
-  if (!isOwner) return NextResponse.json({ error: 'Only owner' }, { status: 403 })
+type RoomPayload = {
+  name: string
+  width?: number | null | string
+  length?: number | null | string
+  notes?: string | null
+  tasks?: TaskPayload[]
+  materials?: MaterialPayload[]
+}
 
-  // falls kein ON DELETE CASCADE
-  await supa.from('project_room_materials').delete().eq('room_id', roomId)
-  await supa.from('project_room_tasks').delete().eq('room_id', roomId)
-  const { error } = await supa.from('project_rooms').delete().eq('id', roomId)
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+const toNumOrNull = (v: any): number | null => {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  return Number.isNaN(n) ? null : n
+}
 
-  return NextResponse.json({ ok: true })
+export async function PUT(req: Request, { params }: RouteParams) {
+  try {
+    const { id: projectId, roomId } = await params
+    const body = (await req.json()) as RoomPayload
+
+    const supa = await supabaseServer()
+    const {
+      data: { user },
+      error: userError,
+    } = await supa.auth.getUser()
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Nicht eingeloggt' },
+        { status: 401 },
+      )
+    }
+
+    // Projekt + Owner prüfen
+    const { data: project, error: projError } = await supa
+      .from('projects')
+      .select('id, user_id')
+      .eq('id', projectId)
+      .single()
+
+    if (projError || !project) {
+      return NextResponse.json(
+        { error: 'Projekt nicht gefunden' },
+        { status: 404 },
+      )
+    }
+
+    if (project.user_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Kein Zugriff auf dieses Projekt' },
+        { status: 403 },
+      )
+    }
+
+    // Raum updaten (nur Spalten, die es in project_rooms gibt)
+    const roomUpdate = {
+      name: body.name?.trim() || 'Unbenannter Bereich',
+      width: toNumOrNull(body.width),
+      length: toNumOrNull(body.length),
+      notes: body.notes ?? null,
+      updated_at: new Date().toISOString(),
+    }
+
+    const { error: roomError } = await supa
+      .from('project_rooms')
+      .update(roomUpdate)
+      .eq('id', roomId)
+      .eq('project_id', projectId)
+
+    if (roomError) {
+      console.error('Room update error', roomError)
+      return NextResponse.json(
+        { error: 'Raum konnte nicht aktualisiert werden' },
+        { status: 500 },
+      )
+    }
+
+    // Alte Tasks/Materialien löschen
+    const { error: delTasksErr } = await supa
+      .from('project_room_tasks')
+      .delete()
+      .eq('room_id', roomId)
+
+    if (delTasksErr) {
+      console.error('Delete room tasks error', delTasksErr)
+      return NextResponse.json(
+        { error: 'Alte Arbeiten konnten nicht gelöscht werden' },
+        { status: 500 },
+      )
+    }
+
+    const { error: delMatErr } = await supa
+      .from('project_room_materials')
+      .delete()
+      .eq('room_id', roomId)
+
+    if (delMatErr) {
+      console.error('Delete room materials error', delMatErr)
+      return NextResponse.json(
+        { error: 'Alte Materialien konnten nicht gelöscht werden' },
+        { status: 500 },
+      )
+    }
+
+    // Neue Tasks
+    const tasks = (body.tasks ?? [])
+      .filter((t) => t.work && t.work.trim() !== '')
+      .map((t) => ({
+        room_id: roomId,
+        work: t.work.trim(),
+        description: t.description ?? '',
+      }))
+
+    if (tasks.length > 0) {
+      const { error: tErr } = await supa
+        .from('project_room_tasks')
+        .insert(tasks)
+
+      if (tErr) {
+        console.error('Insert room tasks error', tErr)
+        return NextResponse.json(
+          { error: 'Arbeiten konnten nicht gespeichert werden' },
+          { status: 500 },
+        )
+      }
+    }
+
+    // Neue Materialien
+    const materials = (body.materials ?? [])
+      .filter((m) => m.material_id)
+      .map((m) => ({
+        room_id: roomId,
+        material_id: m.material_id,
+        quantity: toNumOrNull(m.quantity) ?? 0,
+        notes: m.notes ?? '',
+      }))
+
+    if (materials.length > 0) {
+      const { error: mErr } = await supa
+        .from('project_room_materials')
+        .insert(materials)
+
+      if (mErr) {
+        console.error('Insert room materials error', mErr)
+        return NextResponse.json(
+          { error: 'Materialien konnten nicht gespeichert werden' },
+          { status: 500 },
+        )
+      }
+    }
+
+    return NextResponse.json({ ok: true }, { status: 200 })
+  } catch (e) {
+    console.error('PUT /api/projects/[id]/rooms/[roomId] error', e)
+    return NextResponse.json(
+      { error: 'Interner Fehler' },
+      { status: 500 },
+    )
+  }
+}
+
+export async function DELETE(_req: Request, { params }: RouteParams) {
+  try {
+    const { id: projectId, roomId } = await params
+
+    const supa = await supabaseServer()
+    const {
+      data: { user },
+      error: userError,
+    } = await supa.auth.getUser()
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Nicht eingeloggt' },
+        { status: 401 },
+      )
+    }
+
+    // Projekt + Owner prüfen
+    const { data: project, error: projError } = await supa
+      .from('projects')
+      .select('id, user_id')
+      .eq('id', projectId)
+      .single()
+
+    if (projError || !project) {
+      return NextResponse.json(
+        { error: 'Projekt nicht gefunden' },
+        { status: 404 },
+      )
+    }
+
+    if (project.user_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Kein Zugriff auf dieses Projekt' },
+        { status: 403 },
+      )
+    }
+
+    // Children löschen (falls keine ON DELETE CASCADE FKs definiert sind)
+    const { error: tErr } = await supa
+      .from('project_room_tasks')
+      .delete()
+      .eq('room_id', roomId)
+
+    if (tErr) {
+      console.error('Delete room tasks error', tErr)
+      return NextResponse.json(
+        { error: 'Arbeiten konnten nicht gelöscht werden' },
+        { status: 500 },
+      )
+    }
+
+    const { error: mErr } = await supa
+      .from('project_room_materials')
+      .delete()
+      .eq('room_id', roomId)
+
+    if (mErr) {
+      console.error('Delete room materials error', mErr)
+      return NextResponse.json(
+        { error: 'Materialien konnten nicht gelöscht werden' },
+        { status: 500 },
+      )
+    }
+
+    const { error: roomErr } = await supa
+      .from('project_rooms')
+      .delete()
+      .eq('id', roomId)
+      .eq('project_id', projectId)
+
+    if (roomErr) {
+      console.error('Delete room error', roomErr)
+      return NextResponse.json(
+        { error: 'Raum konnte nicht gelöscht werden' },
+        { status: 500 },
+      )
+    }
+
+    return NextResponse.json({ ok: true }, { status: 200 })
+  } catch (e) {
+    console.error('DELETE /api/projects/[id]/rooms/[roomId] error', e)
+    return NextResponse.json(
+      { error: 'Interner Fehler' },
+      { status: 500 },
+    )
+  }
 }

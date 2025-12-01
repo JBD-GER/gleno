@@ -106,7 +106,8 @@ export default function ProjectTimeEntriesModal({
       const res = await fetch(url, { cache: 'no-store' })
       const body = await safeJson(res)
 
-      if (!res.ok) throw new Error(body?.error || 'Laden der Zeiteinträge fehlgeschlagen.')
+      if (!res.ok)
+        throw new Error(body?.error || 'Laden der Zeiteinträge fehlgeschlagen.')
 
       const list = Array.isArray(body) ? body : []
       setEntries(list)
@@ -234,12 +235,12 @@ export default function ProjectTimeEntriesModal({
               leaveFrom="opacity-100 translate-y-0 scale-100"
               leaveTo="opacity-0 translate-y-3 scale-[0.97]"
             >
-              <Dialog.Panel className="w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/70 bg-white/95 shadow-[0_24px_90px_rgba(15,23,42,0.45)] backdrop-blur-2xl ring-1 ring-white/70">
+              <Dialog.Panel className="mx-2 w-full max-w-5xl overflow-hidden rounded-[28px] border border-white/70 bg-white/95 shadow-[0_24px_90px_rgba(15,23,42,0.45)] backdrop-blur-2xl ring-1 ring-white/70 sm:mx-0">
                 {/* Header */}
-                <div className="border-b border-slate-100 bg-white/90 px-5 py-4">
+                <div className="border-b border-slate-100 bg-white/90 px-4 py-3 sm:px-5 sm:py-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>
-                      <Dialog.Title className="text-lg font-semibold text-slate-900">
+                      <Dialog.Title className="text-base font-semibold text-slate-900 sm:text-lg">
                         Zeiteinträge – dieses Projekt
                       </Dialog.Title>
                       <p className="mt-1 text-[11px] text-slate-600">
@@ -258,7 +259,7 @@ export default function ProjectTimeEntriesModal({
                   {/* Filter & Aktionen */}
                   <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
                     <div className="flex flex-wrap items-end gap-3">
-                      <div>
+                      <div className="min-w-[130px]">
                         <label className="mb-1 block text-[11px] text-slate-600">
                           Von
                         </label>
@@ -269,7 +270,7 @@ export default function ProjectTimeEntriesModal({
                           className="w-full rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-indigo-200"
                         />
                       </div>
-                      <div>
+                      <div className="min-w-[130px]">
                         <label className="mb-1 block text-[11px] text-slate-600">
                           Bis
                         </label>
@@ -280,9 +281,9 @@ export default function ProjectTimeEntriesModal({
                           className="w-full rounded-full border border-slate-200 bg-white/95 px-3 py-2 text-sm shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-indigo-200"
                         />
                       </div>
-                      <div className="text-[11px] text-slate-700">
+                      <div className="mt-2 text-[11px] text-slate-700 sm:mt-0">
                         <span className="inline-block rounded-full bg-slate-50 px-3 py-1">
-                          Gesamt:{" "}
+                          Gesamt:{' '}
                           <span className="font-mono font-semibold">
                             {fmtHMS(totalSeconds)}
                           </span>
@@ -296,17 +297,10 @@ export default function ProjectTimeEntriesModal({
                         disabled={entries.length === 0}
                         className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-xs font-medium text-slate-800 shadow-sm outline-none hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                       >
-                        <span className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
+                        <span className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-slate-50">
                           <ArrowDownTrayIcon className="h-4 w-4 text-slate-700" />
                         </span>
-                        <span className="flex flex-col items-start leading-tight">
-                          <span className="text-[10px] uppercase tracking-wide text-slate-500">
-                            Export
-                          </span>
-                          <span className="text-[11px]">
-                            Zeiteinträge als CSV
-                          </span>
-                        </span>
+                        <span>CSV-Export</span>
                       </button>
 
                       <button
@@ -327,13 +321,13 @@ export default function ProjectTimeEntriesModal({
 
                 {/* Fehler */}
                 {error && (
-                  <div className="mx-5 mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800">
+                  <div className="mx-4 mt-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-800 sm:mx-5">
                     {error}
                   </div>
                 )}
 
                 {/* Content */}
-                <div className="max-h-[65vh] overflow-y-auto px-5 pb-5 pt-3">
+                <div className="max-h-[65vh] overflow-y-auto px-4 pb-4 pt-3 sm:px-5 sm:pb-5">
                   {/* Mobile: Karten */}
                   <div className="space-y-3 md:hidden">
                     {entries.length === 0 && !loading && (
@@ -373,7 +367,8 @@ export default function ProjectTimeEntriesModal({
                                 {employee}
                               </div>
                               <div className="mt-0.5 text-xs text-slate-500">
-                                Datum: <span className="font-mono">{e.work_date}</span>
+                                Datum:{' '}
+                                <span className="font-mono">{e.work_date}</span>
                               </div>
                             </div>
                             <div className="text-right text-xs text-slate-700">
@@ -394,7 +389,7 @@ export default function ProjectTimeEntriesModal({
                     })}
                   </div>
 
-                  {/* Desktop: Tabelle / Liste */}
+                  {/* Desktop / Tablet: Tabelle */}
                   <div className="hidden md:block">
                     {entries.length === 0 && !loading && (
                       <div className="rounded-2xl border border-slate-200 bg-white/95 p-6 text-sm text-slate-600 shadow-sm">
@@ -420,7 +415,9 @@ export default function ProjectTimeEntriesModal({
                           <div className="col-span-3">Mitarbeiter</div>
                           <div className="col-span-2">Datum</div>
                           <div className="col-span-3">Notiz</div>
-                          <div className="col-span-2 text-right">Pause (Min)</div>
+                          <div className="col-span-2 text-right">
+                            Pause (Min)
+                          </div>
                           <div className="col-span-2 text-right">Dauer</div>
                         </div>
 
@@ -478,7 +475,7 @@ export default function ProjectTimeEntriesModal({
                 </div>
 
                 {/* Footer */}
-                <div className="border-t border-slate-100 bg-white/90 px-5 py-3 text-right text-[11px] text-slate-700">
+                <div className="border-t border-slate-100 bg-white/90 px-4 py-3 text-right text-[11px] text-slate-700 sm:px-5">
                   Gesamtzeit:{' '}
                   <span className="font-mono font-semibold">
                     {fmtHMS(totalSeconds)}

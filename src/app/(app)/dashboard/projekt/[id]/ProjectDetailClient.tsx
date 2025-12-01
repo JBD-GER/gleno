@@ -4,39 +4,25 @@
 import React, { useEffect, useMemo, useState } from 'react'
 import Link from 'next/link'
 import { supabaseClient } from '@/lib/supabase-client'
+
+import {
+  ProjectHeaderSection,
+  type Assignee,
+} from './ProjectHeaderSection'
+import { ProjectCoreSection } from './ProjectCoreSection'
+import { ProjectBottomSection } from './ProjectBottomSection'
+
 import {
   ArrowLeftIcon,
-  MapPinIcon,
-  BuildingOfficeIcon,
-  HashtagIcon,
-  ClipboardDocumentListIcon,
-  PhotoIcon,
-  CheckCircleIcon,
-  FolderIcon,
   ChatBubbleOvalLeftEllipsisIcon,
-  XMarkIcon,
   ClockIcon,
   ArrowDownTrayIcon,
+  XMarkIcon,
 } from '@heroicons/react/24/outline'
 
+type Project = any
 type TabKey = 'dokumente' | 'vorher' | 'nachher'
 type SignedMap = Record<string, string>
-type Project = any
-
-type RoomForm = {
-  id?: string | null
-  name: string
-  width: number | null
-  length: number | null
-  notes: string
-  tasks: { id?: string; work: string; description?: string }[]
-  materials: {
-    id?: string
-    material_id: string
-    quantity: number
-    notes?: string
-  }[]
-}
 
 type ProjectTimeEntry = {
   id: string
@@ -49,9 +35,8 @@ type ProjectTimeEntry = {
   notes: string | null
 }
 
-/* ---------- Kleine Helfer ---------- */
 const btnWhite =
-  'rounded-lg border border-white/60 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-sm backdrop-blur hover:bg-white'
+  'rounded-lg border border-white/60 bg-white/70 px-3 py-2 text-sm text-slate-900 shadow-sm backdrop-blur hover:bg-white whitespace-nowrap'
 
 const Label = ({ children }: { children: React.ReactNode }) => (
   <label className="block text-[13px] font-medium text-slate-700">
@@ -59,114 +44,16 @@ const Label = ({ children }: { children: React.ReactNode }) => (
   </label>
 )
 
-const GlassTile = ({
-  title,
-  value,
-  Icon,
-}: {
-  title: string
-  value?: string | null
-  Icon: typeof MapPinIcon
-}) => (
-  <div
-    className="relative overflow-hidden rounded-xl border border-white/60 bg-white/70 p-3 shadow-sm backdrop-blur-xl ring-1 ring-transparent"
-    style={{
-      backgroundImage:
-        'radial-gradient(420px 180px at 120% -30%, rgba(15,23,42,0.06), transparent)',
-    }}
-  >
-    <div className="flex items-start gap-3">
-      <div className="rounded-lg border border-white/60 bg-white/80 p-2 shadow">
-        <Icon className="h-5 w-5 text-slate-700" />
-      </div>
-      <div className="min-w-0">
-        <p className="text-[11px] uppercase tracking-wide text-slate-500">
-          {title}
-        </p>
-        <p className="truncate text-sm font-medium text-slate-900">
-          {value || '–'}
-        </p>
-      </div>
-    </div>
-  </div>
-)
-
-const StatTile = ({
-  title,
-  value,
-  Icon,
-}: {
-  title: string
-  value: string | number
-  Icon: typeof FolderIcon
-}) => (
-  <div
-    className="rounded-2xl border border-white/60 bg-white/70 p-4 shadow-[0_10px_30px_rgba(2,6,23,0.08)] backdrop-blur-xl"
-    style={{
-      backgroundImage:
-        'radial-gradient(520px 220px at 120% -30%, rgba(15,23,42,0.06), transparent)',
-    }}
-  >
-    <div className="flex items-center gap-3">
-      <div className="rounded-xl border border-white/60 bg-white/80 p-2 shadow">
-        <Icon className="h-6 w-6 text-slate-900" />
-      </div>
-      <div>
-        <p className="text-[11px] uppercase tracking-wide text-slate-500">
-          {title}
-        </p>
-        <p className="text-2xl font-semibold tracking-tight text-slate-900">
-          {value}
-        </p>
-      </div>
-    </div>
-  </div>
-)
-
-/* ---------- Angebot-Chip (Edit) ---------- */
-function OfferChip({
-  active,
-  label,
-  onClick,
-}: {
-  active: boolean
-  label: string
-  onClick: () => void
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={[
-        'group inline-flex items-center gap-2 rounded-full px-3 py-1.5 text-sm transition',
-        'border backdrop-blur shadow-sm',
-        active
-          ? 'border-slate-900/10 bg-slate-900/90 text-white hover:bg-slate-900'
-          : 'border-slate-200/80 bg-white/95 text-slate-900 hover:bg-white',
-        'focus:outline-none focus:ring-4 focus:ring-indigo-200/60',
-      ].join(' ')}
-      aria-pressed={active}
-      title={label}
-    >
-      <span className="tabular-nums">{label}</span>
-      <span
-        className={[
-          'h-1.5 w-1.5 rounded-full transition',
-          active ? 'bg-white' : 'bg-slate-300 group-hover:bg-slate-400',
-        ].join(' ')}
-      />
-    </button>
-  )
-}
-
-/* ---------- Time-Helper ---------- */
+/* ---------- Zeit-Helper ---------- */
 const pad = (n: number) => String(n).padStart(2, '0')
+
 const secondsDiff = (a: string | null, b: string | null) => {
   if (!a || !b) return 0
   const A = +new Date(a)
   const B = +new Date(b)
   return Math.max(0, Math.round((B - A) / 1000))
 }
+
 const fmtHMS = (sec: number) => {
   const s = Math.max(0, Math.round(sec))
   const h = Math.floor(s / 3600)
@@ -174,16 +61,17 @@ const fmtHMS = (sec: number) => {
   const r = Math.floor(s % 60)
   return `${pad(h)}:${pad(m)}:${pad(r)}`
 }
+
 const fmtTime = (iso: string | null) => {
   if (!iso) return '–'
   const d = new Date(iso)
   if (isNaN(+d)) return '–'
   return `${pad(d.getHours())}:${pad(d.getMinutes())}`
 }
+
 const localDateStr = (d: Date) =>
   `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 
-/* ---------- kleine Helfer ---------- */
 const timeAgo = (iso: string) => {
   const d = new Date(iso).getTime()
   const diff = Math.max(0, Date.now() - d)
@@ -197,6 +85,8 @@ const timeAgo = (iso: string) => {
   return new Date(iso).toLocaleDateString('de-DE')
 }
 
+/* ====================================================================== */
+
 export default function ProjectDetailClient({
   project: initialProject,
 }: {
@@ -205,56 +95,19 @@ export default function ProjectDetailClient({
   const supa = supabaseClient()
 
   const [project, setProject] = useState<Project>(initialProject)
+
+  const [me, setMe] = useState<string | null>(null)
+  const [isOwner, setIsOwner] = useState<boolean>(false)
+  const [roleChecked, setRoleChecked] = useState<boolean>(false)
+
   const [tab, setTab] = useState<TabKey>('dokumente')
   const [uploading, setUploading] = useState(false)
   const [signed, setSigned] = useState<SignedMap>({})
 
-  // Edit-Flow
-  const [editRequested, setEditRequested] = useState(false)
-  const [savingProject, setSavingProject] = useState(false)
-
-  // Editable fields
-  const [title, setTitle] = useState(project.title ?? '')
-  const [description, setDescription] = useState(project.description ?? '')
-  const [address, setAddress] = useState(project.address ?? '')
-  const [objectName, setObjectName] = useState(project.object_name ?? '')
-  const [floor, setFloor] = useState(project.floor ?? '')
-
-  // Angebote (Master + Auswahl)
-  const [offersMaster, setOffersMaster] = useState<
-    { id: string; offer_number: string }[]
-  >([])
-  const [offerIds, setOfferIds] = useState<string[]>(
-    (project.project_offers ?? []).map((x: any) => x.offer_id),
-  )
-  const [offerQuery, setOfferQuery] = useState('')
-
-  // Rooms
-  const [roomOpen, setRoomOpen] = useState(false)
-  const [roomForm, setRoomForm] = useState<RoomForm>({
-    id: null,
-    name: '',
-    width: null,
-    length: null,
-    notes: '',
-    tasks: [],
-    materials: [],
-  })
-  const [materialsMaster, setMaterialsMaster] = useState<
-    { id: string; name: string; unit: string }[]
-  >([])
-
-  // Comments
-  const [me, setMe] = useState<string | null>(null)
   const [comment, setComment] = useState('')
   const [sending, setSending] = useState(false)
-  const [commentsOpen, setCommentsOpen] = useState(false) // Modal
+  const [commentsOpen, setCommentsOpen] = useState(false)
 
-  // Ownership / Role
-  const [isOwner, setIsOwner] = useState<boolean>(false)
-  const [roleChecked, setRoleChecked] = useState<boolean>(false)
-
-  // Projekt-Zeiterfassungs-Modal
   const [timeModalOpen, setTimeModalOpen] = useState(false)
   const [timeEntries, setTimeEntries] = useState<ProjectTimeEntry[]>([])
   const [timeLoading, setTimeLoading] = useState(false)
@@ -278,62 +131,93 @@ export default function ProjectDetailClient({
     [timeEntries],
   )
 
+  /* -------------------------------------------------------------------
+     Assignees robust ableiten (egal ob assignees oder project_employees)
+  -------------------------------------------------------------------- */
+  const assignees: Assignee[] = useMemo(() => {
+    if (!project) return []
+
+    const rawFromAssignees = Array.isArray(project.assignees)
+      ? project.assignees
+      : []
+    const rawFromProjectEmployees = Array.isArray(project.project_employees)
+      ? project.project_employees
+      : []
+
+    const combined = [...rawFromAssignees, ...rawFromProjectEmployees]
+
+    const map = new Map<string, Assignee>()
+
+    for (const a of combined) {
+      if (!a) continue
+      const emp = a.employees || a.employee || null
+      const id: string | undefined =
+        emp?.id ?? a.employee_id ?? a.id ?? undefined
+
+      const displayName = emp
+        ? `${emp.first_name ?? ''} ${emp.last_name ?? ''}`.trim()
+        : ''
+
+      const label = displayName || a.employee_name || a.employee_id || id
+
+      if (!id || !label) continue
+      if (!map.has(String(id))) {
+        map.set(String(id), { id: String(id), label: String(label) })
+      }
+    }
+
+    return Array.from(map.values())
+  }, [project])
+
   const counts = useMemo(
     () => ({
-      rooms: (project.project_rooms ?? []).length,
-      docs: (project.project_documents ?? []).length,
-      before: (project.project_before_images ?? []).length,
-      after: (project.project_after_images ?? []).length,
       comments: (project.project_comments ?? []).length,
     }),
     [project],
   )
 
-  /* ---------- Data ---------- */
-  const refreshProject = async () => {
-    const { data } = await supa
-      .from('projects')
-      .select(
-        `
-        id, user_id, customer_id, title, description, address, object_name, floor, created_at,
-        customer:customers ( id, first_name, last_name ),
-        project_offers ( offer_id, offers ( id, offer_number ) ),
-        project_documents ( id, path, name, size, uploaded_at ),
-        project_before_images ( id, path, uploaded_at ),
-        project_after_images ( id, path, uploaded_at ),
-        project_comments ( id, user_id, content, created_at ),
-        project_rooms (
-          id, name, width, length, notes,
-          project_room_tasks ( id, work, description ),
-          project_room_materials ( id, material_id, quantity, notes, materials ( id, name, unit ) )
-        )
-      `,
-      )
-      .eq('id', project.id)
-      .single()
+  const commentsSorted = useMemo(() => {
+    const list = Array.isArray(project.project_comments)
+      ? [...project.project_comments]
+      : []
+    return list.sort((a: any, b: any) => {
+      const ad = a.created_at
+      const bd = b.created_at
+      return new Date(ad).getTime() - new Date(bd).getTime()
+    })
+  }, [project])
 
-    if (data) {
-      setProject(data)
-      if (!editRequested) {
-        setTitle(data.title ?? '')
-        setDescription(data.description ?? '')
-        setAddress(data.address ?? '')
-        setObjectName(data.object_name ?? '')
-        setFloor(data.floor ?? '')
+  const lastFive = commentsSorted.slice(-5)
+
+  /* -------------------------------------------------------------------
+     Projekt neu laden
+  -------------------------------------------------------------------- */
+  const refreshProject = async () => {
+    try {
+      const res = await fetch(`/api/projects/${project.id}`, {
+        method: 'GET',
+        cache: 'no-store',
+      })
+      if (!res.ok) {
+        const body = await res.json().catch(() => null)
+        throw new Error((body as any)?.error ?? `Status ${res.status}`)
       }
-      setOfferIds((data.project_offers ?? []).map((x: any) => x.offer_id))
+      const data = await res.json()
+      setProject(data)
+      setSigned({})
+    } catch (e: any) {
+      alert(
+        `Projekt konnte nicht neu geladen werden: ${
+          e?.message ?? String(e)
+        }`,
+      )
     }
   }
 
+  /* -------------------------------------------------------------------
+     Role / Owner
+  -------------------------------------------------------------------- */
   useEffect(() => {
-    supa
-      .from('materials')
-      .select('id,name,unit')
-      .then(({ data }) => setMaterialsMaster((data as any) ?? []))
-  }, []) // eslint-disable-line
-
-  useEffect(() => {
-    // wer bin ich? (für "Du" Markierung) + Owner-Rolle via RPC
     ;(async () => {
       const { data } = await supa.auth.getUser()
       const myId = data.user?.id ?? null
@@ -344,32 +228,17 @@ export default function ProjectDetailClient({
         })
         setIsOwner(!!ownerFlag)
       } catch {
-        // Fallback: falls RPC mal nicht erreichbar ist
         setIsOwner(!!myId && myId === project.user_id)
       } finally {
         setRoleChecked(true)
       }
     })()
-  }, []) // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  // Angebote des Kunden laden
-  useEffect(() => {
-    const load = async () => {
-      if (!project.customer_id) {
-        setOffersMaster([])
-        return
-      }
-      const { data } = await supa
-        .from('offers')
-        .select('id, offer_number')
-        .eq('customer_id', project.customer_id)
-        .order('date', { ascending: false })
-      setOffersMaster((data as any) ?? [])
-    }
-    load()
-  }, [project.customer_id]) // eslint-disable-line
-
-  /* ---------- Signed URLs ---------- */
+  /* -------------------------------------------------------------------
+     Signed URLs
+  -------------------------------------------------------------------- */
   const createSigned = async (path: string, expires = 300) => {
     const { data, error } = await supabaseClient()
       .storage.from('projekt')
@@ -384,17 +253,18 @@ export default function ProjectDetailClient({
       t === 'dokumente'
         ? (project.project_documents ?? []).map((d: any) => d.path)
         : t === 'vorher'
-          ? (project.project_before_images ?? []).map((x: any) => x.path)
-          : (project.project_after_images ?? []).map((x: any) => x.path)
+        ? (project.project_before_images ?? []).map((x: any) => x.path)
+        : (project.project_after_images ?? []).map((x: any) => x.path)
 
     const missing = paths.filter((p) => !signed[p])
     if (missing.length === 0) return
+
     const copy: SignedMap = { ...signed }
     for (const p of missing) {
       try {
         copy[p] = await createSigned(p, 300)
       } catch (e) {
-        console.error(e)
+        // still ignore, UI zeigt "lädt…"
       }
     }
     setSigned(copy)
@@ -402,9 +272,12 @@ export default function ProjectDetailClient({
 
   useEffect(() => {
     prefetchSignedForTab(tab)
-  }, [tab, project]) // eslint-disable-line
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tab, project])
 
-  /* ---------- Uploads ---------- */
+  /* -------------------------------------------------------------------
+     Uploads
+  -------------------------------------------------------------------- */
   const handleUpload = async (files: FileList | null) => {
     if (!files || files.length === 0) return
     try {
@@ -448,7 +321,6 @@ export default function ProjectDetailClient({
       }
 
       await refreshProject()
-      setSigned({})
       await prefetchSignedForTab(tab)
     } catch (e: any) {
       alert(`Upload fehlgeschlagen: ${e.message ?? e}`)
@@ -474,7 +346,6 @@ export default function ProjectDetailClient({
     id: string,
     path: string,
   ) => {
-    // Nur Owner darf löschen (UI ist bereits versteckt, aber hier zusätzliche Absicherung)
     if (!isOwner) {
       alert('Nur der Inhaber kann Dateien löschen.')
       return
@@ -484,10 +355,11 @@ export default function ProjectDetailClient({
       alert(error.message)
       return
     }
-    await supa
-      .storage.from('projekt')
-      .remove([path])
-      .catch(() => {})
+    try {
+      await supa.storage.from('projekt').remove([path])
+    } catch {
+      // ignore
+    }
     await refreshProject()
     setSigned((s) => {
       const c = { ...s }
@@ -496,181 +368,14 @@ export default function ProjectDetailClient({
     })
   }
 
-  /* ---------- Save Project ---------- */
-  const saveProject = async () => {
-    try {
-      setSavingProject(true)
-      const payload = {
-        title,
-        description,
-        address,
-        object_name: objectName,
-        floor,
-        offer_ids: offerIds,
-      }
-      const res = await fetch(`/api/projects/${project.id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload),
-      })
-      if (!res.ok)
-        throw new Error(
-          (await res.json().catch(() => ({})))?.error ?? res.statusText,
-        )
-      await refreshProject()
-      setEditRequested(false)
-    } catch (e: any) {
-      alert(`Speichern fehlgeschlagen: ${e.message ?? e}`)
-    } finally {
-      setSavingProject(false)
-    }
-  }
-
-  /* ---------- Rooms (Modal-Logik) ---------- */
-  const openAddRoom = () => {
-    if (!isOwner) {
-      alert('Nur der Inhaber kann Räume hinzufügen.')
-      return
-    }
-    setRoomForm({
-      id: null,
-      name: '',
-      width: null,
-      length: null,
-      notes: '',
-      tasks: [],
-      materials: [],
-    })
-    setRoomOpen(true)
-  }
-  const openEditRoom = (r: any) => {
-    if (!isOwner) {
-      alert('Nur der Inhaber kann Räume bearbeiten.')
-      return
-    }
-    setRoomForm({
-      id: r.id,
-      name: r.name ?? '',
-      width: r.width ?? null,
-      length: r.length ?? null,
-      notes: r.notes ?? '',
-      tasks: (r.project_room_tasks ?? []).map((t: any) => ({
-        id: t.id,
-        work: t.work ?? '',
-        description: t.description ?? '',
-      })),
-      materials: (r.project_room_materials ?? []).map((m: any) => ({
-        id: m.id,
-        material_id: m.material_id ?? '',
-        quantity: m.quantity ?? 0,
-        notes: m.notes ?? '',
-      })),
-    })
-    setRoomOpen(true)
-  }
-  const saveRoom = async () => {
-    const isEdit = !!roomForm.id
-    const url = isEdit
-      ? `/api/projects/${project.id}/rooms/${roomForm.id}`
-      : `/api/projects/${project.id}/rooms`
-    const method = isEdit ? 'PUT' : 'POST'
-    const res = await fetch(url, {
-      method,
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(roomForm),
-    })
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      alert(
-        `Raum speichern fehlgeschlagen: ${err?.error ?? res.statusText}`,
-      )
-      return
-    }
-    setRoomOpen(false)
-    await refreshProject()
-  }
-  const deleteRoom = async (roomId: string) => {
-    if (!isOwner) {
-      alert('Nur der Inhaber kann Räume löschen.')
-      return
-    }
-    if (!confirm('Diesen Raum wirklich löschen?')) return
-    const res = await fetch(
-      `/api/projects/${project.id}/rooms/${roomId}`,
-      { method: 'DELETE' },
-    )
-    if (!res.ok) {
-      const err = await res.json().catch(() => ({}))
-      alert(`Löschen fehlgeschlagen: ${err?.error ?? res.statusText}`)
-      return
-    }
-    await refreshProject()
-  }
-
-  /* ---------- Helpers: Room form handlers ---------- */
-  const setRoomField = <K extends keyof RoomForm>(
-    key: K,
-    value: RoomForm[K],
-  ) => {
-    setRoomForm((prev) => ({ ...prev, [key]: value }))
-  }
-
-  const addTask = () => {
-    setRoomForm((prev) => ({
-      ...prev,
-      tasks: [...prev.tasks, { work: '', description: '' }],
-    }))
-  }
-  const removeTask = (idx: number) => {
-    setRoomForm((prev) => ({
-      ...prev,
-      tasks: prev.tasks.filter((_, i) => i !== idx),
-    }))
-  }
-  const updateTask = (
-    idx: number,
-    patch: Partial<RoomForm['tasks'][number]>,
-  ) => {
-    setRoomForm((prev) => {
-      const tasks = [...prev.tasks]
-      tasks[idx] = { ...tasks[idx], ...patch }
-      return { ...prev, tasks }
-    })
-  }
-
-  const addMaterial = () => {
-    setRoomForm((prev) => ({
-      ...prev,
-      materials: [
-        ...prev.materials,
-        { material_id: '', quantity: 0, notes: '' },
-      ],
-    }))
-  }
-  const removeMaterial = (idx: number) => {
-    setRoomForm((prev) => ({
-      ...prev,
-      materials: prev.materials.filter((_, i) => i !== idx),
-    }))
-  }
-  const updateMaterial = (
-    idx: number,
-    patch: Partial<RoomForm['materials'][number]>,
-  ) => {
-    setRoomForm((prev) => {
-      const materials = [...prev.materials]
-      materials[idx] = { ...materials[idx], ...patch }
-      return { ...prev, materials }
-    })
-  }
-
-  /* ---------- Comments ---------- */
+  /* -------------------------------------------------------------------
+     Kommentare
+  -------------------------------------------------------------------- */
   const sendComment = async () => {
     const content = comment.trim()
     if (!content) return
     try {
       setSending(true)
-      // kleiner Optimistic-Append
       const optimistic = {
         id: `temp-${crypto.randomUUID()}`,
         user_id: me,
@@ -701,14 +406,9 @@ export default function ProjectDetailClient({
     }
   }
 
-  const commentsSorted = [...(project.project_comments ?? [])].sort(
-    (a: any, b: any) =>
-      new Date(a.created_at).getTime() -
-      new Date(b.created_at).getTime(),
-  )
-  const lastFive = commentsSorted.slice(-5)
-
-  /* ---------- Projekt-Zeiten laden ---------- */
+  /* -------------------------------------------------------------------
+     Projekt-Zeiten
+  -------------------------------------------------------------------- */
   const loadProjectTimes = async () => {
     try {
       setTimeLoading(true)
@@ -764,377 +464,92 @@ export default function ProjectDetailClient({
   }, [timeModalOpen, timeFrom, timeTo])
 
   const exportProjectTimesCsv = () => {
-    if (!timeEntries.length) {
-      alert('Keine Zeiteinträge im gewählten Zeitraum – nichts zu exportieren.')
-      return
-    }
+    if (!timeEntries.length) return
 
-    const esc = (v: unknown) => {
-      if (v === null || v === undefined) return '""'
-      const s = String(v)
-      return `"${s.replace(/"/g, '""')}"`
-    }
-
-    const header = [
+    const rows: string[][] = []
+    rows.push([
       'Mitarbeiter',
       'Datum',
       'Start',
       'Ende',
-      'Pause_Minuten',
-      'Dauer_Sekunden',
-      'Dauer_Stunden',
+      'PauseMin',
+      'DauerSek',
       'Notiz',
-    ]
-    const lines: string[] = []
-    lines.push(header.join(';'))
+    ])
 
-    timeEntries.forEach((e) => {
+    for (const e of timeEntries) {
       const durSec = Math.max(
         0,
         secondsDiff(e.start_time, e.end_time) -
           Number(e.break_minutes || 0) * 60,
       )
-      const durHours = (durSec / 3600).toFixed(2)
-      lines.push(
-        [
-          esc(e.employee_name || e.employee_id),
-          esc(e.work_date),
-          esc(e.start_time || ''),
-          esc(e.end_time || ''),
-          esc(Number(e.break_minutes || 0)),
-          esc(durSec),
-          esc(durHours),
-          esc(e.notes ?? ''),
-        ].join(';'),
-      )
-    })
 
-    const csv = lines.join('\r\n')
+      rows.push([
+        (e.employee_name || e.employee_id || '').toString(),
+        e.work_date,
+        fmtTime(e.start_time),
+        fmtTime(e.end_time),
+        String(e.break_minutes || 0),
+        String(durSec),
+        (e.notes ?? '').replace(/\r?\n/g, ' '),
+      ])
+    }
+
+    const csv = rows
+      .map((r) =>
+        r
+          .map((cell) => {
+            const c = cell.replace(/"/g, '""')
+            return `"${c}"`
+          })
+          .join(';'),
+      )
+      .join('\r\n')
+
     const blob = new Blob([csv], {
       type: 'text/csv;charset=utf-8;',
     })
     const url = URL.createObjectURL(blob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `projekt_zeiteintraege_${project.id}_${timeFrom}_bis_${timeTo}.csv`
-    document.body.appendChild(a)
+    a.download = `projekt-${project.id}-zeiten.csv`
     a.click()
-    document.body.removeChild(a)
     URL.revokeObjectURL(url)
   }
 
-  /* ---------- Render ---------- */
+  /* ================================================================== */
+
   return (
-    <div className="p-6">
+    <div className="w-full px-3 pb-8 pt-4 sm:px-4 md:px-6">
       {/* Zur Übersicht */}
       <div className="mb-5 flex items-center justify-start">
-        <Link href="/dashboard/projekt" className={btnWhite}>
-          <span className="inline-flex items-center gap-2">
-            <ArrowLeftIcon className="h-4 w-4" />
-            Zur Übersicht
-          </span>
+        <Link
+          href="/dashboard/projekt"
+          className={`${btnWhite} inline-flex items-center gap-2`}
+        >
+          <ArrowLeftIcon className="h-4 w-4" />
+          <span>Zur Übersicht</span>
         </Link>
       </div>
 
-      {/* Header */}
-      <div
-        className="mb-6 relative overflow-hidden rounded-2xl border border-white/60 bg-white/70 p-5 shadow-[0_10px_40px_rgba(2,6,23,0.08)] backdrop-blur-xl"
-        style={{
-          backgroundImage:
-            'radial-gradient(1000px 400px at 110% -30%, rgba(15,23,42,0.07), transparent)',
-        }}
-      >
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div>
-            <h1 className="text-2xl font-semibold tracking-tight text-slate-900">
-              {project.title}
-            </h1>
-            <p className="text-sm text-slate-600">
-              {project.customer?.first_name} {project.customer?.last_name}
-            </p>
-            <p className="text-sm text-slate-500">
-              Erstellt am{' '}
-              <span className="tabular-nums font-mono">
-                {new Date(project.created_at).toLocaleDateString('de-DE')}
-              </span>
-            </p>
-          </div>
-         {/* Actions rechts */}
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end sm:gap-3">
-            <button
-              onClick={() => setTimeModalOpen(true)}
-              className="inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white/90 px-4 py-2 text-sm font-medium text-slate-900 shadow-sm backdrop-blur hover:bg-white"
-            >
-              <ClockIcon className="h-4 w-4" />
-              Zeiteinträge zu diesem Projekt
-            </button>
+      {/* OBERES MODUL */}
+      <ProjectHeaderSection
+        project={project}
+        assignees={assignees}
+        isOwner={isOwner}
+        roleChecked={roleChecked}
+        onOpenTimes={() => setTimeModalOpen(true)}
+      />
 
-            {isOwner && (
-              <button
-                onClick={openAddRoom}
-                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90"
-              >
-                + Raum
-              </button>
-            )}
-          </div>
-        </div>
-        {/* Hinweis für Mitarbeiter */}
-        {roleChecked && !isOwner && (
-          <div className="mt-3 rounded-lg border border-slate-200/80 bg-white/80 px-3 py-2 text-xs text-slate-600">
-            Du hast Mitarbeiter-Rechte: Du kannst kommentieren sowie
-            Dokumente und Vorher/Nachher-Bilder hochladen. Stammdaten &
-            Räume sind schreibgeschützt.
-          </div>
-        )}
-      </div>
+      {/* MITTLERES MODUL */}
+      <ProjectCoreSection
+        project={project}
+        isOwner={isOwner}
+        refreshProject={refreshProject}
+      />
 
-      {/* Projektdaten */}
-      <section className="rounded-2xl border border-white/60 bg-white/70 p-5 shadow-[0_10px_40px_rgba(2,6,23,0.08)] backdrop-blur-xl">
-        <div className="mb-4 flex items-center justify-between">
-          <h2 className="text-[12px] font-semibold uppercase tracking-wide text-slate-500">
-            Projektdaten
-          </h2>
-          {/* Bearbeiten – nur Owner */}
-          {!editRequested ? (
-            isOwner ? (
-              <button
-                className={btnWhite}
-                onClick={() => setEditRequested(true)}
-              >
-                Bearbeiten
-              </button>
-            ) : null
-          ) : (
-            <div className="flex gap-2">
-              <button
-                className={btnWhite}
-                onClick={() => {
-                  setEditRequested(false)
-                  setTitle(project.title ?? '')
-                  setDescription(project.description ?? '')
-                  setAddress(project.address ?? '')
-                  setObjectName(project.object_name ?? '')
-                  setFloor(project.floor ?? '')
-                  setOfferIds(
-                    (project.project_offers ?? []).map(
-                      (x: any) => x.offer_id,
-                    ),
-                  )
-                }}
-              >
-                Abbrechen
-              </button>
-              <button
-                onClick={saveProject}
-                disabled={savingProject}
-                className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90 disabled:opacity-60"
-              >
-                {savingProject ? 'Speichert…' : 'Speichern'}
-              </button>
-            </div>
-          )}
-        </div>
-
-        {/* Tiles */}
-        {!editRequested && (
-          <>
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-              <GlassTile
-                title="Adresse"
-                value={project.address}
-                Icon={MapPinIcon}
-              />
-              <GlassTile
-                title="Objekt"
-                value={project.object_name}
-                Icon={BuildingOfficeIcon}
-              />
-              <GlassTile
-                title="Etage"
-                value={project.floor}
-                Icon={HashtagIcon}
-              />
-              <GlassTile
-                title="Kunde"
-                value={`${project.customer?.first_name ?? ''} ${
-                  project.customer?.last_name ?? ''
-                }`.trim() || '–'}
-                Icon={ClipboardDocumentListIcon}
-              />
-              <GlassTile
-                title="Angebote"
-                value={String(
-                  (project.project_offers ?? []).length,
-                )}
-                Icon={CheckCircleIcon}
-              />
-              <GlassTile
-                title="Projekt-ID"
-                value={project.id}
-                Icon={HashtagIcon}
-              />
-            </div>
-
-            {/* Beschreibung & Angebote */}
-            <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
-              <div>
-                <Label>Beschreibung</Label>
-                <p className="mt-1 whitespace-pre-wrap text-slate-900">
-                  {project.description || '–'}
-                </p>
-              </div>
-              <div>
-                <Label>Verknüpfte Angebote</Label>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {(project.project_offers ?? []).length > 0 ? (
-                    project.project_offers.map((po: any) => (
-                      <span
-                        key={po.offer_id}
-                        className="inline-flex items-center gap-2 rounded-full border border-slate-200/80 bg-white/95 px-3 py-1.5 text-sm text-slate-900 shadow-sm"
-                      >
-                        {po.offers?.offer_number ?? po.offer_id}
-                      </span>
-                    ))
-                  ) : (
-                    <span className="text-sm text-slate-500">
-                      – keine –
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-          </>
-        )}
-
-        {/* Edit Formular – nur sichtbar, wenn Owner auf „Bearbeiten“ geklickt hat */}
-        {editRequested && isOwner && (
-          <div className="mt-4 grid grid-cols-1 gap-5 md:grid-cols-2">
-            <div className="space-y-3">
-              <Label>Titel</Label>
-              <input
-                className="w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none ring-indigo-200/60 backdrop-blur focus:ring-4 focus:border-slate-300"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-              />
-              <Label>Beschreibung</Label>
-              <textarea
-                rows={4}
-                className="w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm outline-none ring-indigo-200/60 backdrop-blur focus:ring-4 focus:border-slate-300"
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-              />
-              <Label>Adresse</Label>
-              <input
-                className="w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm outline-none ring-indigo-200/60 backdrop-blur focus:ring-4 focus:border-slate-300"
-                value={address}
-                onChange={(e) => setAddress(e.target.value)}
-              />
-            </div>
-            <div className="space-y-3">
-              <Label>Objekt</Label>
-              <input
-                className="w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm outline-none ring-indigo-200/60 backdrop-blur focus:ring-4 focus:border-slate-300"
-                value={objectName}
-                onChange={(e) => setObjectName(e.target.value)}
-              />
-              <Label>Etage</Label>
-              <input
-                className="w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm outline-none ring-indigo-200/60 backdrop-blur focus:ring-4 focus:border-slate-300"
-                value={floor}
-                onChange={(e) => setFloor(e.target.value)}
-              />
-
-              {/* Angebote – Edit */}
-              <div className="pt-2">
-                <Label>Angebote verknüpfen</Label>
-                <div className="mt-2 flex items-center gap-2">
-                  <input
-                    value={offerQuery}
-                    onChange={(e) => setOfferQuery(e.target.value)}
-                    placeholder="Nach Angebotsnummer suchen…"
-                    className="w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-400 focus:border-slate-300 focus:ring-4 ring-indigo-200/60"
-                  />
-                  <div className="whitespace-nowrap text-xs text-slate-500">
-                    {offerIds.length} ausgewählt
-                  </div>
-                </div>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {offersMaster
-                    .filter((o) =>
-                      o.offer_number
-                        ?.toLowerCase()
-                        .includes(
-                          offerQuery.trim().toLowerCase(),
-                        ),
-                    )
-                    .map((o) => {
-                      const active = offerIds.includes(o.id)
-                      return (
-                        <OfferChip
-                          key={o.id}
-                          active={active}
-                          label={o.offer_number}
-                          onClick={() => {
-                            setOfferIds((prev) =>
-                              prev.includes(o.id)
-                                ? prev.filter((id) => id !== o.id)
-                                : [...prev, o.id],
-                            )
-                          }}
-                        />
-                      )
-                    })}
-                  {offersMaster.length === 0 && (
-                    <span className="text-sm text-slate-500">
-                      Keine Angebote (prüfe Kunde)
-                    </span>
-                  )}
-                </div>
-                <div className="mt-3 flex flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    className={btnWhite}
-                    onClick={() =>
-                      setOfferIds(offersMaster.map((o) => o.id))
-                    }
-                    disabled={offersMaster.length === 0}
-                  >
-                    Alle auswählen
-                  </button>
-                  <button
-                    type="button"
-                    className={btnWhite}
-                    onClick={() => setOfferIds([])}
-                    disabled={offerIds.length === 0}
-                  >
-                    Keine
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* KPIs */}
-      <section className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
-        <StatTile title="Dokumente" value={counts.docs} Icon={FolderIcon} />
-        <StatTile
-          title="Vorher-Bilder"
-          value={counts.before}
-          Icon={PhotoIcon}
-        />
-        <StatTile
-          title="Nachher-Bilder"
-          value={counts.after}
-          Icon={PhotoIcon}
-        />
-      </section>
-
-      {/* Uploads */}
+      {/* UPLOAD-BEREICH */}
       <section className="mt-6 rounded-2xl border border-white/60 bg-white/80 p-0 shadow-[0_10px_30px_rgba(2,6,23,0.06)] backdrop-blur">
-        {/* Tabs */}
         <div className="flex flex-wrap items-center gap-2 px-3 pt-3 sm:px-4">
           {(['dokumente', 'vorher', 'nachher'] as TabKey[]).map((t) => (
             <button
@@ -1151,8 +566,8 @@ export default function ProjectDetailClient({
               {t === 'dokumente'
                 ? 'Dokumente'
                 : t === 'vorher'
-                  ? 'Vorher'
-                  : 'Nachher'}
+                ? 'Vorher'
+                : 'Nachher'}
             </button>
           ))}
         </div>
@@ -1163,8 +578,8 @@ export default function ProjectDetailClient({
             {tab === 'dokumente'
               ? 'Dokumente'
               : tab === 'vorher'
-                ? 'Vorher-Bilder'
-                : 'Nachher-Bilder'}
+              ? 'Vorher-Bilder'
+              : 'Nachher-Bilder'}
           </Label>
           <div className="mt-2 rounded-2xl border-2 border-dashed border-slate-300 bg-white/70 p-5 backdrop-blur">
             <input
@@ -1202,15 +617,10 @@ export default function ProjectDetailClient({
                           {Math.round(d.size / 1024)} KB
                         </span>
                       ) : null}
-                      {/* Löschen – nur Owner */}
                       {isOwner && (
                         <button
                           onClick={() =>
-                            deleteFileRow(
-                              'project_documents',
-                              d.id,
-                              d.path,
-                            )
+                            deleteFileRow('project_documents', d.id, d.path)
                           }
                           className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-sm text-rose-700 hover:bg-rose-100"
                         >
@@ -1222,7 +632,9 @@ export default function ProjectDetailClient({
                 ))}
               </ul>
             ) : (
-              <p className="mt-3 text-slate-700">– keine –</p>
+              <p className="mt-3 text-sm text-slate-700">
+                Noch keine Dokumente.
+              </p>
             )
           ) : (
             <>
@@ -1249,7 +661,6 @@ export default function ProjectDetailClient({
                           lädt…
                         </div>
                       )}
-                      {/* Löschen – nur Owner */}
                       {isOwner && (
                         <div className="absolute right-2 top-2 hidden rounded-lg border border-rose-200 bg-rose-50/95 px-2 py-1 text-xs text-rose-700 shadow-sm group-hover:block">
                           <button
@@ -1276,158 +687,25 @@ export default function ProjectDetailClient({
                   ? project.project_before_images
                   : project.project_after_images
               )?.length === 0 && (
-                <p className="mt-3 text-slate-700">– keine –</p>
+                <p className="mt-3 text-sm text-slate-700">
+                  Noch keine Bilder hochgeladen.
+                </p>
               )}
             </>
           )}
         </div>
       </section>
 
-      {/* Räume */}
-      <section className="mt-6">
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-slate-900">Räume</h2>
-          {/* + Raum hinzufügen – nur Owner */}
-          {isOwner && (
-            <button
-              onClick={openAddRoom}
-              className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90"
-            >
-              + Raum hinzufügen
-            </button>
-          )}
-        </div>
+      {/* UNTERES MODUL */}
+      <ProjectBottomSection
+        project={project}
+        isOwner={isOwner}
+        refreshProject={refreshProject}
+      />
 
-        {project.project_rooms?.length ? (
-          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {project.project_rooms.map((room: any) => (
-              <div
-                key={room.id}
-                className="space-y-3 rounded-2xl border border-white/60 bg-white/80 p-4 shadow-sm backdrop-blur"
-              >
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="text-base font-semibold text-slate-900">
-                      {room.name}
-                    </div>
-                    <div className="text-sm text-slate-600">
-                      {room.width
-                        ? `Breite: ${room.width} m`
-                        : ''}
-                      {room.width && room.length ? ' • ' : ''}
-                      {room.length
-                        ? `Länge: ${room.length} m`
-                        : ''}
-                    </div>
-                  </div>
-                  {/* Bearbeiten/Löschen – nur Owner */}
-                  <div className="flex gap-2">
-                    {isOwner && (
-                      <button
-                        className={btnWhite}
-                        onClick={() => openEditRoom(room)}
-                      >
-                        Bearbeiten
-                      </button>
-                    )}
-                    {isOwner && (
-                      <button
-                        className="rounded-lg bg-rose-600 px-3 py-1.5 text-sm text-white shadow-sm hover:bg-rose-700"
-                        onClick={() => deleteRoom(room.id)}
-                      >
-                        Löschen
-                      </button>
-                    )}
-                  </div>
-                </div>
-
-                {room.notes && (
-                  <p className="whitespace-pre-wrap text-sm text-slate-800">
-                    {room.notes}
-                  </p>
-                )}
-
-                <div>
-                  <div className="mb-1 text-sm font-medium text-slate-700">
-                    Arbeiten
-                  </div>
-                  {room.project_room_tasks?.length ? (
-                    <ul className="ml-5 list-disc text-sm text-slate-800">
-                      {room.project_room_tasks.map((t: any) => (
-                        <li key={t.id}>
-                          <strong>{t.work}</strong>
-                          {t.description
-                            ? ` – ${t.description}`
-                            : ''}
-                        </li>
-                      ))}
-                    </ul>
-                  ) : (
-                    <div className="text-sm text-slate-500">
-                      – keine –
-                    </div>
-                  )}
-                </div>
-
-                <div>
-                  <div className="mb-1 text-sm font-medium text-slate-700">
-                    Materialien
-                  </div>
-                  {room.project_room_materials?.length ? (
-                    <div className="overflow-hidden rounded-xl border border-white/60">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-white/80 backdrop-blur">
-                          <tr>
-                            <th className="p-2 font-semibold text-slate-700">
-                              Material
-                            </th>
-                            <th className="p-2 font-semibold text-slate-700">
-                              Menge
-                            </th>
-                            <th className="p-2 font-semibold text-slate-700">
-                              Notiz
-                            </th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {room.project_room_materials.map(
-                            (pm: any) => (
-                              <tr
-                                key={pm.id}
-                                className="border-t border-slate-200/70"
-                              >
-                                <td className="p-2">
-                                  {pm.materials?.name ?? '—'}
-                                </td>
-                                <td className="p-2">
-                                  {pm.quantity}
-                                </td>
-                                <td className="p-2">
-                                  {pm.notes}
-                                </td>
-                              </tr>
-                            ),
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-sm text-slate-500">
-                      – keine –
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-slate-700">Keine Räume angelegt.</p>
-        )}
-      </section>
-
-      {/* KOMMENTARE – stets GANZ unten */}
+      {/* KOMMENTARE */}
       <section className="mt-6 rounded-2xl border border-white/60 bg-white/70 p-5 shadow-[0_10px_30px_rgba(2,6,23,0.06)] backdrop-blur-xl">
-        <div className="mb-3 flex items-center justify-between">
+        <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="inline-flex items-center gap-2 text-sm font-semibold text-slate-800">
             <ChatBubbleOvalLeftEllipsisIcon className="h-5 w-5" />
             Kommentare{' '}
@@ -1436,20 +714,14 @@ export default function ProjectDetailClient({
             </span>
           </h2>
           {counts.comments > 5 && (
-            <button
-              className={btnWhite}
-              onClick={() => setCommentsOpen(true)}
-            >
+            <button className={btnWhite} onClick={() => setCommentsOpen(true)}>
               Alle anzeigen
             </button>
           )}
         </div>
 
-        {/* Letzte 5 */}
         {lastFive.length === 0 ? (
-          <p className="text-sm text-slate-600">
-            Noch keine Kommentare.
-          </p>
+          <p className="text-sm text-slate-600">Noch keine Kommentare.</p>
         ) : (
           <ul className="space-y-2">
             {lastFive.map((c: any) => (
@@ -1465,9 +737,7 @@ export default function ProjectDetailClient({
                           Du
                         </span>
                       ) : (
-                        <span className="text-slate-600">
-                          Mitarbeiter
-                        </span>
+                        <span className="text-slate-600">Mitarbeiter</span>
                       )}
                       <span className="mx-2">·</span>
                       <span
@@ -1488,7 +758,6 @@ export default function ProjectDetailClient({
           </ul>
         )}
 
-        {/* Eingabe */}
         <div className="mt-4">
           <Label>Neuer Kommentar</Label>
           <textarea
@@ -1502,7 +771,7 @@ export default function ProjectDetailClient({
               }
             }}
             placeholder="Schreibe eine Notiz für das Projekt … (⌘/Ctrl + Enter zum Senden)"
-            className="mt-1 w-full rounded-xl border border-white/60 bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-400 focus:ring-4 ring-indigo-200/60"
+            className="mt-1 w-full rounded-xl border border-white/60 bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-400 focus:ring-4 focus:ring-indigo-200/60"
           />
           <div className="mt-2 flex items-center justify-end">
             <button
@@ -1516,302 +785,7 @@ export default function ProjectDetailClient({
         </div>
       </section>
 
-      {/* ROOM MODAL – nur Owner kann es öffnen */}
-      {roomOpen && isOwner && (
-        <div className="fixed inset-0 z-[200] grid place-items-center bg-slate-900/60 p-3 backdrop-blur sm:p-4">
-          <div className="max-h-[92vh] w-full max-w-[1000px] overflow-hidden rounded-2xl border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(2,6,23,0.35)] backdrop-blur-xl">
-            {/* Header */}
-            <div className="sticky top-0 z-10 border-b border-white/60 bg-white/80 px-4 py-4 backdrop-blur sm:px-6">
-              <div className="flex items-center justify-between">
-                <h3 className="text-lg font-bold text-slate-900">
-                  {roomForm.id ? 'Raum bearbeiten' : 'Neuer Raum'}
-                </h3>
-                <div className="flex gap-2">
-                  <button
-                    className={btnWhite}
-                    onClick={() => setRoomOpen(false)}
-                  >
-                    Abbrechen
-                  </button>
-                  <button
-                    className="rounded-lg bg-slate-900 px-5 py-2 text-sm font-semibold text-white shadow-sm hover:opacity-90"
-                    onClick={saveRoom}
-                  >
-                    Speichern
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Body – vollständiges Formular */}
-            <div className="max-h-[72vh] overflow-auto px-4 py-4 sm:px-6">
-              {/* Stammdaten */}
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
-                <div className="md:col-span-2">
-                  <Label>Raumname</Label>
-                  <input
-                    value={roomForm.name}
-                    onChange={(e) =>
-                      setRoomField('name', e.target.value)
-                    }
-                    placeholder="z.B. Wohnzimmer"
-                    className="mt-1 w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:ring-4 ring-indigo-200/60"
-                  />
-                </div>
-                <div>
-                  <Label>Breite (m)</Label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={roomForm.width ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      setRoomField(
-                        'width',
-                        v === ''
-                          ? null
-                          : Number.isNaN(Number(v))
-                            ? null
-                            : Number(v),
-                      )
-                    }}
-                    placeholder="z.B. 3.80"
-                    className="mt-1 w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:ring-4 ring-indigo-200/60"
-                  />
-                </div>
-                <div>
-                  <Label>Länge (m)</Label>
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={roomForm.length ?? ''}
-                    onChange={(e) => {
-                      const v = e.target.value
-                      setRoomField(
-                        'length',
-                        v === ''
-                          ? null
-                          : Number.isNaN(Number(v))
-                            ? null
-                            : Number(v),
-                      )
-                    }}
-                    placeholder="z.B. 4.20"
-                    className="mt-1 w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:ring-4 ring-indigo-200/60"
-                  />
-                </div>
-                <div className="md:col-span-3">
-                  <Label>Notizen</Label>
-                  <textarea
-                    rows={3}
-                    value={roomForm.notes}
-                    onChange={(e) =>
-                      setRoomField('notes', e.target.value)
-                    }
-                    placeholder="Freitext zu Besonderheiten im Raum …"
-                    className="mt-1 w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:ring-4 ring-indigo-200/60"
-                  />
-                </div>
-              </div>
-
-              {/* Arbeiten */}
-              <div className="mt-6">
-                <div className="mb-2 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-slate-800">
-                    Arbeiten
-                  </h4>
-                  <button
-                    type="button"
-                    className={btnWhite}
-                    onClick={addTask}
-                  >
-                    + Arbeit
-                  </button>
-                </div>
-                {roomForm.tasks.length === 0 ? (
-                  <p className="text-sm text-slate-500">
-                    Noch keine Arbeiten erfasst.
-                  </p>
-                ) : (
-                  <div className="space-y-3">
-                    {roomForm.tasks.map((t, idx) => (
-                      <div
-                        key={t.id ?? idx}
-                        className="rounded-xl border border-white/60 bg-white/80 p-3 shadow-sm"
-                      >
-                        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                          <div className="md:col-span-1">
-                            <Label>Arbeit</Label>
-                            <input
-                              value={t.work}
-                              onChange={(e) =>
-                                updateTask(idx, {
-                                  work: e.target.value,
-                                })
-                              }
-                              placeholder="z.B. Tapezieren"
-                              className="mt-1 w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:ring-4 ring-indigo-200/60"
-                            />
-                          </div>
-                          <div className="md:col-span-2">
-                            <Label>Beschreibung</Label>
-                            <input
-                              value={t.description ?? ''}
-                              onChange={(e) =>
-                                updateTask(idx, {
-                                  description: e.target.value,
-                                })
-                              }
-                              placeholder="Optionale Zusatzbeschreibung"
-                              className="mt-1 w-full rounded-lg border border-slate-200/80 bg-white/90 px-3 py-2 text-sm outline-none focus:border-slate-300 focus:ring-4 ring-indigo-200/60"
-                            />
-                          </div>
-                        </div>
-                        <div className="mt-2 flex justify-end">
-                          <button
-                            type="button"
-                            className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700 hover:bg-rose-100"
-                            onClick={() => removeTask(idx)}
-                          >
-                            Entfernen
-                          </button>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              {/* Materialien */}
-              <div className="mt-6">
-                <div className="mb-2 flex items-center justify-between">
-                  <h4 className="text-sm font-semibold text-slate-800">
-                    Materialien
-                  </h4>
-                  <button
-                    type="button"
-                    className={btnWhite}
-                    onClick={addMaterial}
-                  >
-                    + Material
-                  </button>
-                </div>
-
-                {roomForm.materials.length === 0 ? (
-                  <p className="text-sm text-slate-500">
-                    Noch keine Materialien erfasst.
-                  </p>
-                ) : (
-                  <div className="overflow-hidden rounded-xl border border-white/60">
-                    <table className="w-full text-left text-xs">
-                      <thead className="bg-white/80 backdrop-blur">
-                        <tr>
-                          <th className="p-2 font-semibold text-slate-700">
-                            Material
-                          </th>
-                          <th className="p-2 font-semibold text-slate-700">
-                            Menge
-                          </th>
-                          <th className="p-2 font-semibold text-slate-700">
-                            Notiz
-                          </th>
-                          <th className="p-2" />
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {roomForm.materials.map((m, idx) => {
-                          return (
-                            <tr
-                              key={m.id ?? idx}
-                              className="border-t border-slate-200/70"
-                            >
-                              <td className="p-2">
-                                <select
-                                  value={m.material_id}
-                                  onChange={(e) =>
-                                    updateMaterial(idx, {
-                                      material_id: e.target.value,
-                                    })
-                                  }
-                                  className="w-full rounded-lg border border-slate-200/80 bg-white/90 px-2 py-1.5 text-sm outline-none focus:border-slate-300 focus:ring-4 ring-indigo-200/60"
-                                >
-                                  <option value="">
-                                    – auswählen –
-                                  </option>
-                                  {materialsMaster.map((mat) => (
-                                    <option
-                                      key={mat.id}
-                                      value={mat.id}
-                                    >
-                                      {mat.name}{' '}
-                                      {mat.unit
-                                        ? `(${mat.unit})`
-                                        : ''}
-                                    </option>
-                                  ))}
-                                </select>
-                              </td>
-                              <td className="p-2">
-                                <input
-                                  type="number"
-                                  step="0.01"
-                                  min="0"
-                                  value={m.quantity ?? 0}
-                                  onChange={(e) => {
-                                    const v = e.target.value
-                                    updateMaterial(idx, {
-                                      quantity:
-                                        v === ''
-                                          ? 0
-                                          : Number.isNaN(
-                                                Number(v),
-                                              )
-                                            ? 0
-                                            : Number(v),
-                                    })
-                                  }}
-                                  className="w-28 rounded-lg border border-slate-200/80 bg-white/90 px-2 py-1.5 text-sm outline-none focus:border-slate-300 focus:ring-4 ring-indigo-200/60"
-                                />
-                              </td>
-                              <td className="p-2">
-                                <input
-                                  value={m.notes ?? ''}
-                                  onChange={(e) =>
-                                    updateMaterial(idx, {
-                                      notes: e.target.value,
-                                    })
-                                  }
-                                  className="w-full rounded-lg border border-slate-200/80 bg-white/90 px-2 py-1.5 text-sm outline-none focus:border-slate-300 focus:ring-4 ring-indigo-200/60"
-                                  placeholder="optional"
-                                />
-                              </td>
-                              <td className="p-2 text-right">
-                                <button
-                                  type="button"
-                                  className="rounded-lg border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs text-rose-700 hover:bg-rose-100"
-                                  onClick={() =>
-                                    removeMaterial(idx)
-                                  }
-                                >
-                                  Entfernen
-                                </button>
-                              </td>
-                            </tr>
-                          )
-                        })}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* COMMENTS MODAL – komplette Historie + Eingabe */}
+      {/* COMMENTS MODAL */}
       {commentsOpen && (
         <div className="fixed inset-0 z-[210] grid place-items-center bg-slate-900/60 p-3 backdrop-blur sm:p-4">
           <div className="max-h-[92vh] w-full max-w-3xl overflow-hidden rounded-2xl border border-white/60 bg-white/90 shadow-[0_20px_80px_rgba(2,6,23,0.35)] backdrop-blur-xl">
@@ -1820,12 +794,10 @@ export default function ProjectDetailClient({
                 Kommentare ({commentsSorted.length})
               </h3>
               <button
-                className={btnWhite}
+                className={`${btnWhite} inline-flex items-center gap-1`}
                 onClick={() => setCommentsOpen(false)}
               >
-                <span className="inline-flex items-center gap-1">
-                  <XMarkIcon className="h-4 w-4" /> Schließen
-                </span>
+                <XMarkIcon className="h-4 w-4" /> <span>Schließen</span>
               </button>
             </div>
 
@@ -1881,7 +853,7 @@ export default function ProjectDetailClient({
                   }
                 }}
                 placeholder="Kommentar hinzufügen … (⌘/Ctrl + Enter)"
-                className="w-full rounded-xl border border-white/60 bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-400 focus:ring-4 ring-indigo-200/60"
+                className="w-full rounded-xl border border-white/60 bg-white/90 px-3 py-2 text-sm text-slate-900 outline-none placeholder-slate-400 focus:ring-4 focus:ring-indigo-200/60"
               />
               <div className="mt-2 flex items-center justify-end">
                 <button
@@ -1901,7 +873,6 @@ export default function ProjectDetailClient({
       {timeModalOpen && (
         <div className="fixed inset-0 z-[205] grid place-items-center bg-slate-900/60 p-3 backdrop-blur sm:p-4">
           <div className="max-h-[92vh] w-full max-w-5xl overflow-hidden rounded-2xl border border-white/60 bg-white/95 shadow-[0_20px_80px_rgba(2,6,23,0.35)] backdrop-blur-2xl">
-            {/* Header */}
             <div className="sticky top-0 z-10 border-b border-white/60 bg-white/90 px-4 py-3 sm:px-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -1915,21 +886,22 @@ export default function ProjectDetailClient({
                   <p className="text-xs text-slate-600">
                     Zeitraum{' '}
                     <span className="font-mono">{timeFrom}</span> –{' '}
-                    <span className="font-mono">{timeTo}</span> ·{' '}
-                    Gesamt:{' '}
+                    <span className="font-mono">{timeTo}</span> · Gesamt:{' '}
                     <span className="font-mono font-semibold">
                       {fmtHMS(timeTotalSeconds)}
                     </span>
                   </p>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <button
                     onClick={exportProjectTimesCsv}
                     disabled={!timeEntries.length}
                     className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-800 shadow-sm hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <ArrowDownTrayIcon className="h-4 w-4" />
-                    CSV exportieren
+                    <span className="whitespace-nowrap">
+                      CSV exportieren
+                    </span>
                   </button>
                   <button
                     onClick={loadProjectTimes}
@@ -1941,7 +913,9 @@ export default function ProjectDetailClient({
                         timeLoading ? 'animate-spin' : ''
                       }`}
                     />
-                    Aktualisieren
+                    <span className="whitespace-nowrap">
+                      Aktualisieren
+                    </span>
                   </button>
                   <button
                     onClick={() => setTimeModalOpen(false)}
@@ -1952,7 +926,6 @@ export default function ProjectDetailClient({
                 </div>
               </div>
 
-              {/* Filter-Zeile */}
               <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
                 <div className="flex flex-wrap items-end gap-3">
                   <div>
@@ -1988,7 +961,6 @@ export default function ProjectDetailClient({
               </div>
             </div>
 
-            {/* Body */}
             <div className="max-h-[72vh] overflow-auto px-4 py-3 sm:px-6">
               {timeError && (
                 <div className="mb-3 rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
@@ -2141,7 +1113,6 @@ export default function ProjectDetailClient({
               </div>
             </div>
 
-            {/* Footer */}
             <div className="border-t border-white/60 bg-white/90 px-4 py-2 text-right text-[11px] text-slate-700 sm:px-6">
               Gesamtzeit im Zeitraum:{' '}
               <span className="font-mono font-semibold">

@@ -1,59 +1,155 @@
+// src/app/api/projects/[id]/rooms/route.ts
 import { NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
-export async function POST(req: Request, ctx: { params: Promise<{ id: string }> }) {
-  const { id: projectId } = await ctx.params
-  const supa = await supabaseServer()
-  const { data: { user }, error: authErr } = await supa.auth.getUser()
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+type RouteParams = {
+  params: { id: string }
+}
 
-  const { data: isOwner } = await supa.rpc('is_project_owner', { p_project_id: projectId })
-  if (!isOwner) return NextResponse.json({ error: 'Only owner can create rooms' }, { status: 403 })
+type TaskPayload = {
+  work: string
+  description?: string | null
+}
 
-  const body = await req.json().catch(() => null)
-  if (!body) return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
+type MaterialPayload = {
+  material_id: string
+  quantity?: number | null
+  notes?: string | null
+}
 
-  const { name, width, length, notes, tasks = [], materials = [] } = body as {
-    name: string; width?: number|null; length?: number|null; notes?: string|null;
-    tasks?: { work: string; description?: string }[];
-    materials?: { material_id: string; quantity?: number; notes?: string }[];
-  }
+type RoomPayload = {
+  name: string
+  width?: number | null | string
+  length?: number | null | string
+  notes?: string | null
+  tasks?: TaskPayload[]
+  materials?: MaterialPayload[]
+}
 
-  // Raum anlegen
-  const { data: room, error: rErr } = await supa
-    .from('project_rooms')
-    .insert({
+const toNumOrNull = (v: any): number | null => {
+  if (v === null || v === undefined || v === '') return null
+  const n = Number(v)
+  return Number.isNaN(n) ? null : n
+}
+
+export async function POST(req: Request, { params }: RouteParams) {
+  try {
+    const projectId = params.id
+    const body = (await req.json()) as RoomPayload
+
+    const supa = await supabaseServer()
+    const {
+      data: { user },
+      error: userError,
+    } = await supa.auth.getUser()
+
+    if (userError || !user) {
+      return NextResponse.json(
+        { error: 'Nicht eingeloggt' },
+        { status: 401 },
+      )
+    }
+
+    // Projekt + Owner prüfen
+    const { data: project, error: projError } = await supa
+      .from('projects')
+      .select('id, user_id')
+      .eq('id', projectId)
+      .single()
+
+    if (projError || !project) {
+      return NextResponse.json(
+        { error: 'Projekt nicht gefunden' },
+        { status: 404 },
+      )
+    }
+
+    if (project.user_id !== user.id) {
+      return NextResponse.json(
+        { error: 'Kein Zugriff auf dieses Projekt' },
+        { status: 403 },
+      )
+    }
+
+    // Raum anlegen – Spalten passend zu project_rooms
+    const roomInsert = {
       project_id: projectId,
-      name,
-      width: width ?? null,
-      length: length ?? null,
-      notes: notes ?? null
-    })
-    .select('id')
-    .single()
-  if (rErr || !room) return NextResponse.json({ error: rErr?.message ?? 'room insert failed' }, { status: 400 })
+      user_id: project.user_id, // FK auf auth.users
+      name: body.name?.trim() || 'Unbenannter Bereich',
+      width: toNumOrNull(body.width),
+      length: toNumOrNull(body.length),
+      notes: body.notes ?? null,
+    }
 
-  const room_id = room.id
+    const { data: newRoom, error: roomError } = await supa
+      .from('project_rooms')
+      .insert(roomInsert)
+      .select('id')
+      .single()
 
-  // Tasks (nur sinnvolle)
-  const taskRows = (tasks ?? [])
-    .filter(t => (t.work ?? '').trim().length > 0)
-    .map(t => ({ room_id, work: t.work, description: t.description ?? '' }))
+    if (roomError || !newRoom) {
+      console.error('Room insert error', roomError)
+      return NextResponse.json(
+        { error: 'Raum konnte nicht angelegt werden' },
+        { status: 500 },
+      )
+    }
 
-  if (taskRows.length) {
-    const { error } = await supa.from('project_room_tasks').insert(taskRows)
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
+    const roomId = newRoom.id as string
+
+    // Tasks (project_room_tasks: work, description)
+    const tasks = (body.tasks ?? [])
+      .filter((t) => t.work && t.work.trim() !== '')
+      .map((t) => ({
+        room_id: roomId,
+        work: t.work.trim(),
+        description: t.description ?? '',
+      }))
+
+    if (tasks.length > 0) {
+      const { error: tErr } = await supa
+        .from('project_room_tasks')
+        .insert(tasks)
+
+      if (tErr) {
+        console.error('Task insert error', tErr)
+        return NextResponse.json(
+          { error: 'Arbeiten konnten nicht gespeichert werden' },
+          { status: 500 },
+        )
+      }
+    }
+
+    // Materialien (project_room_materials: material_id, quantity, notes)
+    const materials = (body.materials ?? [])
+      .filter((m) => m.material_id)
+      .map((m) => ({
+        room_id: roomId,
+        material_id: m.material_id,
+        quantity: toNumOrNull(m.quantity) ?? 0,
+        notes: m.notes ?? '',
+      }))
+
+    if (materials.length > 0) {
+      const { error: mErr } = await supa
+        .from('project_room_materials')
+        .insert(materials)
+
+      if (mErr) {
+        console.error('Material insert error', mErr)
+        return NextResponse.json(
+          { error: 'Materialien konnten nicht gespeichert werden' },
+          { status: 500 },
+        )
+      }
+    }
+
+    return NextResponse.json({ id: roomId }, { status: 201 })
+  } catch (e) {
+    console.error('POST /api/projects/[id]/rooms error', e)
+    return NextResponse.json(
+      { error: 'Interner Fehler' },
+      { status: 500 },
+    )
   }
-
-  // Materials (nur sinnvolle)
-  const matRows = (materials ?? [])
-    .filter(m => (m.material_id ?? '') !== '')
-    .map(m => ({ room_id, material_id: m.material_id, quantity: m.quantity ?? 0, notes: m.notes ?? '' }))
-
-  if (matRows.length) {
-    const { error } = await supa.from('project_room_materials').insert(matRows)
-    if (error) return NextResponse.json({ error: error.message }, { status: 400 })
-  }
-
-  return NextResponse.json({ ok: true, room_id })
 }

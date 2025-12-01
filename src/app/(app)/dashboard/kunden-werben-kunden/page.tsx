@@ -271,7 +271,7 @@ export default async function EmpfehlungPage() {
 
             <div className="flex flex-col gap-3 text-sm text-slate-600">
               <span className="inline-flex items-center rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-medium text-emerald-700">
-                🚀 Hinweis: Zugang wird bald freigeschaltet
+                🚀 Hinweis: Zugang ist freigeschaltet
               </span>
               <p>
                 Ihr Empfehlungszugang ist bereits hinterlegt – die ausführliche Übersicht mit

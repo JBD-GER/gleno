@@ -165,6 +165,31 @@ export default function MarktUebersichtPage() {
           </div>
         </section>
 
+        {/* Markt-Status Hinweis (rote Box) */}
+        <section className="w-full">
+          <div className="flex flex-col gap-2 rounded-2xl border border-rose-200/70 bg-rose-50/95 px-4 py-3 text-sm text-rose-900 shadow-[0_6px_22px_rgba(244,63,94,0.28)]">
+            <p className="text-xs font-semibold tracking-wide uppercase text-rose-700">
+              Hinweis: GLENO Markt im Aufbau
+            </p>
+            <p>
+              Der GLENO Markt ist aktuell noch nicht zu{' '}
+              <span className="font-semibold">100&nbsp;% aktiv</span>. Wir befinden
+              uns in der Aufbauphase und gewinnen derzeit weitere{' '}
+              <span className="font-semibold">Betriebe und Unternehmen</span> für den Marktplatz.
+            </p>
+            <p>
+              Sobald in einer Branche mindestens{' '}
+              <span className="font-semibold">10 aktive Partner</span> registriert sind,
+              starten wir gezielte <span className="font-semibold">Werbekampagnen</span>,
+              um neue Anfragen in den jeweiligen Regionen zu generieren.
+            </p>
+            <p className="text-xs text-rose-800">
+              Tipp: Legen Sie Ihr Partnerprofil frühzeitig an – so sind Sie von Anfang an sichtbar,
+              sobald die ersten Kampagnen starten.
+            </p>
+          </div>
+        </section>
+
         {/* Hinweis: Partnerprofil fehlt */}
         {!partnersLoading && !hasPartner && (
           <section className="w-full">
@@ -323,7 +348,7 @@ function QuickLink({
         group relative flex flex-col justify-between
         rounded-2xl border border-white/70 bg-white/82
         px-4 py-4
-        text-sm text-slate-800
+        text-sm text-slate-8
         ring-1 ring-white/70 backdrop-blur-xl
         shadow-[0_4px_18px_rgba(15,23,42,0.06)]
         hover:bg-white hover:shadow-[0_8px_28px_rgba(15,23,42,0.10)]

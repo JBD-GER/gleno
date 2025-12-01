@@ -1,78 +1,64 @@
 // src/app/(public)/features/page.tsx
 import Link from 'next/link'
 import type { Metadata } from 'next'
-import {
-  UserGroupIcon,
-  DocumentTextIcon,
-  EnvelopeOpenIcon,
-  CalendarIcon,
-  TruckIcon,
-  ChartBarIcon,
-  ClipboardDocumentCheckIcon,
-  CameraIcon,
-  ArrowUpOnSquareStackIcon,
-  ShieldCheckIcon,
-  Cog6ToothIcon,
-  BellAlertIcon,
-  CloudArrowUpIcon,
-  CubeTransparentIcon,
-  ClockIcon,
-  UserCircleIcon,
-  PuzzlePieceIcon,
-} from '@heroicons/react/24/outline'
 
 /* ----------------------------- Site/SEO constants ----------------------------- */
 const SITE_NAME = 'GLENO'
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL || 'https://gleno.io'
-const PRIMARY = '#111827' // dunkles Anthrazit als CTA-/Brand-Akzent
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || 'https://gleno.de'
+const PRIMARY = '#0F172A'
 
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'GLENO - Funktionen',
+    default: 'Funktionen – GLENO Unternehmenssoftware',
     template: '%s | GLENO',
   },
   description:
-    'GLENO vereint B2B-Marktplatz, CRM, Buchhaltung, Projektführung, Logistik, Personal-Management und Onepager-Website in einer Plattform. KI-optimierte Anfragen, Bewerbungsverfahren, Chat, Dokumente, Angebote, Aufträge, Rechnungen, Zeiterfassung, Fuhrpark, Materialbestand und KI-Rechtstexte – alles an einem Ort.',
+    'GLENO bündelt Auftragsmanagement, Projektmanagement, Rechnungsmanagement, Zeiterfassung, Terminplanung, Kundenmanagement, Mitarbeitermanagement, Dokumenten-Cloud, Logistik, Vault, Aufgaben, Aktivitätsübersicht, Website-Builder, Marktplatz und Kennzahlen in einer cloudbasierten Unternehmenssoftware für Dienstleister & KMU.',
   keywords: [
     'GLENO',
-    'B2B Marktplatz',
-    'CRM',
-    'Agentursoftware',
-    'Dienstleister Software',
+    'Unternehmenssoftware',
+    'Auftragsmanagement',
     'Projektmanagement',
+    'Rechnungssoftware',
     'Zeiterfassung',
+    'Terminplanung',
+    'CRM',
+    'Dokumentenmanagement',
+    'Marktplatz für Aufträge',
+    'Kennzahlen Dashboard',
+    'Logistik Software',
     'Fuhrparkverwaltung',
-    'Materialverwaltung',
-    'Onepager Website',
-    'KI Angebote',
-    'Bewertungssystem',
-    'Angebote Rechnungen Auftragsbestaetigungen',
+    'Vertragsmanagement',
+    'Passwort Vault',
+    'Website Builder',
+    'Landingpage Lead Magnet',
+    'Dienstleister Software',
+    'KMU Software',
   ],
   alternates: { canonical: `${SITE_URL}/features` },
   openGraph: {
     type: 'website',
     url: `${SITE_URL}/features`,
     siteName: SITE_NAME,
-    title: 'Features – GLENO',
+    title: 'Funktionen – GLENO Unternehmenssoftware',
     description:
-      'Marktplatz, CRM & Website in einem System: KI-optimierte Anfragen, Bewerbungsverfahren, Bewertungen, Chat, Dokumente, Angebot, Auftrag & Rechnung, Projektführung, Logistik, Personal & Onepager-Website.',
+      'GLENO bündelt Aufträge, Projekte, Rechnungen, Zeiten, Termine, Kunden, Team, Dokumente, Logistik, Vault, Aufgaben, Aktivitäten, Website-Builder, Marktplatz & Kennzahlen in einer Plattform – statt Tool-Chaos.',
     images: [
       {
         url: `${SITE_URL}/og/og-features.jpg`,
         width: 1200,
         height: 630,
-        alt: 'Features – GLENO',
+        alt: 'Funktionen – GLENO',
       },
     ],
     locale: 'de_DE',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Features – GLENO',
+    title: 'Funktionen – GLENO Unternehmenssoftware',
     description:
-      'GLENO bündelt Marktplatz, CRM, Buchhaltung, Logistik, Personal, Projektführung & Onepager-Website – inklusive KI-Features und Bewertungssystem.',
+      'Cloudbasierte All-in-One Unternehmenssoftware für Dienstleister & KMU mit Aufträgen, Projekten, Rechnungen, Zeiten, Terminen, Logistik, Vault, Aufgaben, Aktivitäten & Team.',
     images: [`${SITE_URL}/og/og-features.jpg`],
   },
   robots: { index: true, follow: true },
@@ -91,14 +77,14 @@ function JsonLd() {
         url: `${SITE_URL}/features`,
         image: `${SITE_URL}/og/og-features.jpg`,
         description:
-          'GLENO kombiniert B2B-Marktplatz, CRM, Buchhaltung, Projektführung, Logistik, Personal-Management und Website-Builder für Agenturen & Dienstleister in einer Plattform.',
+          'GLENO bündelt Auftragsmanagement, Projektmanagement, Rechnungsmanagement, Zeiterfassung, Terminplanung, Kundenmanagement, Mitarbeitermanagement, Dokumenten-Cloud, Logistik, Vault, Aufgaben, Aktivitätsübersicht, Website-Builder, Marktplatz und Kennzahlen in einer cloudbasierten Lösung.',
         offers: {
           '@type': 'Offer',
           price: '0.00',
           priceCurrency: 'EUR',
           description:
-            'Jetzt kostenlos starten und GLENO testen. Flexible Pakete für Agenturen & Dienstleister.',
-          url: `${SITE_URL}/signup`,
+            'Kostenloses Beratungsgespräch vereinbaren und prüfen, wie GLENO in Ihren Alltag passt.',
+          url: `${SITE_URL}/beratung`,
         },
         publisher: {
           '@type': 'Organization',
@@ -113,13 +99,14 @@ function JsonLd() {
           {
             '@type': 'ListItem',
             position: 2,
-            name: 'Features',
+            name: 'Funktionen',
             item: `${SITE_URL}/features`,
           },
         ],
       },
     ],
   }
+
   return (
     <script
       type="application/ld+json"
@@ -135,401 +122,389 @@ export default function FeaturesPage() {
     <>
       <JsonLd />
 
-      {/* Keyframes für weichen Glow */}
-      <style
-        dangerouslySetInnerHTML={{
-          __html: `
-          @keyframes floatGlow {
-            0%   { transform: translate3d(0,0,0); opacity:.45 }
-            50%  { transform: translate3d(10px,10px,0); opacity:.7 }
-            100% { transform: translate3d(0,0,0); opacity:.45 }
-          }`,
-        }}
-      />
-
-      <div className="space-y-20">
-        {/* HERO */}
-        <section className="relative overflow-visible">
-          <div
-            aria-hidden
-            className="pointer-events-none absolute left-1/2 top-[-30vh] -z-10 h-[120vh] w-[180vw] -translate-x-1/2"
-            style={{
-              background:
-                'radial-gradient(1200px 480px at 50% 0%, rgba(15,23,42,0.06), transparent),' +
-                'radial-gradient(900px 420px at 12% 10%, rgba(15,23,42,0.04), transparent),' +
-                'radial-gradient(900px 420px at 88% 8%, rgba(15,23,42,0.04), transparent)',
-            }}
-          />
-          <div
-            aria-hidden
-            className="pointer-events-none absolute -left-14 -top-10 -z-10 h-[26rem] w-[26rem] rounded-full"
-            style={{
-              background:
-                'radial-gradient(closest-side, rgba(17,24,39,.18), rgba(17,24,39,0))',
-              filter: 'blur(22px)',
-              animation: 'floatGlow 18s ease-in-out infinite',
-            }}
-          />
-
-          <div className="relative mx-auto max-w-6xl px-6 pt-12 sm:pt-16">
-            <div className="rounded-3xl border border-white/60 bg-white/75 p-8 text-center shadow-[0_18px_50px_rgba(15,23,42,0.10)] backdrop-blur-xl ring-1 ring-white/60 sm:p-12">
-              <div className="mx-auto mb-3 inline-flex flex-wrap items-center justify-center gap-2 rounded-full bg-white/90 px-3 py-1 text-[10px] font-semibold text-slate-900 ring-1 ring-white/60 backdrop-blur">
-                <span
-                  className="rounded-full px-2 py-0.5 text-white"
-                  style={{ backgroundColor: PRIMARY }}
-                >
-                  Marktplatz • CRM • Buchhaltung • Website
-                </span>
-                <span className="text-slate-400">•</span>
-                <span>eine Plattform – kein Tool-Chaos</span>
+      {/* cleaner, weißer Hintergrund */}
+      <main className="min-h-[100dvh]">
+        {/* Breite analog Startseite: max-w-7xl + px-6 */}
+        <div className="mx-auto max-w-7xl px-6 pt-10 pb-20">
+          {/* HERO – jetzt zentrierte Box */}
+          <section className="mb-10">
+            <div className="mx-auto max-w-7xl rounded-3xl border border-white/80 bg-white/95 px-6 py-8 text-center shadow-[0_22px_60px_rgba(15,23,42,0.12)] ring-1 ring-slate-100 sm:px-10 sm:py-10">
+              <div className="mx-auto inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-[10px] font-semibold text-slate-50">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" />
+                Funktionen im Überblick
               </div>
 
-              <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-                Alle Funktionen von <span className="whitespace-nowrap">GLENO</span> im Überblick
+              <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+                Alle Funktionen der GLENO Unternehmenssoftware.
               </h1>
-              <p className="mx-auto mt-3 max-w-3xl text-sm sm:text-base leading-relaxed text-slate-700">
-                GLENO strukturiert Ihren kompletten Ablauf: KI-optimierte Anfragen im Marktplatz,
-                Bewerbungsverfahren & Bewertungen, CRM mit Angeboten, Auftragsbestätigungen,
-                Rechnungen, Projektführung, Zeiterfassung, Logistik & Personal – plus ein
-                angebundener Onepager mit Formularen direkt im System. Jede Information nur einmal,
-                immer am richtigen Vorgang.
+
+              <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+                GLENO bündelt die zentralen Bereiche Ihres Unternehmens:
+                Auftragsmanagement, Projektmanagement, Rechnungen, Zeiten, Termine,
+                Kunden, Team, Dokumente, Logistik, Kennzahlen – und sogar
+                Marktplatz, Vault und Website-Builder. Klar strukturiert, ohne
+                überladene ERP-Oberfläche.
               </p>
 
-              <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
+              <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
                 <Link
-                  href="/signup"
-                  className="inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 text-sm font-semibold text-white shadow transition sm:w-auto"
-                  style={{
-                    backgroundColor: PRIMARY,
-                    boxShadow:
-                      '0 6px 22px rgba(17,24,39,.25), inset 0 1px 0 rgba(255,255,255,.16)',
-                  }}
+                  href="/registrieren"
+                  className="inline-flex items-center justify-center gap-2 rounded-2xl bg-slate-900 px-6 py-3 text-sm font-semibold text-slate-50 shadow-sm hover:bg-slate-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-400"
                 >
-                  Kostenlos testen
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 24 24"
-                    className="opacity-90"
-                    fill="currentColor"
-                    aria-hidden
-                  >
-                    <path d="M13.172 12l-4.95-4.95 1.414-1.414L16 12l-6.364 6.364-1.414-1.414z" />
-                  </svg>
+                  GLENO 30 Tage testen
+                  <span className="text-xs">↗</span>
+                </Link>
+                <Link
+                  href="/beratung"
+                  className="inline-flex items-center justify-center rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+                >
+                  Unverbindliche Beratung buchen
                 </Link>
               </div>
 
-              <p className="mt-3 text-[10px] text-slate-500">
-                DSGVO-orientiert • EU-Hosting • Für Agenturen & Dienstleister entwickelt
+              <p className="mt-3 text-[11px] text-slate-500">
+                Alle Module inklusive · Monatlich kündbar nach der Testphase · Server in der EU
               </p>
             </div>
-          </div>
+          </section>
 
-          <div
-            aria-hidden
-            className="pointer-events-none absolute inset-x-0 -bottom-10 h-16 -z-10"
-            style={{
-              background:
-                'linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,1))',
-            }}
-          />
-        </section>
+          {/* FUNKTIONS-GRID – Emojis wie auf der Startseite */}
+          <section className="mb-6">
+            <h2 className="text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
+              GLENO bündelt die zentralen Bereiche Ihres Unternehmens.
+            </h2>
+            <p className="mt-2 max-w-4xl text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+              Statt fünf verschiedenen Tools arbeiten Sie mit einer Oberfläche für
+              Auftragsmanagement, Projektmanagement, Rechnungen, Zeiterfassung,
+              Terminplanung, Kunden- und Mitarbeitermanagement, Dokumentation, Logistik,
+              Vault, Aufgaben und Website – plus Marktplatz für neue Aufträge.
+            </p>
 
-        {/* 3-SÄULEN-ÜBERSICHT */}
-        <section className="mx-auto max-w-6xl px-6">
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-            {/* MARKT */}
-            <div className="rounded-2xl border border-white/60 bg-white/80 p-4 backdrop-blur-xl shadow-[0_8px_26px_rgba(15,23,42,0.06)]">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                Säule 1
-              </p>
-              <h3 className="mt-1 text-sm font-semibold text-slate-900">
-                Marktplatz & Anfragen
-              </h3>
-              <p className="mt-1 text-xs text-slate-700">
-                KI-optimierte Anfragen, Bewerbungsverfahren, Konsument entscheidet,
-                Register & Bewertungen – alles im gleichen Vorgang.
-              </p>
+            <div className="mt-7 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {FEATURE_CARDS.map((f) => (
+                <FeatureCard key={f.title} icon={f.icon} title={f.title} text={f.text} />
+              ))}
             </div>
-            {/* CRM */}
-            <div className="rounded-2xl border border-white/60 bg-white/80 p-4 backdrop-blur-xl shadow-[0_8px_26px_rgba(15,23,42,0.06)]">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                Säule 2
-              </p>
-              <h3 className="mt-1 text-sm font-semibold text-slate-900">
-                CRM, Buchhaltung & Operations
-              </h3>
-              <p className="mt-1 text-xs text-slate-700">
-                Angebote, Auftragsbestätigungen, Rechnungen, Projekte, Kalender,
-                Zeiterfassung, Personal, Logistik & Dokumentation in einem System.
-              </p>
-            </div>
-            {/* WEBSITE */}
-            <div className="rounded-2xl border border-white/60 bg-white/80 p-4 backdrop-blur-xl shadow-[0_8px_26px_rgba(15,23,42,0.06)]">
-              <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500">
-                Säule 3
-              </p>
-              <h3 className="mt-1 text-sm font-semibold text-slate-900">
-                Onepager-Website & Rechtstexte
-              </h3>
-              <p className="mt-1 text-xs text-slate-700">
-                Onepager mit Formularen direkt ins CRM, eigenem Branding sowie
-                KI-gestütztem Impressum & Datenschutz.
-              </p>
-            </div>
-          </div>
-        </section>
+          </section>
 
-        {/* 1) MARKTPLATZ & ANFRAGEN */}
-        <section id="market" className="mx-auto max-w-6xl px-6">
-          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.06)] backdrop-blur-xl ring-1 ring-white/60">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="inline-flex rounded-2xl border border-white/60 bg-white/95 p-2 ring-1 ring-white/60">
-                <PuzzlePieceIcon className="h-5 w-5 text-slate-900" />
+          {/* BEWERTUNGS-STREIFEN – dezent & unaufdringlich */}
+          <section className="mb-12 border-y border-slate-100 py-4">
+            <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+              <div className="flex items-center gap-3 text-[11px] text-slate-600">
+                <div className="flex items-center gap-1 text-amber-500">
+                  <span className="text-xs">★</span>
+                  <span className="text-xs">★</span>
+                  <span className="text-xs">★</span>
+                  <span className="text-xs">★</span>
+                  <span className="text-xs text-amber-400/80">★</span>
+                </div>
+                <span className="font-semibold text-slate-800">
+                  4,8 von 5 Punkten
+                </span>
+                <span className="hidden text-slate-400 md:inline">·</span>
+                <span className="text-slate-500">
+                  basierend auf Rückmeldungen aus Pilotprojekten &amp; Beta-Teams
+                </span>
               </div>
-              <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900">
-                Marktplatz & KI-optimierte Anfragen
-              </h2>
-            </div>
-            <p className="text-sm leading-relaxed text-slate-700">
-              GLENO verbindet Nachfrage und Angebot in einem klar strukturierten Prozess:
-              Anfragen werden per KI aufbereitet, Dienstleister bewerben sich sauber,
-              Konsumenten wählen fundiert – und alles bleibt an einem Vorgang.
-            </p>
-            <ul className="mt-3 grid grid-cols-1 gap-1.5 text-[12px] text-slate-700 sm:grid-cols-2">
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>KI-optimierte Anfragen mit klaren Datenfeldern statt Freitext-Chaos.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Strukturiertes Bewerbungsverfahren für Dienstleister je Anfrage.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Konsument entscheidet transparent auf Basis vergleichbarer Angebote.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Chat, Dokumente, Angebot, Auftrag & Rechnung direkt an der Anfrage.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Öffentliches Register mit Profilen und Leistungsdarstellung.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Bewertungssystem nach Abschluss für echte Qualitätssignale.</span>
-              </li>
-            </ul>
-          </div>
-        </section>
 
-        {/* 2) CRM, BUCHHALTUNG, TEAM, LOGISTIK */}
-        <section id="crm" className="mx-auto max-w-6xl px-6 space-y-6">
-          {/* CRM & Doku */}
-          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.06)] backdrop-blur-xl ring-1 ring-white/60">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="inline-flex rounded-2xl border border-white/60 bg-white/95 p-2 ring-1 ring-white/60">
-                <UserGroupIcon className="h-5 w-5 text-slate-900" />
+              <div className="grid gap-2 text-[11px] text-slate-500 md:max-w-xl md:grid-cols-2">
+                <p className="italic leading-relaxed">
+                  „Wir haben GLENO zuerst nur für Angebote getestet – inzwischen laufen
+                  Aufträge, Zeiten und Rechnungen komplett darüber.“
+                  <span className="not-italic text-slate-400">
+                    {' '}
+                    – Agentur mit 7 Personen
+                  </span>
+                </p>
+                <p className="italic leading-relaxed">
+                  „Die Kombination aus Aufträgen, Projekten und To-dos nimmt viel
+                  Kleinkram aus meinem Kopf.“
+                  <span className="not-italic text-slate-400">
+                    {' '}
+                    – Inhaber eines technischen Dienstleisters
+                  </span>
+                </p>
               </div>
-              <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900">
-                CRM & zentrale Vorgangsorganisation
-              </h2>
             </div>
-            <p className="text-sm leading-relaxed text-slate-700">
-              Alle Anfragen, Projekte und Beziehungen laufen in einem CRM zusammen.
-              Kein Springen zwischen Tools – jeder Vorgang ist vollständig dokumentiert.
-            </p>
-            <ul className="mt-3 grid grid-cols-1 gap-1.5 text-[12px] text-slate-700 sm:grid-cols-2">
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Zentrales CRM für Kunden & Organisationen inkl. Historie.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Vorgänge mit Chat, Dateien, Notizen, Status & Verantwortlichen.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Projektführung inkl. Dokumentation direkt am Vorgang.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Terminkalender-Anbindung pro Vorgang (z. B. Start, Abgaben, Meetings).</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Template-Bibliothek für wiederkehrende Positionen & Texte.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Vorlagenorganisation für einheitliche Angebote & Dokumente.</span>
-              </li>
-            </ul>
-          </div>
+          </section>
 
-          {/* Buchhaltung */}
-          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.06)] backdrop-blur-xl ring-1 ring-white/60">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="inline-flex rounded-2xl border border-white/60 bg-white/95 p-2 ring-1 ring-white/60">
-                <DocumentTextIcon className="h-5 w-5 text-slate-900" />
-              </div>
-              <h3 className="text-lg font-semibold tracking-tight text-slate-900">
-                Angebot, Auftragsbestätigung & Rechnung – entlang eines Vorgangs
-              </h3>
-            </div>
-            <p className="text-sm leading-relaxed text-slate-700">
-              Dokumente entstehen direkt aus den vorhandenen Daten. Aus einer Anfrage
-              wird ein Angebot, daraus die Auftragsbestätigung und schließlich die Rechnung –
-              ohne Medienbruch.
-            </p>
-            <ul className="mt-3 grid grid-cols-1 gap-1.5 text-[12px] text-slate-700 sm:grid-cols-2">
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Strukturierte Angebote mit Positionen & hinterlegten Templates.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Auftragsbestätigung per Klick aus dem Angebot.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Rechnung aus Auftrag/Angebot – mit sauberer Verknüpfung.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>PDF-Erzeugung & Versand per E-Mail mit vorbereiteten Texten.</span>
-              </li>
-            </ul>
-          </div>
+          {/* DETAIL-CLUSTER – jeweils thematisch sortiert */}
 
-          {/* Team & Zeit */}
-          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.06)] backdrop-blur-xl ring-1 ring-white/60">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="inline-flex rounded-2xl border border-white/60 bg-white/95 p-2 ring-1 ring-white/60">
-                <UserCircleIcon className="h-5 w-5 text-slate-900" />
-              </div>
-              <h3 className="text-lg font-semibold tracking-tight text-slate-900">
-                Personal, Mitarbeiterzugänge & Zeiterfassung
-              </h3>
-            </div>
-            <p className="text-sm leading-relaxed text-slate-700">
-              Mitarbeitende arbeiten in fokussierten Oberflächen. Zeiten landen direkt an
-              Projekten und Vorgängen – nachvollziehbar und mobilfähig.
-            </p>
-            <ul className="mt-3 grid grid-cols-1 gap-1.5 text-[12px] text-slate-700 sm:grid-cols-2">
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Mitarbeiterzugänge mit klar definierten Berechtigungen.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Zeiterfassung pro Projekt, Vorgang oder Tätigkeit.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Mobile Nutzung auf Smartphone & Tablet für das operative Team.</span>
-              </li>
-            </ul>
-          </div>
+          {/* 1. Aufträge & Projekte / Angebote & Rechnungen */}
+          <section className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <DetailCluster
+              label="Aufträge & Projekte"
+              title="Vom Erstkontakt bis zum abgeschlossenen Projekt."
+              icon="📋"
+              bullets={[
+                'Aufträge mit Status, Verantwortlichen, Fristen und Dokumenten an einem Ort.',
+                'Projektstruktur mit Phasen, Arbeitspaketen und Deadlines.',
+                'Automatische To-dos mit Mitarbeiterzuweisung, Prioritäten & Fälligkeiten.',
+                'Soll-/Ist-Budgetierung pro Projekt mit verknüpfter Zeiterfassung.',
+              ]}
+            />
+            <DetailCluster
+              label="Angebote & Rechnungen"
+              title="Rechnungsmanagement mit KI & wiederkehrenden Intervallen."
+              icon="🧾"
+              bullets={[
+                'KI-unterstützte Angebotserstellung – spart 20–30 Minuten pro Angebot.',
+                'Template-Bibliothek für wiederkehrende Positionen & Texte.',
+                'Auftragsbestätigung & Rechnung aus dem Angebot per Klick – ohne Doppelpflege.',
+                'Wiederkehrende Rechnungsintervalle inkl. automatischer Erinnerung an Kunden.',
+              ]}
+            />
+          </section>
 
-          {/* Logistik */}
-          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-[0_10px_34px_rgba(15,23,42,0.06)] backdrop-blur-xl ring-1 ring-white/60">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="inline-flex rounded-2xl border border-white/60 bg-white/95 p-2 ring-1 ring-white/60">
-                <TruckIcon className="h-5 w-5 text-slate-900" />
-              </div>
-              <h3 className="text-lg font-semibold tracking-tight text-slate-900">
-                Logistik: Fuhrpark, Werkzeuge & Materialbestand
-              </h3>
-            </div>
-            <p className="text-sm leading-relaxed text-slate-700">
-              Logistik wird Teil der Organisation: Fahrzeuge, Werkzeuge und Materialien
-              lassen sich Vorgängen zuordnen und strukturiert überblicken.
-            </p>
-            <ul className="mt-3 grid grid-cols-1 gap-1.5 text-[12px] text-slate-700 sm:grid-cols-2">
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Fuhrparkübersicht mit Zuordnung zu Projekten.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Werkzeuge & Geräte je Vorgang nachvollziehbar hinterlegt.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Materialbestände sichtbar – Basis für geordnete Abwicklung.</span>
-              </li>
-            </ul>
-          </div>
-        </section>
+          {/* 2. Zeit & Planung / Logistik */}
+          <section className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <DetailCluster
+              label="Zeit & Planung"
+              title="Zeiterfassung und Termine, die zusammengehören."
+              icon="⏱️"
+              bullets={[
+                'Projektscharfe Zeiterfassung – Mitarbeitende erfassen Zeiten selbstständig.',
+                'Manuelle Einträge & Korrekturen möglich und nachvollziehbar.',
+                'Auswertung nach Projekt, Kunde, Mitarbeiter oder Zeitraum (inkl. CSV-Export).',
+                'Terminplanung als Liste oder Kalender – inkl. Kunden- & Projektzuordnung.',
+              ]}
+            />
+            <DetailCluster
+              label="Logistik & Ressourcen"
+              title="Fuhrpark, Material & Equipment im Griff."
+              icon="🚚"
+              bullets={[
+                'Übersicht über Fahrzeuge, Maschinen und Werkzeuge – inkl. Zuordnung zu Projekten.',
+                'Materialbestände pro Projekt oder Lager erfassen und nachvollziehen.',
+                'Optionale Laufleistungen, Prüfintervalle & Wartungstermine für Fahrzeuge/Geräte.',
+                'Geplante Einsätze besser koordinieren, statt Überraschungen vor Ort.',
+              ]}
+            />
+          </section>
 
-        {/* 3) WEBSITE & RECHTTEXTE */}
-        <section id="website" className="mx-auto max-w-6xl px-6">
-          <div className="rounded-3xl border border-white/60 bg-white/80 p-6 shadow-[0_12px_38px_rgba(15,23,42,0.08)] backdrop-blur-xl ring-1 ring-white/60">
-            <div className="mb-3 flex items-center gap-3">
-              <div className="inline-flex rounded-2xl border border-white/60 bg-white/95 p-2 ring-1 ring-white/60">
-                <CloudArrowUpIcon className="h-5 w-5 text-slate-900" />
-              </div>
-              <h2 className="text-lg sm:text-xl font-semibold tracking-tight text-slate-900">
-                Onepager-Website direkt mit GLENO verbunden
-              </h2>
-            </div>
-            <p className="text-sm leading-relaxed text-slate-700">
-              Die Website ist kein Fremdkörper, sondern Teil Ihres Systems: Anfragen
-              aus Formularen landen automatisch dort, wo sie hingehören – im CRM.
-            </p>
-            <ul className="mt-3 grid grid-cols-1 gap-1.5 text-[12px] text-slate-700 sm:grid-cols-2">
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Schlanker Onepager speziell für Dienstleister & Agenturen.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Kontakt- und Projektformulare schreiben direkt ins CRM.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>Eigenes Logo, Farben & Inhalte für konsistentes Branding.</span>
-              </li>
-              <li className="flex gap-2">
-                <span className="mt-1 h-1.5 w-1.5 rounded-full" style={{ backgroundColor: PRIMARY }} />
-                <span>KI-gestützte Erstellung von Impressum & Datenschutzerklärung.</span>
-              </li>
-            </ul>
-          </div>
-        </section>
+          {/* 3. Kundenmanagement / Mitarbeitermanagement */}
+          <section className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <DetailCluster
+              label="Kundenmanagement (CRM)"
+              title="Alle Kundenbeziehungen strukturiert an einem Ort."
+              icon="🧑‍💼"
+              bullets={[
+                'Stammdaten für Kunden, Organisationen & Ansprechpartner mit Kontaktwegen.',
+                'Chronologische Historie von Angeboten, Aufträgen, Projekten & Rechnungen pro Kunde.',
+                'Schneller Überblick: Zu welchen Themen gab es zuletzt Kontakt – und was ist offen?',
+                'Segmentierung nach Branche, Größe, Region oder individuellen Labels.',
+              ]}
+            />
+            <DetailCluster
+              label="Mitarbeitermanagement"
+              title="Zugänge, Rollen & Verantwortlichkeiten im Team."
+              icon="👤"
+              bullets={[
+                'Mitarbeiterprofile mit Rollen, Zuständigkeiten und Kontaktdaten.',
+                'Rollenbasierte Rechte: Wer darf Angebote schreiben, Zeiten sehen oder Kennzahlen auswerten?',
+                'Verknüpfung von Mitarbeitenden mit Projekten, Terminen, Aufgaben & Ressourcen.',
+                'Transparente Auslastung auf Basis von Zeiterfassung und Terminplanung.',
+              ]}
+            />
+          </section>
 
-        {/* SEO / WHY BLOCK – ABSCHLUSS */}
-        <section className="mx-auto max-w-6xl px-6 pb-20">
-          <h2 className="text-2xl font-semibold tracking-tight text-slate-900">
-            Warum GLENO die logische Mitte zwischen Marktplatz, CRM & Website ist.
-          </h2>
-          <div className="mt-3 space-y-3 text-sm leading-relaxed text-slate-700">
-            <p>
-              Normalerweise existieren Anfragen, Angebote, Projekte, Zeiten, Material,
-              Personal und Website völlig getrennt. GLENO führt diese Bereiche zusammen:
-              Marktplatz, CRM, Buchhaltung, Logistik, Personal und Onepager-Website greifen
-              ineinander – jede Information hängt an einem Vorgang.
-            </p>
-            <p>
-              Die drei Säulen sind klar abgegrenzt und technisch verbunden: Der
-              <strong> Marktplatz</strong> liefert strukturierte, KI-optimierte Anfragen
-              mit fairem Bewerbungsverfahren und Bewertungen. Das
-              <strong> CRM & Operations</strong>-Modul bildet Angebote, Auftragsbestätigungen,
-              Rechnungen, Projektführung, Zeiterfassung sowie Fuhrpark-, Werkzeug- und
-              Materialorganisation ab. Die <strong>Onepager-Website</strong> sendet
-              Anfragen direkt ins System und lässt sich mit KI bei Rechtstexten unterstützen.
-            </p>
-            <p>
-              So entsteht eine durchgehende Prozesskette für Agenturen & Dienstleister,
-              die Wert auf Struktur, Nachvollziehbarkeit und professionelle Außenwirkung
-              legen – ohne Spielerei, ohne Tool-Wirrwarr.
-            </p>
-          </div>
-        </section>
-      </div>
+          {/* 4. Dokumenten Cloud & Vault / Website & Marktplatz */}
+          <section className="mb-10 grid grid-cols-1 gap-6 md:grid-cols-2">
+            <DetailCluster
+              label="Dokumenten Cloud & Vault"
+              title="Dokumente, Verträge, Zugänge & Lizenzen sicher verwalten."
+              icon="📂"
+              bullets={[
+                'Dokumenten Cloud mit eigenen Ordnerstrukturen und versionierten Dateien.',
+                'Digitaler Vault für Verträge, Zugangsdaten & Lizenzen – zentral statt über Excel & Notizzettel verteilt.',
+                'Rollen- und projektbasierte Zugriffsrechte – sensible Unterlagen bleiben geschützt.',
+                'Optionale revisionssichere Ablage & Nachvollziehbarkeit, wer was wann geändert oder hochgeladen hat.',
+              ]}
+            />
+            <DetailCluster
+              label="Website, Landingpages & Marktplatz"
+              title="Neue Leads & Aufträge direkt in Ihrem GLENO-Flow."
+              icon="🌐"
+              bullets={[
+                'Website & Landingpage in 2–3 Minuten: Onepager mit Formular, Branding & Textbausteinen.',
+                'Lead-Magnet-Formulare schreiben direkt ins System – inklusive Zuordnung zu Kunde & Projekt.',
+                'Marktplatz-Anfragen werden als Vorgänge in GLENO angelegt – kein Copy & Paste aus E-Mails.',
+                'Chat, Dokumente, Angebote, Aufträge & Rechnungen pro Anfrage gebündelt in einem Vorgang.',
+              ]}
+            />
+          </section>
+
+          {/* 5. Aufgaben & Aktivitäten / Kennzahlen */}
+          <section className="grid grid-cols-1 gap-6 md:grid-cols-2">
+            <DetailCluster
+              label="Aufgaben & Aktivitäten"
+              title="Einheitliche To-dos und Aktivitätsübersicht."
+              icon="✅"
+              bullets={[
+                'Zentrale To-do-Liste über alle Aufträge, Projekte und Kunden – filterbar nach Person & Bereich.',
+                'Automatische Aktivitäten-Historie: Angebote, Statuswechsel, Kommentare, Dokument-Uploads u. v. m.',
+                'Zeitliche Timeline je Vorgang, damit klar ist, was wann passiert ist und was als Nächstes ansteht.',
+                'Persönliche Arbeitsliste für Mitarbeitende: „Heute“, „Diese Woche“ und „Überfällig“ auf einen Blick.',
+              ]}
+            />
+            <DetailCluster
+              label="Übersicht & Kennzahlen"
+              title="Tagesaktuelle betriebswirtschaftliche Auswertungen."
+              icon="📊"
+              bullets={[
+                'Umsatzentwicklung nach Zeitraum, Kunde, Projekt oder Leistungsart.',
+                'Offene Posten & Zahlungseingänge im Blick – inklusive Fälligkeiten.',
+                'Auslastung des Teams und Projektfortschritt auf einen Blick.',
+                'Individuelle Kennzahlenansichten als ruhiges Dashboard statt Zahlen-Wirrwarr.',
+              ]}
+            />
+          </section>
+
+          {/* kein zusätzlicher CTA-Block unten – bewusst clean gehalten */}
+        </div>
+      </main>
     </>
+  )
+}
+
+/* --------------------------- Daten & Komponenten --------------------------- */
+
+const FEATURE_CARDS = [
+  {
+    icon: '📋',
+    title: 'Auftragsmanagement',
+    text:
+      'Vom Erstkontakt bis zum fertigen Auftrag: Status, Verantwortliche, Fristen und Dokumente an einem Ort.',
+  },
+  {
+    icon: '📁',
+    title: 'Projektmanagement',
+    text:
+      'Projekte strukturieren, Arbeitspakete definieren, Fortschritt verfolgen und Engpässe früh erkennen.',
+  },
+  {
+    icon: '🧾',
+    title: 'Rechnungsmanagement',
+    text:
+      'Rechnungen erstellen, offene Posten im Blick behalten und nachvollziehen, welchen Umsatz welche Aufträge bringen.',
+  },
+  {
+    icon: '⏱️',
+    title: 'Zeiterfassung',
+    text:
+      'Projektscharfe Zeiterfassung – Mitarbeitende erfassen Zeiten selbstständig, manuell editierbar und auswertbar.',
+  },
+  {
+    icon: '📅',
+    title: 'Termine & Planung',
+    text:
+      'Einsätze, Kundentermine und interne Meetings so planen, dass Ihr Team weiß, was wann ansteht – als Liste oder Kalender.',
+  },
+  {
+    icon: '🧑‍💼',
+    title: 'Kundenmanagement (CRM)',
+    text:
+      'Alle Kunden, Organisationen & Ansprechpartner mit Historie von Angeboten, Aufträgen, Projekten und Rechnungen.',
+  },
+  {
+    icon: '👤',
+    title: 'Mitarbeitermanagement',
+    text:
+      'Mitarbeiterprofile, Rollen, Berechtigungen und Verantwortlichkeiten mit direkter Verknüpfung zu Projekten & Aufgaben.',
+  },
+  {
+    icon: '📂',
+    title: 'Dokumenten Cloud',
+    text:
+      'Wichtige Dateien und Dokumente strukturiert ablegen, versionieren und mit dem Team teilen – direkt am Vorgang.',
+  },
+  {
+    icon: '🔐',
+    title: 'Vault: Zugänge, Lizenzen & Verträge',
+    text:
+      'Zugänge, Lizenzen und Verträge zentral im Vault verwalten – mit Rollenrechten und sicherer Ablage statt Excel-Listen.',
+  },
+  {
+    icon: '🌐',
+    title: 'Marktplatz für neue Aufträge',
+    text:
+      'Zusätzliche Anfragen über den GLENO Marktplatz, die direkt in Ihren GLENO-Flow übergehen – inklusive Chat & Dokumenten.',
+  },
+  {
+    icon: '💻',
+    title: 'Website & Landingpages',
+    text:
+      'Onepager-Website und Lead-Magnet-Landingpages in 2–3 Minuten aufsetzen – Formulare schreiben direkt ins CRM.',
+  },
+  {
+    icon: '🚚',
+    title: 'Logistik & Ressourcen',
+    text:
+      'Fuhrpark, Werkzeuge und Materialbestände nachvollziehbar zu Projekten & Aufträgen zuordnen.',
+  },
+  {
+    icon: '✅',
+    title: 'Aufgaben & Aktivitäten',
+    text:
+      'Zentrale To-dos und Aktivitätsübersicht über alle Vorgänge, Projekte und Kunden hinweg.',
+  },
+  {
+    icon: '📊',
+    title: 'Übersicht & Kennzahlen',
+    text:
+      'Tagesaktuelle Kennzahlen zu Umsatz, Auslastung, offenen Posten und Projekten – als ruhiges Dashboard.',
+  },
+]
+
+type FeatureCardProps = {
+  icon: string
+  title: string
+  text: string
+}
+
+function FeatureCard({ icon, title, text }: FeatureCardProps) {
+  return (
+    <div className="flex h-full flex-col rounded-2xl border border-slate-200 bg-white p-4 shadow-[0_8px_26px_rgba(15,23,42,0.04)]">
+      <div className="flex items-center gap-3">
+        <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-slate-50 text-xl">
+          {icon}
+        </div>
+        <h3 className="text-sm font-semibold text-slate-900">{title}</h3>
+      </div>
+      <p className="mt-2 text-xs leading-relaxed text-slate-600 sm:text-[13px]">
+        {text}
+      </p>
+    </div>
+  )
+}
+
+type DetailClusterProps = {
+  label: string
+  title: string
+  icon: string
+  bullets: string[]
+}
+
+function DetailCluster({ label, title, icon, bullets }: DetailClusterProps) {
+  return (
+    <section className="rounded-3xl border border-slate-100 bg-white p-5 shadow-[0_12px_34px_rgba(15,23,42,0.05)]">
+      <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-slate-500">
+        <span className="flex h-6 w-6 items-center justify-center rounded-full bg-slate-50 text-base">
+          {icon}
+        </span>
+        <span>{label}</span>
+      </div>
+      <h3 className="mt-2 text-sm font-semibold text-slate-900 sm:text-[15px]">
+        {title}
+      </h3>
+      <ul className="mt-2 space-y-1.5 text-[13px] leading-relaxed text-slate-600">
+        {bullets.map((b) => (
+          <li key={b} className="flex gap-2">
+            <span className="mt-[6px] h-1.5 w-1.5 flex-shrink-0 rounded-full bg-slate-900" />
+            <span>{b}</span>
+          </li>
+        ))}
+      </ul>
+    </section>
   )
 }

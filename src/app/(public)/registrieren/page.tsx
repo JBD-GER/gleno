@@ -8,6 +8,7 @@ import {
 } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
+import Image from 'next/image'
 import { motion } from 'framer-motion'
 import {
   EyeIcon,
@@ -57,7 +58,7 @@ export default function RegisterPage() {
   return (
     <Suspense
       fallback={
-        <div className="min-h-screen bg-[#0b1220]" />
+        <div className="min-h-screen bg-slate-50" />
       }
     >
       <RegisterPageContent />
@@ -103,7 +104,6 @@ function RegisterPageContent() {
     try {
       const paramsRef = searchParams.get('ref')
 
-      // Debug (Browser-Konsole)
       console.log('RegisterPage searchParams:', searchParams.toString())
       console.log('RegisterPage ?ref=', paramsRef)
 
@@ -118,7 +118,6 @@ function RegisterPageContent() {
         return
       }
 
-      // Wenn kein ref in der URL: aus localStorage
       try {
         const stored = localStorage.getItem(REFERRAL_STORAGE_KEY)
         if (stored && stored.trim().length > 0) {
@@ -160,10 +159,8 @@ function RegisterPageContent() {
       const ttq = w.ttq
       if (!ttq || typeof ttq.track !== 'function') return
 
-      // Event-Name so wählen, wie du ihn im TikTok-Event-Manager konfiguriert hast:
-      // z.B. 'CompletePayment' oder 'CompleteRegistration'
       ttq.track('CompleteRegistration', {
-        value: TIKTOK_SIGNUP_VALUE, // reine Zahl, kein €
+        value: TIKTOK_SIGNUP_VALUE,
         currency: 'EUR',
         contents: [
           {
@@ -212,7 +209,6 @@ function RegisterPageContent() {
           accept_privacy: true,
           terms_version: TERMS_VERSION,
           privacy_version: PRIVACY_VERSION,
-          // 👉 Referral-Code mitschicken (kann null sein)
           referral_code: referralCode,
         }),
       })
@@ -225,7 +221,7 @@ function RegisterPageContent() {
         return
       }
 
-      // 👉 HIER TikTok-Event feuern (Wert 10 EUR für Backend-Optimierung)
+      // 👉 TikTok-Event feuern
       trackTikTokSignup()
 
       router.push('/danke')
@@ -236,110 +232,101 @@ function RegisterPageContent() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0b1220]">
-      {/* Glows */}
+    <div className="relative min-h-screen overflow-hidden from-slate-50 via-slate-50 to-sky-50/40">
+      {/* leichte Radial-Glows, sehr hell */}
       <div
-        className="pointer-events-none absolute inset-0 -z-20"
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 -top-40 -z-10 h-80"
         style={{
           background:
-            'radial-gradient(1200px 520px at 50% -10%, rgba(88,101,242,0.14), transparent),' +
-            'radial-gradient(900px 420px at 10% 0%, rgba(88,101,242,0.12), transparent),' +
-            'radial-gradient(900px 420px at 90% 0%, rgba(139,92,246,0.10), transparent)',
+            'radial-gradient(800px 320px at 15% 0%, rgba(88,101,242,0.14), transparent),' +
+            'radial-gradient(900px 360px at 85% 0%, rgba(129,140,248,0.14), transparent)',
         }}
       />
-      <motion.div
-        className="absolute -top-32 -left-20 h-[34rem] w-[34rem] rounded-full blur-3xl"
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-40 left-1/2 -z-10 h-80 w-[1100px] -translate-x-1/2 rounded-[50%]"
         style={{
           background:
-            'radial-gradient(closest-side, rgba(88,101,242,.20), rgba(88,101,242,0))',
+            'radial-gradient(600px 220px at 50% 100%, rgba(15,23,42,0.08), transparent)',
         }}
-        initial={{ opacity: 0.5, scale: 0.9 }}
-        animate={{ opacity: [0.5, 0.65, 0.5], scale: [0.9, 1, 0.9] }}
-        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        className="absolute -bottom-40 -right-20 h-[38rem] w-[38rem] rounded-full blur-3xl"
-        style={{
-          background:
-            'radial-gradient(closest-side, rgba(139,92,246,.18), rgba(139,92,246,0))',
-        }}
-        initial={{ opacity: 0.45, scale: 0.95 }}
-        animate={{ opacity: [0.45, 0.6, 0.45], scale: [0.95, 1.03, 0.95] }}
-        transition={{ duration: 13, repeat: Infinity, ease: 'easeInOut' }}
       />
 
-      <div className="relative z-10 mx-auto max-w-6xl px-4 py-10 sm:py-16">
-        {/* Intro */}
-        <div className="mb-8 text-center">
-          <span className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/90 ring-1 ring-white/20 backdrop-blur">
-            <ShieldCheckIcon className="h-4 w-4" />
-            7 Tage kostenlos – ohne Kreditkarte
-          </span>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Erstelle dein Konto in wenigen Minuten
+      <div className="relative mx-auto max-w-6xl px-4 py-10 sm:py-16">
+        {/* Kopfbereich / Hero */}
+        <header className="mb-8 text-center sm:mb-10">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[11px] font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200">
+            <ShieldCheckIcon className="h-4 w-4 text-emerald-500" />
+            <span>7 Tage Testphase sichern – alle Funktionen inklusive</span>
+          </div>
+
+          <h1 className="mt-4 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+            Erstelle dein GLENO Konto in wenigen Minuten.
           </h1>
-          <p className="mx-auto mt-2 max-w-2xl text-sm text-white/70">
-            All-in-One für Angebote, Material, Team &amp; Benachrichtigungen.
+          <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+            Teste die GLENO Unternehmenssoftware 7 Tage lang mit allen Bereichen:
+            Aufträge, Projekte, Rechnungen, Zeiten, Team, Dokumente &amp; Logistik.
+            Danach entscheidest du in Ruhe, ob du weitermachst.
           </p>
 
-          {/* Hinweis auf Empfehlungs-Code, falls vorhanden */}
           {hasReferral && (
-            <p className="mx-auto mt-3 max-w-xl text-xs text-emerald-200">
+            <p className="mx-auto mt-3 max-w-xl text-xs text-emerald-700">
               Du registrierst dich mit einem Empfehlungs-Code:{' '}
-              <span className="rounded-md bg-emerald-900/40 px-2 py-1 font-mono text-[11px]">
+              <span className="rounded-md bg-emerald-50 px-2 py-1 font-mono text-[11px] text-emerald-800 ring-1 ring-emerald-200">
                 {referralCode}
               </span>
             </p>
           )}
-        </div>
+        </header>
 
-        {/* Card */}
+        {/* Haupt-Card: Formular + Info-Spalte */}
         <motion.div
-          className="grid grid-cols-1 gap-6 rounded-3xl border border-white/20 bg-white/10 p-6 shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-2xl ring-1 ring-white/10 sm:p-8 lg:grid-cols-2"
+          className="grid grid-cols-1 gap-6 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-8 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]"
           initial={{ opacity: 0, y: 18, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
+          transition={{ duration: 0.45, ease: [0.2, 0.8, 0.2, 1] }}
         >
-          {/* Formular */}
+          {/* Formular-Spalte */}
           <div>
-            <h2 className="mb-5 text-center text-2xl font-semibold text-white">
-              Registrierung
-            </h2>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Konto anlegen &amp; 7 Tage testen
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                Keine Kreditkarte nötig · Monatlich kündbar nach der Testphase
+              </p>
+            </div>
 
             {error && (
-              <div className="mb-4 rounded-lg border border-rose-300/40 bg-rose-300/10 p-3 text-rose-100">
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-700">
                 {error}
               </div>
             )}
 
-            <form
-              onSubmit={handleSubmit}
-              autoComplete="on"
-              className="space-y-4"
-            >
+            <form onSubmit={handleSubmit} autoComplete="on" className="space-y-4">
               {/* Name */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-white/80">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
                     Vorname
                   </label>
                   <input
                     name="given-name"
                     autoComplete="given-name"
-                    className="w-full rounded-lg border border-white/20 bg-white/80 px-4 py-3 text-black outline-none focus:border-white/30 focus:bg-white"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                     value={firstName}
                     onChange={(e) => setFirstName(e.target.value)}
                     required
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-white/80">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
                     Nachname
                   </label>
                   <input
                     name="family-name"
                     autoComplete="family-name"
-                    className="w-full rounded-lg border border-white/20 bg-white/80 px-4 py-3 text-black outline-none focus:border-white/30 focus:bg-white"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                     value={lastName}
                     onChange={(e) => setLastName(e.target.value)}
                     required
@@ -349,28 +336,29 @@ function RegisterPageContent() {
 
               {/* Firma optional */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-slate-700">
                   Firmenname (optional)
                 </label>
                 <input
                   name="organization"
                   autoComplete="organization"
-                  className="w-full rounded-lg border border-white/20 bg-white/80 px-4 py-3 text-black outline-none focus:border-white/30 focus:bg-white"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                   value={companyName}
                   onChange={(e) => setCompanyName(e.target.value)}
+                  placeholder="Meine Firma GmbH"
                 />
               </div>
 
               {/* Adresse */}
               <div className="grid grid-cols-1 gap-4 sm:grid-cols-5">
                 <div className="sm:col-span-3">
-                  <label className="mb-1 block text-xs font-medium text-white/80">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
                     Straße
                   </label>
                   <input
                     name="street-address"
                     autoComplete="address-line1"
-                    className="w-full rounded-lg border border-white/20 bg-white/80 px-4 py-3 text-black outline-none focus:border-white/30 focus:bg-white"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                     value={street}
                     onChange={(e) => setStreet(e.target.value)}
                     required
@@ -378,13 +366,13 @@ function RegisterPageContent() {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-white/80">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
                     Hausnummer
                   </label>
                   <input
                     name="address-line2"
                     autoComplete="address-line2"
-                    className="w-full rounded-lg border border-white/20 bg-white/80 px-4 py-3 text-black outline-none focus:border-white/30 focus:bg-white"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                     value={houseNo}
                     onChange={(e) => setHouseNo(e.target.value)}
                     required
@@ -392,14 +380,14 @@ function RegisterPageContent() {
                   />
                 </div>
                 <div>
-                  <label className="mb-1 block text-xs font-medium text-white/80">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
                     PLZ
                   </label>
                   <input
                     name="postal-code"
                     autoComplete="postal-code"
                     inputMode="numeric"
-                    className="w-full rounded-lg border border-white/20 bg-white/80 px-4 py-3 text-black outline-none focus:border-white/30 focus:bg-white"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                     value={zip}
                     onChange={(e) => setZip(e.target.value)}
                     required
@@ -407,13 +395,13 @@ function RegisterPageContent() {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-white/80">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
                     Ort
                   </label>
                   <input
                     name="address-level2"
                     autoComplete="address-level2"
-                    className="w-full rounded-lg border border-white/20 bg-white/80 px-4 py-3 text-black outline-none focus:border-white/30 focus:bg-white"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                     value={city}
                     onChange={(e) => setCity(e.target.value)}
                     required
@@ -421,7 +409,7 @@ function RegisterPageContent() {
                   />
                 </div>
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-white/80">
+                  <label className="mb-1 block text-xs font-medium text-slate-700">
                     Land
                   </label>
                   <select
@@ -430,7 +418,7 @@ function RegisterPageContent() {
                     value={country}
                     onChange={(e) => setCountry(e.target.value)}
                     required
-                    className="w-full appearance-none rounded-lg border border-white/20 bg-white/80 px-4 py-3 text-black outline-none focus:border-white/30 focus:bg-white"
+                    className="w-full appearance-none rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                   >
                     {COUNTRY_OPTIONS.map((opt) => (
                       <option key={opt.value} value={opt.value}>
@@ -443,13 +431,13 @@ function RegisterPageContent() {
 
               {/* USt-ID optional */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-slate-700">
                   USt-ID (optional)
                 </label>
                 <input
                   name="vat-number"
                   autoComplete="off"
-                  className="w-full rounded-lg border border-white/20 bg-white/80 px-4 py-3 text-black outline-none focus:border-white/30 focus:bg-white"
+                  className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                   value={vatNumber}
                   onChange={(e) => setVatNumber(e.target.value)}
                   placeholder="DE123456789"
@@ -458,7 +446,7 @@ function RegisterPageContent() {
 
               {/* E-Mail */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-slate-700">
                   E-Mail
                 </label>
                 <input
@@ -468,12 +456,12 @@ function RegisterPageContent() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  className={`w-full rounded-lg border px-4 py-3 text-black outline-none focus:bg-white ${
+                  className={`w-full rounded-lg border px-3.5 py-2.5 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:ring-[1px] ${
                     email.length === 0
-                      ? 'border-white/20 bg-white/80 focus:border-white/30'
+                      ? 'border-slate-200 bg-white focus:border-slate-400 focus:ring-slate-300'
                       : emailValid
-                      ? 'border-emerald-400/70 bg-white'
-                      : 'border-amber-400/70 bg-white'
+                      ? 'border-emerald-300 bg-emerald-50/60 focus:border-emerald-400 focus:ring-emerald-200'
+                      : 'border-amber-300 bg-amber-50/60 focus:border-amber-400 focus:ring-amber-200'
                   }`}
                   placeholder="name@firma.de"
                 />
@@ -481,7 +469,7 @@ function RegisterPageContent() {
 
               {/* Passwort */}
               <div>
-                <label className="mb-1 block text-xs font-medium text-white/80">
+                <label className="mb-1 block text-xs font-medium text-slate-700">
                   Passwort
                 </label>
                 <div className="relative">
@@ -493,13 +481,13 @@ function RegisterPageContent() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={8}
-                    className="w-full rounded-lg border border-white/20 bg-white/80 px-4 py-3 pr-12 text-black outline-none focus:border-white/30 focus:bg-white"
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 pr-11 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                     placeholder="Mind. 8 Zeichen"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPw((s) => !s)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-600 hover:bg-slate-200/70"
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 hover:bg-slate-100"
                     aria-label={showPw ? 'Passwort verbergen' : 'Passwort anzeigen'}
                   >
                     {showPw ? (
@@ -509,7 +497,7 @@ function RegisterPageContent() {
                     )}
                   </button>
                 </div>
-                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-white/20">
+                <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-slate-100">
                   <div
                     className="h-full"
                     style={{
@@ -524,18 +512,18 @@ function RegisterPageContent() {
                     }}
                   />
                 </div>
-                <p className="mt-1 text-[12px] text-white/70">
+                <p className="mt-1 text-[12px] text-slate-500">
                   Passwortstärke: {pwLabel}
                 </p>
               </div>
 
               {/* Rechtliches */}
-              <div className="space-y-2 rounded-xl border border-white/20 bg-white/5 p-3">
-                <label className="flex items-start gap-2 text-sm text-white/90">
+              <div className="space-y-2 rounded-xl border border-slate-200 bg-slate-50 px-3.5 py-3">
+                <label className="flex items-start gap-2 text-xs text-slate-800">
                   <input
                     type="checkbox"
                     name="accept-terms"
-                    className="mt-1"
+                    className="mt-0.5"
                     checked={acceptTerms}
                     onChange={(e) => setAcceptTerms(e.target.checked)}
                     required
@@ -544,18 +532,18 @@ function RegisterPageContent() {
                     Ich akzeptiere die{' '}
                     <Link
                       href="/agb"
-                      className="underline underline-offset-2 hover:opacity-90"
+                      className="font-medium text-slate-900 underline underline-offset-2"
                     >
                       AGB
                     </Link>
                     .
                   </span>
                 </label>
-                <label className="flex items-start gap-2 text-sm text-white/90">
+                <label className="flex items-start gap-2 text-xs text-slate-800">
                   <input
                     type="checkbox"
                     name="accept-privacy"
-                    className="mt-1"
+                    className="mt-0.5"
                     checked={acceptPrivacy}
                     onChange={(e) => setAcceptPrivacy(e.target.checked)}
                     required
@@ -564,14 +552,14 @@ function RegisterPageContent() {
                     Ich habe die{' '}
                     <Link
                       href="/datenschutz"
-                      className="underline underline-offset-2 hover:opacity-90"
+                      className="font-medium text-slate-900 underline underline-offset-2"
                     >
                       Datenschutzerklärung
                     </Link>{' '}
                     gelesen und akzeptiere sie.
                   </span>
                 </label>
-                <p className="mt-1 text-[11px] text-white/60">
+                <p className="mt-1 text-[11px] text-slate-500">
                   Versionen: AGB v{TERMS_VERSION} · Datenschutz v{PRIVACY_VERSION}
                 </p>
               </div>
@@ -580,13 +568,16 @@ function RegisterPageContent() {
               <button
                 type="submit"
                 disabled={!canSubmit}
-                className="group relative mt-2 w-full overflow-hidden rounded-full bg-indigo-600 px-6 py-3 font-semibold text-white shadow-lg transition enabled:hover:bg-indigo-700 disabled:opacity-50"
-                style={{ backgroundColor: PRIMARY }}
+                className="group relative mt-1 w-full overflow-hidden rounded-full px-6 py-3 text-sm font-semibold text-white
+             bg-[radial-gradient(circle_at_0%_0%,rgba(15,23,42,0.15),#0F172A)]
+             shadow-[0_14px_40px_rgba(15,23,42,0.45)]
+             transition hover:shadow-[0_18px_55px_rgba(15,23,42,0.7)]
+             disabled:opacity-60"
               >
                 <span
                   className={`${loading ? 'opacity-0' : 'opacity-100'} transition-opacity`}
                 >
-                  Konto erstellen
+                  Konto erstellen &amp; 7 Tage testen
                 </span>
                 {loading && (
                   <span className="absolute inset-0 grid place-items-center">
@@ -613,60 +604,119 @@ function RegisterPageContent() {
                 )}
               </button>
 
-              <p className="mt-4 text-center text-xs text-white/60">
-                <CheckCircleIcon className="mr-1 inline h-4 w-4 align-[-2px] text-emerald-300" />
-                Nach der Registrierung erhältst du eine E-Mail zur Bestätigung.
+              <p className="mt-3 flex items-center justify-center gap-2 text-[11px] text-slate-500">
+                <CheckCircleIcon className="h-4 w-4 text-emerald-500" />
+                7 Tage kostenlos · Du kannst die Testphase jederzeit beenden.
               </p>
             </form>
 
-            <p className="mt-6 text-center text-sm text-white/80">
+            <p className="mt-6 text-center text-sm text-slate-600">
               Bereits ein Konto?{' '}
               <Link
                 href="/login"
-                className="font-semibold text-white hover:underline"
+                className="font-semibold text-slate-900 underline underline-offset-2"
               >
                 Jetzt einloggen
               </Link>
             </p>
           </div>
 
-          {/* Info-Spalte */}
-          <div className="flex flex-col justify-center rounded-2xl border border-white/20 bg-white/10 p-6 ring-1 ring-white/10 sm:p-8">
-            <h3 className="text-2xl font-semibold text-white">
-              7 Tage kostenlos &amp; unverbindlich
-            </h3>
-            <p className="mt-2 text-white/80">
-              Teste alle Features ohne Risiko. Deine Daten bleiben in der EU.
-            </p>
-            <ul className="mt-5 space-y-3 text-white/85">
-              {[
-                'Angebot → Auftrag → Rechnung (PDF)',
-                'Material & Mindestmengen mit Benachrichtigungen',
-                'Team- & Terminplanung inkl. ICS-Export',
-                'Fotos & Dokumente (Drag & Drop, Lightbox)',
-              ].map((t) => (
-                <li key={t} className="flex items-start gap-2">
-                  <CheckCircleIcon className="mt-0.5 h-5 w-5 text-emerald-300" />
-                  <span className="text-sm">{t}</span>
-                </li>
-              ))}
-            </ul>
-            <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-1">
-              <a
-                href="tel:+4950353169991"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/25"
-              >
-                <PhoneIcon className="h-5 w-5" /> +49&nbsp;5035&nbsp;3169991
-              </a>
-              <a
-                href="mailto:support@gleno.de"
-                className="inline-flex items-center justify-center gap-2 rounded-full bg-white/15 px-4 py-2 text-sm font-medium text-white ring-1 ring-white/20 backdrop-blur transition hover:bg-white/25"
-              >
-                <EnvelopeIcon className="h-5 w-5" /> support@gleno.de
-              </a>
+          {/* Info-/Trust-Spalte mit Bild */}
+          <div className="flex flex-col justify-between rounded-2xl bg-slate-50/80 px-5 py-6 ring-1 ring-slate-100 sm:px-6 sm:py-7">
+            <div>
+              {/* Team-Bild oben */}
+
+              <h3 className="text-lg font-semibold text-slate-900">
+                Alle Funktionen inklusive – ein Preis später.
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Während der 7-tägigen Testphase kannst du GLENO vollumfänglich nutzen:
+                Auftragsmanagement, Projekte, Rechnungen, Zeiterfassung, Team,
+                Dokumenten-Cloud, Logistik, Vault &amp; Kennzahlen.
+              </p>
+
+              <ul className="mt-4 space-y-2.5 text-sm text-slate-700">
+                {[
+                  'Unbegrenzte Aufträge & Projekte – ohne Funktionsbeschränkung.',
+                  'Beliebig viele Team-Mitglieder hinzufügen, kein Nutzer-Limit.',
+                  'Server in der EU, DSGVO-konforme Unternehmenssoftware.',
+                  'Export deiner wichtigsten Daten jederzeit möglich.',
+                ].map((t) => (
+                  <li key={t} className="flex items-start gap-2">
+                    <CheckCircleIcon className="mt-0.5 h-4 w-4 text-emerald-500" />
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div className="mt-6 border-t border-slate-200 pt-5">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Noch Fragen vor der Registrierung?
+              </p>
+              <div className="flex flex-wrap items-center gap-3 text-sm">
+                <Link
+                  href="/beratung"
+                  className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+                >
+                  <ShieldCheckIcon className="h-4 w-4" />
+                  30 Tage Testphase sichern
+                </Link>
+                <a
+                  href="tel:+4950353169991"
+                  className="inline-flex items-center justify-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900"
+                >
+                  <PhoneIcon className="h-4 w-4" />
+                  +49&nbsp;5035&nbsp;3169991
+                </a>
+                <a
+                  href="mailto:support@gleno.de"
+                  className="inline-flex items-center justify-center gap-2 text-xs font-medium text-slate-600 hover:text-slate-900"
+                >
+                  <EnvelopeIcon className="h-4 w-4" />
+                  support@gleno.de
+                </a>
+              </div>
             </div>
           </div>
         </motion.div>
+
+        {/* Auszeichnungen / Social Proof unterhalb der Card */}
+        <section className="mt-6 rounded-3xl border border-slate-200 bg-white/95 px-5 py-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-md text-[11px] sm:text-xs text-slate-600">
+              <p className="text-sm font-semibold text-slate-900 sm:text-[13px]">
+                GLENO wird bereits von Dienstleistern &amp; KMU im Alltag getestet.
+              </p>
+              <p className="mt-1 leading-relaxed">
+                Entwickelt von Unternehmern aus der Praxis – mit Fokus auf klare Abläufe
+                statt Feature-Wirrwarr. Feedback aus Pilot-Teams fließt direkt in die
+                Weiterentwicklung ein.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs">
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                <span className="mr-1 text-amber-400">★ ★ ★ ★ ★</span>
+                4,8 / 5 in Pilot-Teams
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                Made in Germany
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                Server in der EU
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                Für Dienstleister &amp; KMU entwickelt
+              </span>
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                Ohne Verbindlichkeit
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                0€ Kosten für die Testphase
+              </span>
+            </div>
+          </div>
+        </section>
       </div>
     </div>
   )

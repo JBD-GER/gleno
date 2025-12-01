@@ -19,27 +19,27 @@ const PRIMARY = '#0a1b40'
 export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
   title: {
-    default: 'Support – GLENO',
+    default: 'Support – GLENO Unternehmenssoftware',
     template: '%s | GLENO',
   },
   description:
-    'Support für GLENO: Telefon & E-Mail, schnelle Hilfe, Import, Status & FAQ. All-in-One Plattform für Agenturen & Dienstleister.',
+    'Support für die GLENO Unternehmenssoftware: Telefon & E-Mail, Hilfe bei Einrichtung, Import, Datenumzug, Sicherheit und Fragen zum Alltag mit Aufträgen, Projekten, Zeiten & Rechnungen.',
   alternates: { canonical: `${SITE_URL}/support` },
   openGraph: {
     type: 'website',
     url: `${SITE_URL}/support`,
     siteName: SITE_NAME,
-    title: 'Support – GLENO',
+    title: 'Support – GLENO Unternehmenssoftware',
     description:
-      'Telefon & E-Mail Support, Hilfe bei Einrichtung, Import, CRM, Marktplatz & Website-Modul.',
+      'Persönlicher Support für die GLENO All-in-One Unternehmenssoftware: Hilfe bei Setup, Datenimport, Prozessen & Sicherheit – telefonisch oder per E-Mail.',
     images: [{ url: `${SITE_URL}/og/og-support.jpg`, width: 1200, height: 630 }],
     locale: 'de_DE',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Support – GLENO',
+    title: 'Support – GLENO Unternehmenssoftware',
     description:
-      'Telefon & E-Mail Support, Hilfe bei Einrichtung, Import, CRM, Marktplatz & Website-Modul.',
+      'Telefon & E-Mail Support für die GLENO Unternehmenssoftware. Unterstützung bei Einrichtung, Datenimport & laufendem Betrieb.',
     images: [`${SITE_URL}/og/og-support.jpg`],
   },
   robots: { index: true, follow: true },
@@ -62,7 +62,7 @@ export default function SupportPage() {
         }}
       />
 
-      {/* Hero – Glass */}
+      {/* Hero – Glass / Unternehmenssoftware-Support */}
       <section className="relative">
         {/* Hintergrund-Glow */}
         <div
@@ -87,25 +87,26 @@ export default function SupportPage() {
           }}
         />
 
-        <div className="relative mx-auto max-w-6xl px-6 pt-12 sm:pt-16">
-          <div className="rounded-3xl border border-white/60 bg-white/70 p-10 text-center shadow-[0_18px_50px_rgba(2,6,23,0.08)] backdrop-blur-xl ring-1 ring-white/60 sm:p-14">
+        <div className="relative mx-auto max-w-7xl px-6 pt-12 sm:pt-16">
+          <div className="rounded-3xl border border-white/60 bg-white/75 p-10 text-center shadow-[0_18px_50px_rgba(2,6,23,0.08)] backdrop-blur-xl ring-1 ring-white/60 sm:p-14">
             <p className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full bg-white/85 px-3 py-1 text-[11px] font-semibold text-slate-900 ring-1 ring-white/60">
               <span
                 className="rounded-full px-2 py-0.5 text-white"
                 style={{ backgroundColor: PRIMARY }}
               >
-                Hilfe
+                Support
               </span>
-              <span>Persönlicher Support – Telefon & E-Mail</span>
+              <span>Persönlicher Ansprechpartner für Ihre Unternehmenssoftware</span>
             </p>
 
             <h1 className="text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
-              Wir helfen dir schnell & unkompliziert
+              Wir unterstützen Sie beim Arbeiten mit GLENO.
             </h1>
-            <p className="mx-auto mt-3 max-w-2xl text-base leading-relaxed text-slate-700">
-              Fragen zu Einrichtung, Import, CRM, Marktplatz, Website-Modul oder
-              Abrechnung? Melde dich gerne – werktags reagieren wir in der Regel
-              innerhalb weniger Stunden.
+            <p className="mx-auto mt-3 max-w-3xl text-base leading-relaxed text-slate-700">
+              Ob Sie GLENO gerade einführen oder bereits täglich nutzen – bei Fragen
+              zu Einrichtung, Datenimport, Prozessen oder Sicherheit erreichen Sie uns
+              direkt. Unser Ziel: Ihre All-in-One Unternehmenssoftware soll sich im
+              Alltag ruhig und verlässlich anfühlen.
             </p>
 
             {/* Kontakt-CTA */}
@@ -125,7 +126,7 @@ export default function SupportPage() {
               </a>
               <a
                 href="mailto:support@gleno.de"
-                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/60 bg-white/80 px-6 py-3 text-sm font-semibold text-slate-900 ring-1 ring-white/60 backdrop-blur hover:bg-white"
+                className="inline-flex items-center justify-center gap-2 rounded-full border border-white/60 bg-white/85 px-6 py-3 text-sm font-semibold text-slate-900 ring-1 ring-white/60 backdrop-blur hover:bg-white"
                 aria-label="E-Mail an den Support schreiben"
               >
                 <EnvelopeIcon className="h-5 w-5" />
@@ -134,30 +135,30 @@ export default function SupportPage() {
             </div>
 
             <p className="mt-4 text-xs text-slate-500">
-              Mo–Fr 9–17 Uhr • Server in der EU • DSGVO-konform
+              Mo–Fr 9–17 Uhr · Server in der EU · DSGVO-konforme Unternehmenssoftware
             </p>
           </div>
         </div>
       </section>
 
-      {/* Quick Cards */}
-      <section className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-6 sm:grid-cols-3">
+      {/* Quick Cards – Selbsthilfe & Status */}
+      <section className="mx-auto grid max-w-7xl grid-cols-1 gap-6 px-6 sm:grid-cols-3">
         {[
           {
             title: 'Import & Daten',
-            desc: 'Vorlagen & Anleitung für den Import deiner Daten.',
+            desc: 'CSV-Vorlagen & Anleitungen für den Import von Kunden, Projekten & Stammdaten.',
             href: '/docs/csv-vorlagen',
             icon: DocumentArrowDownIcon,
           },
           {
             title: 'System-Status',
-            desc: 'Verfügbarkeit & geplante Wartungen im Blick.',
+            desc: 'Verfügbarkeit der GLENO-Unternehmenssoftware & geplante Wartungen im Überblick.',
             href: '/status',
             icon: ShieldCheckIcon,
           },
           {
             title: 'Hilfe-Center',
-            desc: 'Schritt-für-Schritt-Guides & Best Practices zu GLENO.',
+            desc: 'Schritt-für-Schritt-Guides zu Aufträgen, Projekten, Zeiten, Rechnungen & mehr.',
             href: '/docs',
             icon: LifebuoyIcon,
           },
@@ -165,14 +166,12 @@ export default function SupportPage() {
           <Link
             key={title}
             href={href}
-            className="group rounded-2xl border border-white/60 bg-white/70 p-6 shadow-[0_12px_36px_rgba(2,6,23,0.07)] backdrop-blur-xl ring-1 ring-white/60 transition hover:shadow-[0_16px_44px_rgba(2,6,23,0.09)]"
+            className="group rounded-2xl border border-white/60 bg-white/75 p-6 shadow-[0_12px_36px_rgba(2,6,23,0.07)] backdrop-blur-xl ring-1 ring-white/60 transition hover:shadow-[0_16px_44px_rgba(2,6,23,0.09)]"
           >
-            <div className="mb-3 inline-flex rounded-xl bg-white/80 p-3 ring-1 ring-white/60">
+            <div className="mb-3 inline-flex rounded-xl bg-white/90 p-3 ring-1 ring-white/70">
               <Icon className="h-6 w-6 text-slate-900" />
             </div>
-            <h3 className="text-base font-semibold text-slate-900">
-              {title}
-            </h3>
+            <h3 className="text-base font-semibold text-slate-900">{title}</h3>
             <p className="mt-1 text-sm leading-relaxed text-slate-700">
               {desc}
             </p>
@@ -183,39 +182,56 @@ export default function SupportPage() {
         ))}
       </section>
 
-      {/* FAQ */}
-      <section className="mx-auto max-w-6xl px-6">
+      {/* FAQ – typische Support-Themen rund um Unternehmenssoftware */}
+      <section className="mx-auto max-w-7xl px-6">
         <h2 className="mb-2 flex items-center gap-2 text-2xl font-semibold tracking-tight text-slate-900">
           <QuestionMarkCircleIcon className="h-6 w-6 text-slate-400" />
-          Häufige Fragen
+          Häufige Fragen zur Unterstützung mit GLENO
         </h2>
+        <p className="max-w-3xl text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+          Die häufigsten Support-Themen rund um Einrichtung, Datenübernahme und den
+          täglichen Einsatz der GLENO Unternehmenssoftware.
+        </p>
 
-        <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
           {[
             {
-              q: 'Wie starte ich mit GLENO?',
-              a: 'Registriere dein Konto, lege dein Unternehmen an und folge den Schritten in der Dokumentation. Bei Fragen hilft der Support.',
+              q: 'Wie starte ich mit der GLENO Unternehmenssoftware?',
+              a: 'Sie registrieren Ihr Konto, legen Ihr Unternehmen an und folgen dem Einrichtungs-Assistenten. Im Hilfe-Center finden Sie Emp­fehlungen für den Start mit Aufträgen, Projekten, Zeiten und Rechnungen. Wenn Sie möchten, begleiten wir Sie per Telefon oder E-Mail.',
             },
             {
-              q: 'Wie importiere ich bestehende Daten?',
-              a: 'Über passende CSV-Vorlagen. Im Hilfe-Center findest du Beispiele & Erklärungen.',
+              q: 'Wie importiere ich bestehende Kunden- und Projektdaten?',
+              a: 'Über CSV-Vorlagen können Sie Kunden, Kontakte, Projekte und weitere Stammdaten in GLENO importieren. Im Bereich „Import & Daten“ finden Sie passende Vorlagen, Beispiele und Erklärungen. Bei Fragen unterstützen wir Sie gerne.',
             },
             {
-              q: 'Welche Support-Kanäle gibt es?',
-              a: 'Telefon & E-Mail. Wir antworten in der Regel werktags innerhalb weniger Stunden.',
+              q: 'Welche Support-Kanäle bietet GLENO?',
+              a: 'Sie erreichen uns per E-Mail und telefonisch. In der Regel antworten wir werktags innerhalb weniger Stunden. Für komplexere Themen können wir einen kurzen gemeinsamen Termin vereinbaren.',
             },
             {
-              q: 'Wo liegen meine Daten?',
-              a: 'In der EU, verschlüsselt übertragen. Exporte sind jederzeit möglich.',
+              q: 'Unterstützen Sie bei der Abbildung unserer Prozesse?',
+              a: 'Ja. Viele Unternehmen nutzen GLENO für Auftragsmanagement, Projektsteuerung, Zeiterfassung und Rechnungen. Wir besprechen mit Ihnen, wie Ihre Abläufe aussehen und welches Setup in GLENO dazu passt.',
+            },
+            {
+              q: 'Wo werden meine Unternehmensdaten gespeichert?',
+              a: 'GLENO wird auf Servern in der EU betrieben. Die Daten werden verschlüsselt übertragen, regelmäßige Backups sind Teil des Betriebs. Auf Wunsch erläutern wir Ihnen gerne die wichtigsten technischen und organisatorischen Maßnahmen.',
+            },
+            {
+              q: 'Was ist, wenn sich unser Bedarf später ändert?',
+              a: 'GLENO ist modular gedacht – Sie können Bereiche wie Logistik, Vault oder Website-Builder nach und nach stärker nutzen, ohne das System wechseln zu müssen. Wenn Sie GLENO irgendwann verlassen möchten, lassen sich relevante Daten exportieren.',
             },
           ].map((f) => (
             <details
               key={f.q}
-              className="group rounded-2xl border border-white/60 bg-white/70 backdrop-blur-xl ring-1 ring-white/60 open:shadow-[0_10px_34px_rgba(2,6,23,0.07)]"
+              className="group rounded-2xl border border-white/60 bg-white/75 backdrop-blur-xl ring-1 ring-white/60 open:shadow-[0_10px_34px_rgba(2,6,23,0.07)]"
             >
               <summary className="cursor-pointer list-none rounded-2xl p-5 text-left">
-                <div className="text-base font-medium text-slate-900">
-                  {f.q}
+                <div className="flex items-center justify-between gap-3">
+                  <div className="text-base font-medium text-slate-900">
+                    {f.q}
+                  </div>
+                  <span className="text-xs text-slate-400 transition-transform group-open:rotate-90">
+                    ▸
+                  </span>
                 </div>
                 <div className="mt-1 hidden text-sm text-slate-700 group-open:block">
                   {f.a}
@@ -228,13 +244,37 @@ export default function SupportPage() {
           ))}
         </div>
 
-        {/* SEO-Abschluss */}
-        <p className="mt-8 text-sm leading-relaxed text-slate-600">
-          Noch Fragen zu <strong>GLENO</strong> oder zur Einrichtung deiner
-          All-in-One Plattform für Marktplatz, CRM und Website? Ruf uns an oder
-          schreib eine E-Mail – wir unterstützen dich beim Start und bei allen
-          Schritten im laufenden Betrieb.
+        {/* SEO-Abschluss / ruhiger Text */}
+        <p className="mt-8 text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+          Wenn Sie eine <strong>zentrale Unternehmenssoftware</strong> für Aufträge,
+          Projekte, Zeiten, Rechnungen, Team, Dokumente und Logistik nutzen möchten,
+          sollen Support-Fragen nicht zur zusätzlichen Baustelle werden. Melden Sie sich
+          einfach telefonisch oder per E-Mail – wir helfen Ihnen dabei, GLENO sauber
+          einzurichten und im Alltag entspannt zu nutzen.
         </p>
+
+        <div className="mt-5 flex flex-wrap items-center gap-3 text-sm">
+          <a
+            href="tel:+4950353169991"
+            className="inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-white px-5 py-2.5 font-semibold text-slate-900 shadow-sm hover:bg-slate-50"
+          >
+            <PhoneIcon className="h-4 w-4" />
+            Support anrufen
+          </a>
+          <a
+            href="mailto:support@gleno.de"
+            className="inline-flex items-center justify-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
+          >
+            <EnvelopeIcon className="h-4 w-4" />
+            E-Mail an support@gleno.de
+          </a>
+          <Link
+            href="/beratung"
+            className="inline-flex items-center justify-center gap-2 text-sm font-medium text-slate-700 hover:text-slate-900"
+          >
+            Oder zuerst eine kurze Beratung zu GLENO buchen ↗
+          </Link>
+        </div>
       </section>
     </div>
   )

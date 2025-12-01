@@ -26,8 +26,9 @@ export default function Footer() {
                 />
               </div>
               <p className="mt-1 text-sm leading-relaxed text-slate-700">
-                GLENO vereint Marktplatz, CRM und Website in einer Plattform.
-                Ein Login. Ein Preis. Alles drin – für moderne Dienstleister, Agenturen & Unternehmen.
+                GLENO ist Ihre cloudbasierte All-in-One Unternehmenssoftware für
+                Dienstleister, Agenturen &amp; KMU – mit integriertem Marktplatz
+                für neue Aufträge.
               </p>
             </div>
 

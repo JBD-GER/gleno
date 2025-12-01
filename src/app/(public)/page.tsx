@@ -204,7 +204,7 @@ export default function HomePage() {
         />
 
         <div className="relative mx-auto max-w-7xl px-6 pt-16 pb-24 sm:pt-20">
-          {/* Pain-Badge oben */}
+                    {/* Pain-Badge oben */}
           <div className="mx-auto flex max-w-3xl items-center justify-center">
             <div className="inline-flex items-center gap-1.5 rounded-full bg-slate-950/80 px-3 py-0.5 text-[9px] font-medium text-slate-200 ring-1 ring-slate-700/80 backdrop-blur">
               <span className="grid h-4 w-4 place-content-center rounded-full bg-slate-800 text-[9px] text-white">
@@ -248,8 +248,7 @@ export default function HomePage() {
               <span className="ml-1.5 text-xs">↗</span>
             </Link>
             <p className="text-[11px] text-slate-300">
-              Kostenlos &amp; unverbindlich · Keine Kreditkarte · Erste Einschätzung in
-              wenigen Minuten
+              Kostenlos &amp; unverbindlich · Keine Kreditkarte · Made in Germany 🇩🇪
             </p>
           </div>
 
@@ -564,15 +563,15 @@ export default function HomePage() {
               },
               {
                 icon: '👥',
-                title: 'Team & Verantwortlichkeiten',
+                title: 'Mitarbeiter- & Kundenrmanagement',
                 text:
-                  'Mitarbeiterzugänge, Rollen und Zuständigkeiten klar definieren – so weiß jede Person, was zu tun ist.',
+                  'Mitarbeiter & Kundendaten zentral verwalten & Interaktionen dokumentieren.',
               },
               {
                 icon: '📂',
-                title: 'Dokumente & Nachweise',
+                title: 'Dokumenten Cloud',
                 text:
-                  'Verträge, Protokolle, Nachweise – direkt an Aufträgen und Projekten abgelegt und schnell auffindbar.',
+                  'Wichtige Dateien und Dokumente strukturiert ablegen, versionieren und mit dem Team teilen.',
               },
               {
                 icon: '🌐',

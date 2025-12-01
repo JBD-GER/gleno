@@ -12,10 +12,11 @@ import {
   LockClosedIcon,
   CheckCircleIcon,
   ArrowRightIcon,
+  PhoneIcon,
 } from '@heroicons/react/24/outline'
 import { supabaseClient } from '@/lib/supabase-client'
 
-const PRIMARY = '#5865f2'
+const PRIMARY = '#0F172A'
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL ||
   (typeof window !== 'undefined' ? window.location.origin : 'https://gleno.de')
@@ -69,6 +70,7 @@ export default function LoginPage() {
       })
       if (signInError) {
         setError(signInError.message)
+        setLoading(false)
         return
       }
 
@@ -76,6 +78,7 @@ export default function LoginPage() {
       const { data, error: userError } = await supabase.auth.getUser()
       if (userError) {
         setError('Fehler beim Abrufen des Benutzers.')
+        setLoading(false)
         return
       }
 
@@ -84,6 +87,7 @@ export default function LoginPage() {
         await supabase.auth.signOut()
         setError('Deine E-Mail ist noch nicht bestätigt.')
         setCanResend(true)
+        setLoading(false)
         return
       }
 
@@ -105,7 +109,10 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard')
       }
-    } finally {
+      // WICHTIG: loading hier NICHT zurücksetzen -> Spinner läuft,
+      // bis die Seite gewechselt ist und die Komponente unmountet.
+    } catch (err: any) {
+      setError(err?.message ?? 'Unbekannter Fehler bei der Anmeldung.')
       setLoading(false)
     }
   }
@@ -162,192 +169,310 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#0b1220]">
+    <div className="relative min-h-screen overflow-hidden ">
       <Suspense fallback={null}>
         <CheckEmailEffect onInfo={setInfo} />
       </Suspense>
 
-      {/* Hintergrund-Glow */}
+      {/* Radiale Glows wie bei Registrierung */}
       <div
-        className="pointer-events-none absolute inset-0 -z-20"
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 -top-40 -z-10 h-80"
         style={{
           background:
-            'radial-gradient(1200px 520px at 50% -10%, rgba(88,101,242,0.14), transparent),' +
-            'radial-gradient(900px 420px at 10% 0%, rgba(88,101,242,0.12), transparent),' +
-            'radial-gradient(900px 420px at 90% 0%, rgba(139,92,246,0.10), transparent)',
+            'radial-gradient(800px 320px at 15% 0%, rgba(15,23,42,0.14), transparent),' +
+            'radial-gradient(900px 360px at 85% 0%, rgba(15,23,42,0.12), transparent)',
         }}
       />
-      <motion.div
-        className="absolute -top-32 -left-20 h-[34rem] w-[34rem] rounded-full blur-3xl"
+      <div
+        aria-hidden
+        className="pointer-events-none absolute -bottom-40 left-1/2 -z-10 h-80 w-[1100px] -translate-x-1/2 rounded-[50%]"
         style={{
           background:
-            'radial-gradient(closest-side, rgba(88,101,242,.20), rgba(88,101,242,0))',
+            'radial-gradient(600px 220px at 50% 100%, rgba(15,23,42,0.10), transparent)',
         }}
-        initial={{ opacity: 0.5, scale: 0.9 }}
-        animate={{ opacity: [0.5, 0.65, 0.5], scale: [0.9, 1, 0.9] }}
-        transition={{ duration: 12, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        className="absolute -bottom-40 -right-20 h-[38rem] w-[38rem] rounded-full blur-3xl"
-        style={{
-          background:
-            'radial-gradient(closest-side, rgba(139,92,246,.18), rgba(139,92,246,0))',
-        }}
-        initial={{ opacity: 0.45, scale: 0.95 }}
-        animate={{ opacity: [0.45, 0.6, 0.45], scale: [0.95, 1.03, 0.95] }}
-        transition={{ duration: 13, repeat: Infinity, ease: 'easeInOut' }}
       />
 
-      <div className="relative z-10 mx-auto max-w-6xl px-4 py-10 sm:py-16">
-        {/* Intro / Claim */}
-        <div className="mb-8 text-center">
-          <span className="mx-auto mb-3 inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1 text-[11px] font-semibold text-white/90 ring-1 ring-white/20 backdrop-blur">
-            <CheckCircleIcon className="h-4 w-4 text-emerald-300" />
-            Ein Login für Betrieb, Team & Marktplatz-Teilnehmer
-          </span>
-          <h1 className="mt-2 text-3xl font-semibold tracking-tight text-white sm:text-4xl">
-            Willkommen zurück
-          </h1>
-          <p className="mx-auto mt-2 max-w-2xl text-sm text-white/70">
-            Hier melden sich alle an: Inhaber:innen, Mitarbeitende und
-            Konsumenten aus dem Marktplatz. Nach dem Login leiten wir dich
-            automatisch in das passende Dashboard (Unternehmen oder
-            Konsumentenbereich).
-          </p>
-        </div>
+      <div className="relative mx-auto max-w-6xl px-4 py-10 sm:py-16">
+        {/* Kopfbereich */}
+        <header className="mb-8 text-center sm:mb-10">
+          <div className="mx-auto flex max-w-xl flex-col items-center gap-2">
+            <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[10px] font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200">
+              <span className="text-base leading-none">🔐</span>
+              <span>Zentraler Login für GLENO Unternehmenssoftware &amp; Marktplatz</span>
+            </div>
+            <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
+              Willkommen zurück bei GLENO.
+            </h1>
+            <p className="mx-auto mt-3 max-w-2xl text-sm leading-relaxed text-slate-600 sm:text-[15px]">
+              Melde dich mit deiner Geschäfts-E-Mail an. Wir leiten dich automatisch
+              in das passende Dashboard – Unternehmensbereich oder Konsumentenbereich –
+              abhängig von deiner hinterlegten Rolle.
+            </p>
+          </div>
+        </header>
 
-        {/* Card */}
+        {/* Card: Login + Info-Spalte */}
         <motion.div
-          className="mx-auto grid max-w-3xl grid-cols-1 gap-6 rounded-3xl border border-white/20 bg-white/10 p-6 shadow-[0_30px_120px_rgba(0,0,0,0.35)] backdrop-blur-2xl ring-1 ring-white/10 sm:p-8"
+          className="grid grid-cols-1 gap-6 rounded-3xl border border-slate-200 bg-white/95 p-6 shadow-[0_18px_60px_rgba(15,23,42,0.08)] backdrop-blur-sm sm:p-8 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)]"
           initial={{ opacity: 0, y: 18, scale: 0.98 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
-          transition={{ duration: 0.5, ease: [0.2, 0.8, 0.2, 1] }}
+          transition={{ duration: 0.45, ease: [0.2, 0.8, 0.2, 1] }}
         >
-          {info && (
-            <div className="rounded-lg border border-emerald-300/40 bg-emerald-300/10 px-4 py-3 text-sm text-emerald-100">
-              {info}
+          {/* Linke Spalte – Formular */}
+          <div>
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-lg font-semibold text-slate-900">
+                Einloggen in dein GLENO Konto
+              </h2>
+              <p className="text-[11px] text-slate-500">
+                Sicherer Login · Server in der EU · Rollenbasierter Zugriff
+              </p>
             </div>
-          )}
-          {error && (
-            <div className="rounded-lg border border-rose-300/40 bg-rose-300/10 px-4 py-3 text-sm text-rose-100">
-              {error}
-            </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* E-Mail */}
-            <div>
-              <label className="mb-1 block text-xs font-medium text-white/80">
-                E-Mail
-              </label>
-              <div className="relative">
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className={`w-full rounded-lg border px-4 py-3 pl-11 text-black outline-none focus:bg-white ${
-                    email.length === 0
-                      ? 'border-white/20 bg-white/80 focus:border-white/30'
-                      : emailValid
-                      ? 'border-emerald-400/70 bg-white'
-                      : 'border-amber-400/70 bg-white'
-                  }`}
-                  placeholder="name@firma.de"
-                />
-                <EnvelopeIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
+            {info && (
+              <div className="mb-4 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-xs text-emerald-800">
+                {info}
               </div>
-            </div>
+            )}
+            {error && (
+              <div className="mb-4 rounded-lg border border-rose-200 bg-rose-50 px-3 py-2 text-xs text-rose-800">
+                {error}
+              </div>
+            )}
 
-            {/* Passwort */}
-            <div>
-              <label className="mb-1 block text-xs font-medium text-white/80">
-                Passwort
-              </label>
-              <div className="relative">
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={8}
-                  className="w-full rounded-lg border border-white/20 bg-white/80 px-4 pl-12 pr-12 py-3 text-black outline-none focus:border-white/30 focus:bg-white"
-                  placeholder="••••••••"
-                />
-                <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-slate-500" />
-                <button
-                  type="button"
-                  onClick={() => setShowPw((s) => !s)}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-600 hover:bg-slate-200/70"
-                  aria-label={
-                    showPw ? 'Passwort verbergen' : 'Passwort anzeigen'
-                  }
+            <form onSubmit={handleSubmit} className="space-y-4">
+              {/* E-Mail */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700">
+                  E-Mail
+                </label>
+                <div className="relative">
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                    className={`w-full rounded-lg border px-3.5 py-2.5 pl-10 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:ring-[1px] ${
+                      email.length === 0
+                        ? 'border-slate-200 bg-white focus:border-slate-400 focus:ring-slate-300'
+                        : emailValid
+                        ? 'border-emerald-300 bg-emerald-50/60 focus:border-emerald-400 focus:ring-emerald-200'
+                        : 'border-amber-300 bg-amber-50/60 focus:border-amber-400 focus:ring-amber-200'
+                    }`}
+                    placeholder="name@firma.de"
+                  />
+                  <EnvelopeIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                </div>
+              </div>
+
+              {/* Passwort */}
+              <div>
+                <label className="mb-1 block text-xs font-medium text-slate-700">
+                  Passwort
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPw ? 'text' : 'password'}
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={8}
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 pl-10 pr-11 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
+                    placeholder="Mind. 8 Zeichen"
+                  />
+                  <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPw((s) => !s)}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-md p-1 text-slate-500 hover:bg-slate-100"
+                    aria-label={showPw ? 'Passwort verbergen' : 'Passwort anzeigen'}
+                  >
+                    {showPw ? (
+                      <EyeSlashIcon className="h-5 w-5" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Buttons + Passwort vergessen in EINER Reihe */}
+              <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <motion.button
+                  type="submit"
+                  disabled={loading}
+                  className="group relative w-full overflow-hidden rounded-full px-6 py-3 text-sm font-semibold text-white
+                             bg-[radial-gradient(circle_at_0%_0%,rgba(15,23,42,0.15),#0F172A)]
+                             shadow-[0_14px_40px_rgba(15,23,42,0.45)]
+                             transition hover:shadow-[0_18px_55px_rgba(15,23,42,0.7)]
+                             disabled:opacity-60 sm:w-auto"
+                  whileHover={{ scale: loading ? 1 : 1.02 }}
+                  whileTap={{ scale: loading ? 1 : 0.98 }}
                 >
-                  {showPw ? (
-                    <EyeSlashIcon className="h-5 w-5" />
-                  ) : (
-                    <EyeIcon className="h-5 w-5" />
+                  <span
+                    className={`${loading ? 'opacity-0' : 'opacity-100'} transition-opacity`}
+                  >
+                    Einloggen
+                  </span>
+                  {loading && (
+                    <span className="absolute inset-0 grid place-items-center">
+                      <svg
+                        className="h-5 w-5 animate-spin text-white"
+                        viewBox="0 0 24 24"
+                      >
+                        <circle
+                          className="opacity-30"
+                          cx="12"
+                          cy="12"
+                          r="10"
+                          stroke="currentColor"
+                          strokeWidth="4"
+                          fill="none"
+                        />
+                        <path
+                          className="opacity-80"
+                          fill="currentColor"
+                          d="M4 12a8 8 0 018-8v4a4 4 0 00-4 4H4z"
+                        />
+                      </svg>
+                    </span>
                   )}
-                </button>
-              </div>
+                  {!loading && (
+                    <ArrowRightIcon className="ml-2 inline-block h-5 w-5 opacity-90" />
+                  )}
+                </motion.button>
 
-              <div className="mt-2 text-right">
                 <button
                   type="button"
                   onClick={handleResetPassword}
-                  className="text-xs font-medium text-white/80 underline-offset-4 hover:underline"
+                  className="text-left text-[11px] font-medium text-slate-600 underline-offset-4 hover:text-slate-900 hover:underline sm:text-right"
                 >
                   Passwort vergessen?
                 </button>
               </div>
-            </div>
 
-            {/* Buttons */}
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-              <motion.button
-                type="submit"
-                disabled={loading}
-                className="inline-flex w-full items-center justify-center gap-2 rounded-full px-6 py-3 font-semibold text-white shadow-lg transition enabled:hover:opacity-95 disabled:opacity-60"
-                style={{ backgroundColor: PRIMARY }}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-              >
-                <span>{loading ? 'Anmeldung…' : 'Einloggen'}</span>
-                {!loading && (
-                  <ArrowRightIcon className="h-5 w-5 opacity-90" />
-                )}
-              </motion.button>
-
+              {/* Resend-Button darunter */}
               {canResend && (
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={handleResend}
-                  className="w-full rounded-full border border-white/20 bg-white/15 px-6 py-3 text-sm font-medium text-white ring-1 ring-white/10 backdrop-blur transition hover:bg-white/25 disabled:opacity-60"
-                >
-                  Bestätigungs-E-Mail erneut senden
-                </button>
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={handleResend}
+                    className="w-full rounded-full border border-slate-200 bg-slate-50 px-6 py-3 text-sm font-medium text-slate-800 shadow-sm hover:bg-white disabled:opacity-60 sm:w-auto"
+                  >
+                    Bestätigungs-E-Mail erneut senden
+                  </button>
+                </div>
               )}
+            </form>
+
+{/* Info unter dem Formular weiter nach unten */}
+<div className="mt-8 border-t border-slate-200 pt-4 space-y-3 text-center">
+  <p className="text-[11px] text-slate-500">
+    Mit deinem Zugang kannst du dich sowohl im Unternehmens-Dashboard (Betrieb &amp; Team)
+    als auch im Konsumentenbereich des Marktplatzes anmelden – abhängig von deiner
+    hinterlegten Rolle.
+  </p>
+
+  <p className="text-sm text-slate-700">
+    Noch kein Konto?{' '}
+    <Link
+      href="/registrieren"
+      className="font-semibold text-slate-900 underline underline-offset-2"
+    >
+      Jetzt registrieren
+    </Link>
+  </p>
+</div>
+          </div>
+
+          {/* Rechte Spalte – Info & Trust */}
+          <div className="flex flex-col justify-between rounded-2xl bg-slate-50/80 px-5 py-6 ring-1 ring-slate-100 sm:px-6 sm:py-7">
+            <div>
+              <h3 className="text-lg font-semibold text-slate-900">
+                Dein Zugang zur GLENO Unternehmenssoftware.
+              </h3>
+              <p className="mt-2 text-sm leading-relaxed text-slate-600">
+                Mit einem Login behältst du Aufträge, Projekte, Rechnungen, Zeiten,
+                Termine und Marktplatz-Aktivitäten im Blick – ohne Tool-Chaos.
+              </p>
+
+              <ul className="mt-4 space-y-2.5 text-sm text-slate-700">
+                {[
+                  'Ein Login für Unternehmens-Dashboard & Marktplatz – Rolle entscheidet über die Ansicht.',
+                  'Server in der EU, TLS-verschlüsselte Verbindung und DSGVO-konforme Prozesse.',
+                ].map((t) => (
+                  <li key={t} className="flex items-start gap-2">
+                    <CheckCircleIcon className="mt-0.5 h-4 w-4 text-emerald-500" />
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ul>
             </div>
-          </form>
 
-          <p className="mt-2 text-center text-[11px] text-white/55">
-            Mit deinem Zugang kannst du dich sowohl im Unternehmens-Dashboard
-            (Betrieb & Team) als auch im Konsumentenbereich des Marktplatzes
-            anmelden – abhängig von deiner hinterlegten Rolle.
-          </p>
-
-          <p className="mt-4 text-center text-sm text-white/80">
-            Noch kein Konto?{' '}
-            <Link
-              href="/registrieren"
-              className="font-semibold text-white underline-offset-2 hover:underline"
-            >
-              Jetzt registrieren
-            </Link>
-          </p>
+            <div className="mt-10 border-t border-slate-200 pt-5">
+              <p className="mb-3 text-xs font-semibold uppercase tracking-[0.16em] text-slate-500">
+                Hilfe beim Login?
+              </p>
+              <div className="flex flex-wrap items-center gap-3 text-xs">
+                <a
+                  href="tel:+4950353169991"
+                  className="inline-flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900"
+                >
+                  <PhoneIcon className="h-4 w-4" />
+                  +49&nbsp;5035&nbsp;3169991
+                </a>
+                <a
+                  href="mailto:support@gleno.de"
+                  className="inline-flex items-center justify-center gap-2 text-slate-600 hover:text-slate-900"
+                >
+                  <EnvelopeIcon className="h-4 w-4" />
+                  support@gleno.de
+                </a>
+              </div>
+            </div>
+          </div>
+          
         </motion.div>
+          {/* Auszeichnungen / Social Proof unterhalb der Card */}
+        <section className="mt-6 rounded-3xl border border-slate-200 bg-white/95 px-5 py-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="max-w-md text-[11px] sm:text-xs text-slate-600">
+              <p className="text-sm font-semibold text-slate-900 sm:text-[13px]">
+                GLENO wird bereits von Dienstleistern &amp; KMU im Alltag getestet.
+              </p>
+              <p className="mt-1 leading-relaxed">
+                Entwickelt von Unternehmern aus der Praxis – mit Fokus auf klare Abläufe
+                statt Feature-Wirrwarr. Feedback aus Pilot-Teams fließt direkt in die
+                Weiterentwicklung ein.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2 text-[11px] sm:text-xs">
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                <span className="mr-1 text-amber-400">★ ★ ★ ★ ★</span>
+                4,8 / 5 in Pilot-Teams
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                Made in Germany
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                Server in der EU
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                Für Dienstleister &amp; KMU entwickelt
+              </span>
+                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                Ohne Verbindlichkeit
+              </span>
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+                0€ Kosten für die Testphase
+              </span>
+            </div>
+          </div>
+        </section>
       </div>
+      
     </div>
   )
 }

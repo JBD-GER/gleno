@@ -18,6 +18,8 @@ import {
   DocumentTextIcon,
   ShieldCheckIcon,
   BellAlertIcon,
+  ChevronDownIcon,
+  ChevronUpIcon,
 } from '@heroicons/react/24/outline'
 import {
   Chart as ChartJS,
@@ -206,11 +208,11 @@ type VaultMetrics = {
   contractsActive: number
   contractsExpiringSoon: number
   contractsExpired: number
-  contractsNextInDays: number | null
   licensesMonthly: number
   licensesActive: number
   licensesExpiringSoon: number
   licensesExpired: number
+  contractsNextInDays: number | null
   licensesNextInDays: number | null
   costsIncreaseLast7: number
 }
@@ -838,6 +840,7 @@ export default function DashboardClient({
 }) {
   const [range, setRange] = useState<3 | 6 | 12>(12)
   const [setupOpen, setSetupOpen] = useState(false)
+  const [showVaultMobile, setShowVaultMobile] = useState(false)
 
   // "Heute" als ISO für Vault-Berechnungen
   const todayIso = useMemo(
@@ -940,10 +943,6 @@ export default function DashboardClient({
   }
 
   // --- Zuwachs letzte 7 Tage (Kunden, Umsatz, Kosten) ---
-  // Kunden-Zuwachs: Anteil der Kunden, die in den letzten 7 Tagen entstanden sind,
-  // gemessen an der aktuellen Gesamtkundenzahl.
-  // Umsatz-Zuwachs: Anteil des Umsatzes der letzten 7 Tage am Gesamtumsatz YTD.
-
   const totalCustomers = Math.max(0, Number(kpis.customers ?? 0))
   const customersLast7 = Math.max(0, Number(kpis.customersLast7 ?? 0))
 
@@ -1276,35 +1275,62 @@ export default function DashboardClient({
         </div>
 
         {/* KPIs – Verträge & Lizenzen */}
-        <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-          {vaultKpiCard(
-            'Fixkosten (Monat)',
-            euro(fixedCostsMonthly),
-            vaultLoading ? 'Verträge & Lizenzen – lädt …' : 'Verträge & Lizenzen',
-            BanknotesIcon,
-            {
-              pct: fixedCostsGrowthPct,
-              mode: 'negative', // Zuwachs = schlecht -> rot
-            },
-          )}
-          {vaultKpiCard(
-            'Aktive Verträge',
-            vaultMetrics.contractsActive,
-            `${vaultMetrics.contractsExpiringSoon} im Kündigungsfenster (≤ 90 Tage)`,
-            DocumentTextIcon,
-          )}
-          {vaultKpiCard(
-            'Aktive Lizenzen',
-            vaultMetrics.licensesActive,
-            `${vaultMetrics.licensesExpiringSoon} laufen ≤ 30 Tage ab`,
-            ShieldCheckIcon,
-          )}
-          {vaultKpiCard(
-            'Nächster Ablauf',
-            nextDueLabel,
-            'Nächster Vertrag oder Lizenz, der ausläuft',
-            BellAlertIcon,
-          )}
+        <div className="space-y-3">
+          {/* Toggle nur auf Handy/kleine Screens */}
+          <button
+            type="button"
+            onClick={() => setShowVaultMobile((v) => !v)}
+            className="flex w-full items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-medium text-slate-700 shadow-sm md:hidden"
+          >
+            <span>Fixkosten, Verträge &amp; Lizenzen</span>
+            <span className="inline-flex items-center gap-1 text-[11px] text-slate-500">
+              {vaultLoading ? 'lädt …' : showVaultMobile ? 'ausblenden' : 'anzeigen'}
+              {showVaultMobile ? (
+                <ChevronUpIcon className="h-4 w-4" />
+              ) : (
+                <ChevronDownIcon className="h-4 w-4" />
+              )}
+            </span>
+          </button>
+
+          <div
+            className={
+              showVaultMobile
+                ? 'grid grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4'
+                : 'hidden grid-cols-1 gap-3 sm:grid-cols-2 md:grid-cols-4 md:grid'
+            }
+          >
+            {vaultKpiCard(
+              'Fixkosten (Monat)',
+              euro(fixedCostsMonthly),
+              vaultLoading
+                ? 'Verträge & Lizenzen – lädt …'
+                : 'Verträge & Lizenzen',
+              BanknotesIcon,
+              {
+                pct: fixedCostsGrowthPct,
+                mode: 'negative', // Zuwachs = schlecht -> rot
+              },
+            )}
+            {vaultKpiCard(
+              'Aktive Verträge',
+              vaultMetrics.contractsActive,
+              `${vaultMetrics.contractsExpiringSoon} im Kündigungsfenster (≤ 90 Tage)`,
+              DocumentTextIcon,
+            )}
+            {vaultKpiCard(
+              'Aktive Lizenzen',
+              vaultMetrics.licensesActive,
+              `${vaultMetrics.licensesExpiringSoon} laufen ≤ 30 Tage ab`,
+              ShieldCheckIcon,
+            )}
+            {vaultKpiCard(
+              'Nächster Ablauf',
+              nextDueLabel,
+              'Nächster Vertrag oder Lizenz, der ausläuft',
+              BellAlertIcon,
+            )}
+          </div>
         </div>
 
         {/* KUNDEN-WERBEN-KUNDEN */}

@@ -109,8 +109,7 @@ export default function LoginPage() {
       } else {
         router.push('/dashboard')
       }
-      // WICHTIG: loading hier NICHT zurücksetzen -> Spinner läuft,
-      // bis die Seite gewechselt ist und die Komponente unmountet.
+      // loading nicht zurücksetzen – Komponente unmountet beim Page-Wechsel
     } catch (err: any) {
       setError(err?.message ?? 'Unbekannter Fehler bei der Anmeldung.')
       setLoading(false)
@@ -199,7 +198,9 @@ export default function LoginPage() {
           <div className="mx-auto flex max-w-xl flex-col items-center gap-2">
             <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-[10px] font-semibold text-slate-900 shadow-sm ring-1 ring-slate-200">
               <span className="text-base leading-none">🔐</span>
-              <span>Zentraler Login für GLENO Unternehmenssoftware &amp; Marktplatz</span>
+              <span>
+                Zentraler Login für GLENO Unternehmenssoftware &amp; Marktplatz
+              </span>
             </div>
             <h1 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900 sm:text-4xl">
               Willkommen zurück bei GLENO.
@@ -253,7 +254,8 @@ export default function LoginPage() {
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
-                    className={`w-full rounded-lg border px-3.5 py-2.5 pl-10 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:ring-[1px] ${
+                    // WICHTIG: text-[16px], damit iOS nicht reinzoomt
+                    className={`w-full rounded-lg border px-3.5 py-2.5 pl-10 text-[16px] text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:ring-[1px] ${
                       email.length === 0
                         ? 'border-slate-200 bg-white focus:border-slate-400 focus:ring-slate-300'
                         : emailValid
@@ -278,7 +280,8 @@ export default function LoginPage() {
                     onChange={(e) => setPassword(e.target.value)}
                     required
                     minLength={8}
-                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 pl-10 pr-11 text-sm text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
+                    // WICHTIG: auch hier 16px
+                    className="w-full rounded-lg border border-slate-200 bg-white px-3.5 py-2.5 pl-10 pr-11 text-[16px] text-slate-900 outline-none ring-0 placeholder:text-slate-400 focus:border-slate-400 focus:ring-[1px] focus:ring-slate-300"
                     placeholder="Mind. 8 Zeichen"
                   />
                   <LockClosedIcon className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
@@ -310,17 +313,12 @@ export default function LoginPage() {
                   whileHover={{ scale: loading ? 1 : 1.02 }}
                   whileTap={{ scale: loading ? 1 : 0.98 }}
                 >
-                  <span
-                    className={`${loading ? 'opacity-0' : 'opacity-100'} transition-opacity`}
-                  >
+                  <span className={`${loading ? 'opacity-0' : 'opacity-100'} transition-opacity`}>
                     Einloggen
                   </span>
                   {loading && (
                     <span className="absolute inset-0 grid place-items-center">
-                      <svg
-                        className="h-5 w-5 animate-spin text-white"
-                        viewBox="0 0 24 24"
-                      >
+                      <svg className="h-5 w-5 animate-spin text-white" viewBox="0 0 24 24">
                         <circle
                           className="opacity-30"
                           cx="12"
@@ -367,24 +365,24 @@ export default function LoginPage() {
               )}
             </form>
 
-{/* Info unter dem Formular weiter nach unten */}
-<div className="mt-8 border-t border-slate-200 pt-4 space-y-3 text-center">
-  <p className="text-[11px] text-slate-500">
-    Mit deinem Zugang kannst du dich sowohl im Unternehmens-Dashboard (Betrieb &amp; Team)
-    als auch im Konsumentenbereich des Marktplatzes anmelden – abhängig von deiner
-    hinterlegten Rolle.
-  </p>
+            {/* Info unter dem Formular */}
+            <div className="mt-8 border-t border-slate-200 pt-4 space-y-3 text-center">
+              <p className="text-[11px] text-slate-500">
+                Mit deinem Zugang kannst du dich sowohl im Unternehmens-Dashboard (Betrieb
+                &amp; Team) als auch im Konsumentenbereich des Marktplatzes anmelden –
+                abhängig von deiner hinterlegten Rolle.
+              </p>
 
-  <p className="text-sm text-slate-700">
-    Noch kein Konto?{' '}
-    <Link
-      href="/registrieren"
-      className="font-semibold text-slate-900 underline underline-offset-2"
-    >
-      Jetzt registrieren
-    </Link>
-  </p>
-</div>
+              <p className="text-sm text-slate-700">
+                Noch kein Konto?{' '}
+                <Link
+                  href="/registrieren"
+                  className="font-semibold text-slate-900 underline underline-offset-2"
+                >
+                  Jetzt registrieren
+                </Link>
+              </p>
+            </div>
           </div>
 
           {/* Rechte Spalte – Info & Trust */}
@@ -433,9 +431,9 @@ export default function LoginPage() {
               </div>
             </div>
           </div>
-          
         </motion.div>
-          {/* Auszeichnungen / Social Proof unterhalb der Card */}
+
+        {/* Auszeichnungen / Social Proof unterhalb der Card */}
         <section className="mt-6 rounded-3xl border border-slate-200 bg-white/95 px-5 py-4 shadow-[0_16px_40px_rgba(15,23,42,0.06)]">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="max-w-md text-[11px] sm:text-xs text-slate-600">
@@ -462,7 +460,7 @@ export default function LoginPage() {
               <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
                 Für Dienstleister &amp; KMU entwickelt
               </span>
-                <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
+              <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
                 Ohne Verbindlichkeit
               </span>
               <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1 font-medium text-slate-800">
@@ -472,7 +470,6 @@ export default function LoginPage() {
           </div>
         </section>
       </div>
-      
     </div>
   )
 }

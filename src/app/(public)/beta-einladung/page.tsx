@@ -222,13 +222,13 @@ function BetaEinladungPageContent() {
   }
 
   return (
-    <div className="relative min-h-screen bg-gradient-to-b from-slate-50 ">
+    <div className="relative min-h-screen ">
       {/* dezent: Glass-Ring in der Mitte */}
       <div className="pointer-events-none absolute inset-0 -z-10 flex items-center justify-center">
         <div className="h-72 w-72 rounded-full bg-white/60 blur-3xl shadow-[0_0_120px_rgba(15,23,42,0.15)]" />
       </div>
 
-      <div className="relative z-10 mx-auto max-w-5xl px-4 pb-12 pt-8 sm:px-6 sm:pb-16 sm:pt-12 lg:px-8">
+      <div className="relative z-10 mx-auto max-w-7xl px-4 pb-12 pt-8 sm:px-6 sm:pb-16 sm:pt-12 lg:px-8">
         {/* Intro / Hero */}
         <div className="mb-8 text-center sm:mb-10">
           <span className="mx-auto mb-4 inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white/80 px-4 py-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-slate-700 shadow-sm backdrop-blur">

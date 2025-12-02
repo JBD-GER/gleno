@@ -2,6 +2,7 @@
 'use client'
 
 import { FormEvent, useEffect, useMemo, useState } from 'react'
+import { useRouter } from 'next/navigation'
 
 type SlotDef = {
   label: string // z.B. "09:00"
@@ -97,6 +98,8 @@ function toLocalIsoForSlot(date: Date, hhmm: string) {
 }
 
 export default function BookingForm() {
+  const router = useRouter()
+
   const [days] = useState<Date[]>(() => getNextConsultingDays(4))
   const [selectedDayIndex, setSelectedDayIndex] = useState(0)
   const selectedDay = days[selectedDayIndex]
@@ -148,9 +151,6 @@ export default function BookingForm() {
 
         const normalized = (data.booked ?? []).map((s) => normalizeIsoString(s))
         setBookedIso(normalized)
-
-        // Debug-Log, falls du mal checken willst:
-        // console.log('[ZoomSlots][Frontend]', { dateParam, raw: data.booked, normalized })
       } catch (err) {
         console.error(err)
       } finally {
@@ -229,10 +229,9 @@ export default function BookingForm() {
         return
       }
 
-      setSuccessMsg(
-        'Vielen Dank! Ihr Zoom-Termin wurde gebucht. Der Link zum Gespräch und ein Kalendereintrag wurden Ihnen per E-Mail zugeschickt.',
-      )
-      setErrorMsg(null)
+      // ✅ Erfolgreich: auf Danke-Seite weiterleiten
+      router.push('/beratung/danke')
+      return
     } catch (err) {
       console.error(err)
       setErrorMsg('Unbekannter Fehler. Bitte versuchen Sie es später erneut.')

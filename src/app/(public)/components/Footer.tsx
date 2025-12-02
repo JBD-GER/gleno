@@ -65,10 +65,7 @@ export default function Footer() {
               <ul className="mt-2 space-y-2 text-sm text-slate-700">
                 <li className="flex items-center gap-2">
                   <PhoneIcon className="h-5 w-5 text-slate-400" />
-                  <a
-                    href="tel:+4950353169991"
-                    className="hover:text-slate-900"
-                  >
+                  <a href="tel:+4950353169991" className="hover:text-slate-900">
                     +49 5035 3169991
                   </a>
                 </li>
@@ -119,8 +116,38 @@ export default function Footer() {
           </div>
 
           {/* Bottom bar */}
-          <div className="mt-6 rounded-2xl border border-white/70 bg-white/80 px-4 py-3.5 text-xs sm:text-sm text-slate-500 backdrop-blur-xl ring-1 ring-white/70 shadow-[0_1px_6px_rgba(2,6,23,0.03)] flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+          <div className="mt-6 flex flex-col gap-2 rounded-2xl border border-white/70 bg-white/80 px-4 py-3.5 text-xs text-slate-500 backdrop-blur-xl ring-1 ring-white/70 shadow-[0_1px_6px_rgba(2,6,23,0.03)] sm:flex-row sm:items-center sm:justify-between sm:text-sm">
             <p>© {year} GLENO. Alle Rechte vorbehalten.</p>
+
+            {/* Social Links dezent rechts */}
+            <div className="flex flex-wrap items-center gap-3 text-[11px] sm:text-xs">
+              <a
+                href="https://www.instagram.com/gleno.de/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-500 hover:text-slate-900"
+              >
+                Instagram
+              </a>
+              <span className="h-3 w-px bg-slate-200 hidden sm:inline" />
+              <a
+                href="https://www.facebook.com/profile.php?id=61584077105787"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-500 hover:text-slate-900"
+              >
+                Facebook
+              </a>
+              <span className="h-3 w-px bg-slate-200 hidden sm:inline" />
+              <a
+                href="https://www.linkedin.com/company/gleno"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-slate-500 hover:text-slate-900"
+              >
+                LinkedIn
+              </a>
+            </div>
           </div>
         </div>
       </footer>

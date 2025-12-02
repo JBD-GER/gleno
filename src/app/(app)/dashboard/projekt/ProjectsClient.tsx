@@ -3,6 +3,7 @@
 
 import React, { useEffect, useMemo, useState, useRef } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import {
   MagnifyingGlassIcon,
   PencilSquareIcon,
@@ -48,11 +49,11 @@ type ConfirmState =
   | { open: true; id: string; title: string }
 
 export default function ProjectsClient({ userId }: { userId: string }) {
+  const router = useRouter()
+
   const [rows, setRows] = useState<ProjectOverview[]>([])
   const [loading, setLoading] = useState(true)
   const [q, setQ] = useState('')
-  const [showForm, setShowForm] = useState(false)
-  const [editId, setEditId] = useState<string | null>(null)
   const [confirm, setConfirm] = useState<ConfirmState>({ open: false })
   const [isEmployee, setIsEmployee] = useState<boolean>(false)
 
@@ -181,10 +182,9 @@ export default function ProjectsClient({ userId }: { userId: string }) {
           {!isEmployee && (
             <button
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/60 bg-white/90 px-4 py-2 text-sm font-medium text-slate-900 shadow-sm backdrop-blur hover:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-200/60"
-              onClick={() => {
-                setEditId(null)
-                setShowForm(true)
-              }}
+              onClick={() =>
+                router.push('/dashboard/projekt/projekt-erstellen')
+              }
               type="button"
             >
               <PlusIcon className="h-4 w-4" />
@@ -215,6 +215,7 @@ export default function ProjectsClient({ userId }: { userId: string }) {
         ) : filtered.length > 0 ? (
           filtered.map((p) => {
             const detailHref = `/dashboard/projekt/${p.id}`
+            const editHref = `/dashboard/projekt/projekt-erstellen?projectId=${p.id}`
             const ass = (p.assignees ?? [])
               .map((a) => a.employees ?? null)
               .filter(Boolean) as NonNullable<Assignee['employees']>[]
@@ -251,7 +252,7 @@ export default function ProjectsClient({ userId }: { userId: string }) {
                   </div>
                 </Link>
 
-                {/* Kunde & Mitarbeiter – klar beschriftet, ausgeschrieben */}
+                {/* Kunde & Mitarbeiter */}
                 <div className="mt-3 grid gap-3 text-sm sm:grid-cols-2">
                   <div>
                     <div className="text-[11px] font-medium uppercase tracking-wide text-slate-500">
@@ -274,9 +275,7 @@ export default function ProjectsClient({ userId }: { userId: string }) {
                 {/* Zähler */}
                 <div className="mt-4 grid grid-cols-4 gap-2">
                   <div className="text-center">
-                    <div className="text-[11px] text-slate-500">
-                      Räume
-                    </div>
+                    <div className="text-[11px] text-slate-500">Räume</div>
                     <div className="mt-0.5">
                       <Badge>{c(p.project_rooms)}</Badge>
                     </div>
@@ -318,10 +317,7 @@ export default function ProjectsClient({ userId }: { userId: string }) {
 
                   {!isEmployee ? (
                     <button
-                      onClick={() => {
-                        setEditId(p.id)
-                        setShowForm(true)
-                      }}
+                      onClick={() => router.push(editHref)}
                       className="inline-flex h-10 items-center justify-center rounded-lg border border-white/60 bg-white/90 text-sm font-medium text-slate-900 shadow-sm backdrop-blur hover:bg-white"
                       type="button"
                     >
@@ -391,7 +387,7 @@ export default function ProjectsClient({ userId }: { userId: string }) {
 
             <tbody className="divide-y divide-slate-100/80">
               {loading ? (
-                Array.from({ length: 6 }).map((_, i) => (
+                Array.from({ length: !isEmployee ? 6 : 6 }).map((_, i) => (
                   <tr key={i} className="animate-pulse">
                     {Array.from({ length: !isEmployee ? 8 : 7 }).map(
                       (__, j) => (
@@ -405,6 +401,7 @@ export default function ProjectsClient({ userId }: { userId: string }) {
               ) : filtered.length > 0 ? (
                 filtered.map((p) => {
                   const detailHref = `/dashboard/projekt/${p.id}`
+                  const editHref = `/dashboard/projekt/projekt-erstellen?projectId=${p.id}`
                   const ass = (p.assignees ?? [])
                     .map((a) => a.employees ?? null)
                     .filter(Boolean) as NonNullable<Assignee['employees']>[]
@@ -492,10 +489,7 @@ export default function ProjectsClient({ userId }: { userId: string }) {
                         <td className="px-5 py-4">
                           <ProjectRowActions
                             detailHref={detailHref}
-                            onEdit={() => {
-                              setEditId(p.id)
-                              setShowForm(true)
-                            }}
+                            editHref={editHref}
                             onDelete={() =>
                               setConfirm({
                                 open: true,
@@ -522,10 +516,9 @@ export default function ProjectsClient({ userId }: { userId: string }) {
                       {!isEmployee && (
                         <button
                           className="rounded-lg border border-white/60 bg-white/90 px-3 py-1.5 text-sm font-medium text-slate-900 shadow-sm backdrop-blur hover:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-200/60"
-                          onClick={() => {
-                            setEditId(null)
-                            setShowForm(true)
-                          }}
+                          onClick={() =>
+                            router.push('/dashboard/projekt/projekt-erstellen')
+                          }
                           type="button"
                         >
                           Neues Projekt anlegen
@@ -572,17 +565,6 @@ export default function ProjectsClient({ userId }: { userId: string }) {
           </div>
         </div>
       )}
-
-      {/* Formular (Modal) – nur Owner */}
-      {!isEmployee && showForm && (
-        <ProjectForm
-          projectId={editId}
-          onClose={() => {
-            setShowForm(false)
-            fetchRows()
-          }}
-        />
-      )}
     </div>
   )
 }
@@ -591,11 +573,11 @@ export default function ProjectsClient({ userId }: { userId: string }) {
 
 function ProjectRowActions({
   detailHref,
-  onEdit,
+  editHref,
   onDelete,
 }: {
   detailHref: string
-  onEdit: () => void
+  editHref: string
   onDelete: () => void
 }) {
   const [open, setOpen] = useState(false)
@@ -678,7 +660,7 @@ function ProjectRowActions({
         onClick={toggle}
         aria-haspopup="menu"
         aria-expanded={open}
-        className="group inline-flex items-center gap-1 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-900 shadow-sm backdrop-blur hover:bg-white focus:outline-none focus:ring-4 focus:ring-indigo-200/60"
+        className="group inline-flex items-center gap-1 rounded-full border border-white/60 bg-white/90 px-3 py-1.5 text-xs font-medium text-slate-900 shadow-sm backdrop-blur hover:bg:white focus:outline-none focus:ring-4 focus:ring-indigo-200/60"
       >
         Aktionen
         <ChevronDownIcon className="h-4 w-4 text-slate-500 transition-transform group-aria-expanded:rotate-180" />
@@ -709,17 +691,14 @@ function ProjectRowActions({
                 </Link>
               </li>
               <li>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setOpen(false)
-                    onEdit()
-                  }}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition hover:bg-white"
+                <Link
+                  href={editHref}
+                  className="flex items-center gap-2 px-3 py-2 text-sm transition hover:bg-white"
+                  onClick={() => setOpen(false)}
                 >
                   <PencilSquareIcon className="h-4 w-4 text-slate-500" />
                   Bearbeiten
-                </button>
+                </Link>
               </li>
               <li className="my-1 border-t border-white/60" />
               <li>
@@ -741,11 +720,4 @@ function ProjectRowActions({
         )}
     </>
   )
-}
-
-/* -------- Lazy import für ProjectForm -------- */
-
-function ProjectForm(props: { projectId: string | null; onClose: () => void }) {
-  const Lazy = React.useMemo(() => require('./ProjectForm').default, [])
-  return React.createElement(Lazy, props)
 }

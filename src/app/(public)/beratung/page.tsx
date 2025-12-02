@@ -109,8 +109,6 @@ export default function BeratungPage() {
         <section className="flex flex-col gap-10 lg:flex-row lg:items-start">
           {/* Linke Spalte (breiter) */}
           <div className="lg:w-7/12 space-y-6">
-          
-
             {/* Haupttext */}
             <div className="space-y-5">
               <div className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3 py-1 text-[11px] font-semibold text-slate-900 ring-1 ring-white/60 backdrop-blur">
@@ -136,36 +134,36 @@ export default function BeratungPage() {
                 persönlich, klar und ohne Verkaufsshow.
               </p>
 
-               {/* Ansprechpartner-Box volle Breite oben */}
-            <div className="rounded-3xl border border-white/70 bg-white/90 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.18)] backdrop-blur-xl ring-1 ring-white/60">
-              <div className="flex items-center gap-3">
-                <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-slate-100">
-                  <Image
-                    src="/kundenberater_pfad.jpeg"
-                    alt="Christoph Pfad – Ihr Ansprechpartner bei GLENO"
-                    fill
-                    sizes="96px"
-                    className="object-cover"
-                    priority
-                  />
+              {/* Ansprechpartner-Box volle Breite oben */}
+              <div className="rounded-3xl border border-white/70 bg-white/90 p-4 shadow-[0_16px_45px_rgba(15,23,42,0.18)] backdrop-blur-xl ring-1 ring-white/60">
+                <div className="flex items-center gap-3">
+                  <div className="relative h-16 w-16 overflow-hidden rounded-2xl border border-slate-100">
+                    <Image
+                      src="/kundenberater_pfad.jpeg"
+                      alt="Christoph Pfad – Ihr Ansprechpartner bei GLENO"
+                      fill
+                      sizes="96px"
+                      className="object-cover"
+                      priority
+                    />
+                  </div>
+                  <div className="space-y-0.5">
+                    <div className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
+                      Ihr persönlicher Ansprechpartner
+                    </div>
+                    <div className="text-sm font-semibold text-slate-900">
+                      Christoph Pfad
+                    </div>
+                    <div className="text-xs text-slate-500">
+                      Geschäftsführer &amp; Gründer von GLENO
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-0.5">
-                  <div className="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-semibold text-emerald-700">
-                    Ihr persönlicher Ansprechpartner
-                  </div>
-                  <div className="text-sm font-semibold text-slate-900">
-                    Christoph Pfad
-                  </div>
-                  <div className="text-xs text-slate-500">
-                    Geschäftsführer &amp; Gründer von GLENO
-                  </div>
-                </div>
+                <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
+                  Fokus: KMU, Dienstleister &amp; Handwerk. Im Termin geht es um
+                  Ihre Prozesse – nicht um ein Skript.
+                </p>
               </div>
-              <p className="mt-3 text-[11px] leading-relaxed text-slate-500">
-                Fokus: KMU, Dienstleister &amp; Handwerk. Im Termin geht es um
-                Ihre Prozesse – nicht um ein Skript.
-              </p>
-            </div>
 
               <ul className="mt-2 space-y-2 text-sm text-slate-700">
                 {[
@@ -180,13 +178,23 @@ export default function BeratungPage() {
                 ))}
               </ul>
 
-              <div className="pt-2 text-sm text-slate-500">
-                <span className="font-medium text-slate-700">
-                  Keine Kreditkarte, kein Abo –
-                </span>{' '}
-                Sie erhalten nach dem Gespräch die wichtigsten Infos &amp; Links
-                per E-Mail.
-              </div>
+{/* Hier dezent der 30-Tage-Hinweis */}
+<div className="pt-2 text-sm text-slate-500">
+  <span className="font-medium text-slate-700">
+    Keine Kreditkarte, kein Abo –
+  </span>{' '}
+  das Gespräch ist für Sie komplett unverbindlich. Im Anschluss erhalten Sie
+  die wichtigsten Infos und Links bequem per E-Mail.
+  <span className="mt-1 block">
+    Wenn GLENO zu Ihrem Unternehmen passt, können Sie sich nach dem Zoom-Call
+    eine{' '}
+    <span className="font-medium text-slate-700">
+      30-tägige kostenlose Testphase
+    </span>{' '}
+    sichern.
+  </span>
+</div>
+
 
               <div className="pt-3 flex flex-wrap gap-3 text-xs text-slate-500">
                 <div className="rounded-full border border-white/60 bg-white/70 px-3 py-1 backdrop-blur">

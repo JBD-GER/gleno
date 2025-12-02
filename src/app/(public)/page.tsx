@@ -238,19 +238,30 @@ export default function HomePage() {
             </p>
           </div>
 
-          {/* CTA-Zeile */}
-          <div className="mt-7 flex flex-col items-center gap-2 sm:gap-3">
-            <Link
-              href="/beratung"
-              className="hero-cta inline-flex items-center justify-center whitespace-nowrap rounded-2xl bg-white px-7 py-3 text-sm font-semibold text-slate-900 shadow-[0_20px_70px_rgba(0,0,0,0.9)] hover:shadow-[0_24px_90px_rgba(0,0,0,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
-            >
-              Kostenlose Beratung buchen
-              <span className="ml-1.5 text-xs">↗</span>
-            </Link>
-            <p className="text-[11px] text-slate-300">
-              Kostenlos &amp; unverbindlich · Keine Kreditkarte · Made in Germany 🇩🇪
-            </p>
-          </div>
+{/* CTA-Zeile */}
+<div className="mt-7 flex flex-col items-center gap-2 sm:gap-3">
+  <div className="flex flex-col items-center gap-2 sm:flex-row sm:gap-3">
+    <Link
+      href="/beratung"
+      className="hero-cta inline-flex items-center justify-center whitespace-nowrap rounded-2xl bg-white px-7 py-3 text-sm font-semibold text-slate-900 shadow-[0_20px_70px_rgba(0,0,0,0.9)] hover:shadow-[0_24px_90px_rgba(0,0,0,1)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-amber-300"
+    >
+      Kostenlose Beratung buchen
+      <span className="ml-1.5 text-xs">↗</span>
+    </Link>
+
+    <Link
+      href="/login" // wenn du eine eigene Registrierungsseite hast, z.B. "/register" hier anpassen
+      className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl border border-white/70 bg-transparent px-7 py-3 text-sm font-semibold text-slate-50/95 shadow-[0_10px_40px_rgba(0,0,0,0.6)] backdrop-blur hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
+    >
+      Direkt kostenlos starten
+    </Link>
+  </div>
+
+  <p className="text-[11px] text-slate-300 text-center">
+    Kostenlos &amp; unverbindlich · Keine Kreditkarte · Made in Germany 🇩🇪
+  </p>
+</div>
+
 
           {/* Benefit-Pills */}
           <div className="mx-auto mt-10 grid max-w-4xl grid-cols-1 gap-3 text-sm text-slate-100 sm:grid-cols-3">

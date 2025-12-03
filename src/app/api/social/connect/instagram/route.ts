@@ -1,3 +1,4 @@
+// app/api/social/connect/instagram/route.ts
 import { NextResponse } from 'next/server'
 import { supabaseServer } from '@/lib/supabase-server'
 
@@ -25,25 +26,21 @@ export async function GET() {
   const state = randomState()
   const redirectUri = `${SITE_URL}/api/social/callback/instagram`
 
-  // Scopes passend zu deinen Berechtigungen
   const scopes = [
     'instagram_business_basic',
-    'instagram_manage_comments',
     'instagram_business_manage_messages',
-    // später kannst du z. B. noch 'instagram_business_content_publish' ergänzen
+    'instagram_business_manage_comments',
+    'instagram_business_content_publish',
   ]
 
-  const params = new URLSearchParams({
-    client_id: INSTAGRAM_APP_ID,
-    redirect_uri: redirectUri,
-    scope: scopes.join(','),
-    response_type: 'code',
-    state,
-  })
+  const authUrl = new URL('https://www.instagram.com/oauth/authorize')
+  authUrl.searchParams.set('client_id', INSTAGRAM_APP_ID)
+  authUrl.searchParams.set('redirect_uri', redirectUri)
+  authUrl.searchParams.set('response_type', 'code')
+  authUrl.searchParams.set('scope', scopes.join(','))
+  authUrl.searchParams.set('state', state)
 
-  const authUrl = `https://api.instagram.com/oauth/authorize?${params.toString()}`
-
-  const res = NextResponse.redirect(authUrl)
+  const res = NextResponse.redirect(authUrl.toString())
 
   res.cookies.set('ig_oauth_state', state, {
     httpOnly: true,

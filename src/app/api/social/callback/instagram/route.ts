@@ -5,10 +5,8 @@ import { supabaseServer } from '@/lib/supabase-server'
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://www.gleno.de'
 
-// Hier ebenfalls Facebook-App-ID + -Secret
-const META_APP_ID = process.env.META_APP_ID!
-const META_APP_SECRET = process.env.META_APP_SECRET!
-const FB_API_VERSION = 'v21.0'
+const INSTAGRAM_APP_ID = process.env.INSTAGRAM_APP_ID!
+const INSTAGRAM_APP_SECRET = process.env.INSTAGRAM_APP_SECRET!
 
 export async function GET(req: Request) {
   const url = new URL(req.url)
@@ -53,25 +51,27 @@ export async function GET(req: Request) {
 
   const redirectUri = `${SITE_URL}/api/social/callback/instagram`
 
-  // 1) Code → Access Token (Facebook OAuth / Graph)
-  const tokenUrl = new URL(
-    `https://graph.facebook.com/${FB_API_VERSION}/oauth/access_token`
-  )
-  tokenUrl.searchParams.set('client_id', META_APP_ID)
-  tokenUrl.searchParams.set('client_secret', META_APP_SECRET)
-  tokenUrl.searchParams.set('redirect_uri', redirectUri)
-  tokenUrl.searchParams.set('code', code)
+  // 1) Code → Short-lived Access Token (Instagram API with Instagram Login)
+  const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {
+    method: 'POST',
+    body: new URLSearchParams({
+      client_id: INSTAGRAM_APP_ID,
+      client_secret: INSTAGRAM_APP_SECRET,
+      grant_type: 'authorization_code',
+      redirect_uri: redirectUri,
+      code,
+    }),
+  })
 
-  const tokenRes = await fetch(tokenUrl.toString(), { method: 'GET' })
   const tokenData = await tokenRes.json()
 
   if (!tokenRes.ok || !tokenData.access_token) {
     console.error('IG token error', tokenRes.status, tokenData)
 
     const igErr =
-      tokenData.error?.message ||
-      tokenData.error_description ||
       tokenData.error_message ||
+      tokenData.error_description ||
+      tokenData.error?.message ||
       JSON.stringify(tokenData)
 
     const errShort = encodeURIComponent(String(igErr).substring(0, 180))
@@ -82,10 +82,11 @@ export async function GET(req: Request) {
   }
 
   const accessToken = tokenData.access_token as string
+  const userId = tokenData.user_id as string | undefined
 
-  // 2) Grunddaten zum Facebook-User holen
+  // 2) Profil holen (Instagram User über Graph)
   const meRes = await fetch(
-    `https://graph.facebook.com/${FB_API_VERSION}/me?fields=id,name&access_token=${accessToken}`
+    `https://graph.instagram.com/me?fields=id,username,account_type&access_token=${accessToken}`
   )
   const me = await meRes.json()
 
@@ -97,8 +98,6 @@ export async function GET(req: Request) {
   }
 
   const scopes = [
-    'email',
-    'instagram_basic',
     'instagram_business_basic',
     'instagram_manage_comments',
     'instagram_business_manage_messages',
@@ -110,9 +109,9 @@ export async function GET(req: Request) {
       {
         user_id: user.id,
         provider: 'instagram',
-        account_type: 'profile', // später evtl. 'business'
-        external_id: String(me.id), // FB-User-ID mit IG-Rechten
-        display_name: me.name || 'Instagram Account',
+        account_type: me.account_type || 'profile',
+        external_id: String(me.id || userId),
+        display_name: me.username || 'Instagram Account',
         avatar_url: null,
         access_token: accessToken,
         scopes,

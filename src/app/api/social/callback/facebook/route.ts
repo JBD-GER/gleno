@@ -30,9 +30,9 @@ export async function GET(req: Request) {
     )
   }
 
-  const cookieStore = cookies()
-  const cookieState = cookieStore.get('fb_oauth_state')?.value
-  const userIdFromCookie = cookieStore.get('gl_social_uid')?.value
+const cookieStore = await cookies()
+const cookieState = cookieStore.get('fb_oauth_state')?.value
+const userIdFromCookie = cookieStore.get('gl_social_uid')?.value
 
   if (!cookieState || cookieState !== state) {
     console.error('FB state mismatch', { cookieState, state })
@@ -99,7 +99,7 @@ export async function GET(req: Request) {
     )
   }
 
-  // 3) Insert in social_accounts – ohne Supabase-Auth, nur mit userIdFromCookie
+  // 3) Insert in social_accounts
   const row = {
     user_id: userIdFromCookie,
     provider: 'facebook',

@@ -4,6 +4,7 @@ import { supabaseServer } from '@/lib/supabase-server'
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://www.gleno.de'
+
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID!
 
 function randomState() {
@@ -25,16 +26,21 @@ export async function GET() {
   const state = randomState()
   const redirectUri = `${SITE_URL}/api/social/callback/linkedin`
 
-  const scope = ['r_liteprofile', 'r_emailaddress', 'w_member_social'].join(
-    ' '
-  )
+  const scopes = [
+    'openid',
+    'profile',
+    'email',
+    'w_member_social', // zum Posten
+  ]
 
-  const authUrl = new URL('https://www.linkedin.com/oauth/v2/authorization')
+  const authUrl = new URL(
+    'https://www.linkedin.com/oauth/v2/authorization'
+  )
   authUrl.searchParams.set('response_type', 'code')
   authUrl.searchParams.set('client_id', LINKEDIN_CLIENT_ID)
   authUrl.searchParams.set('redirect_uri', redirectUri)
   authUrl.searchParams.set('state', state)
-  authUrl.searchParams.set('scope', scope)
+  authUrl.searchParams.set('scope', scopes.join(' ')) // space-getrennt
 
   const res = NextResponse.redirect(authUrl.toString())
 

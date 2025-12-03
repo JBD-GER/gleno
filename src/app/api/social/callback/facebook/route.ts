@@ -16,19 +16,21 @@ export async function GET(req: Request) {
   const error = url.searchParams.get('error')
 
   if (error) {
-    return NextResponse.json(
-      { step: 'oauth_error', error },
-      { status: 400 }
+    console.error('FB OAuth error', error)
+    return NextResponse.redirect(
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_oauth_${encodeURIComponent(
+        error
+      )}`
     )
   }
 
   if (!code || !state) {
-    return NextResponse.json(
-      { step: 'missing_code_or_state', code, state },
-      { status: 400 }
+    return NextResponse.redirect(
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_invalid`
     )
   }
 
+  // bei deiner Next-Version: cookies() ist async → await
   const cookieStore = await cookies()
   const cookieState = cookieStore.get('fb_oauth_state')?.value
 
@@ -39,27 +41,16 @@ export async function GET(req: Request) {
   } = await supa.auth.getUser()
 
   if (!cookieState || cookieState !== state) {
-    return NextResponse.json(
-      {
-        step: 'state_mismatch',
-        cookieState,
-        state,
-        hasUser: !!user,
-        userError,
-      },
-      { status: 400 }
+    console.error('FB state mismatch', { cookieState, state, user, userError })
+    return NextResponse.redirect(
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_state`
     )
   }
 
   if (!user) {
-    return NextResponse.json(
-      {
-        step: 'no_user',
-        cookieState,
-        state,
-        userError,
-      },
-      { status: 400 }
+    console.error('No Supabase user in callback', { userError })
+    return NextResponse.redirect(
+      `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
     )
   }
 
@@ -78,13 +69,15 @@ export async function GET(req: Request) {
   const tokenData = await tokenRes.json()
 
   if (!tokenRes.ok || !tokenData.access_token) {
-    return NextResponse.json(
-      {
-        step: 'token_error',
-        status: tokenRes.status,
-        tokenData,
-      },
-      { status: 400 }
+    console.error('FB token error', tokenRes.status, tokenData)
+    const fbErr =
+      tokenData.error?.message ||
+      tokenData.error_description ||
+      JSON.stringify(tokenData)
+    const errShort = encodeURIComponent(String(fbErr).substring(0, 180))
+
+    return NextResponse.redirect(
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_token_${errShort}`
     )
   }
 
@@ -94,25 +87,19 @@ export async function GET(req: Request) {
   const meRes = await fetch(
     'https://graph.facebook.com/v21.0/me?fields=id,name,picture{url}',
     {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
+      headers: { Authorization: `Bearer ${accessToken}` },
     }
   )
   const me = await meRes.json()
 
   if (!meRes.ok || !me.id) {
-    return NextResponse.json(
-      {
-        step: 'me_error',
-        status: meRes.status,
-        me,
-      },
-      { status: 400 }
+    console.error('FB me error', meRes.status, me)
+    return NextResponse.redirect(
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_me`
     )
   }
 
-  // 3) Insert in social_accounts
+  // 3) Upsert in social_accounts
   const row = {
     user_id: user.id,
     provider: 'facebook' as const,
@@ -123,28 +110,28 @@ export async function GET(req: Request) {
     access_token: accessToken,
   }
 
-  const { data: inserted, error: insertError } = await supa
+  const { error: upsertError } = await supa
     .from('social_accounts')
-    .insert(row)
-    .select('*')
-    .maybeSingle()
+    .upsert(row, {
+      onConflict: 'user_id,provider,external_id',
+    })
 
-  // 4) Direkt nach dem Insert den kompletten Table lesen
-  const { data: allAccounts, error: selectError } = await supa
-    .from('social_accounts')
-    .select('*')
-    .order('created_at', { ascending: true })
+  if (upsertError) {
+    console.error('upsert facebook social_accounts error', upsertError)
+    const errShort = encodeURIComponent(
+      String(
+        upsertError.message ??
+          upsertError.details ??
+          JSON.stringify(upsertError)
+      ).substring(0, 180)
+    )
 
-  return NextResponse.json(
-    {
-      step: 'done',
-      user,
-      rowWeTriedToInsert: row,
-      insertError,
-      inserted,
-      selectError,
-      allAccounts,
-    },
-    { status: insertError ? 400 : 200 }
+    return NextResponse.redirect(
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_upsert_${errShort}`
+    )
+  }
+
+  return NextResponse.redirect(
+    `${SITE_URL}/dashboard/einstellung/social?connected=facebook`
   )
 }

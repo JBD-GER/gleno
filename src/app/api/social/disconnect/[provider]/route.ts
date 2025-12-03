@@ -21,23 +21,28 @@ export async function GET(
   } = await supa.auth.getUser()
 
   if (!user) {
+    console.error('disconnect: no user')
     return NextResponse.redirect(
       `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
     )
   }
 
-  const { error } = await supa
+  console.log('disconnect called', { provider, userId: user.id })
+
+  const { error, count } = await supa
     .from('social_accounts')
-    .delete()
+    .delete({ count: 'exact' })
     .eq('user_id', user.id)
     .eq('provider', provider)
 
   if (error) {
-    console.error('disconnect error', error)
+    console.error('disconnect error', { provider, userId: user.id, error })
     return NextResponse.redirect(
       `${SITE_URL}/dashboard/einstellung/social?error=${provider}_disconnect`
     )
   }
+
+  console.log('disconnect removed rows', { provider, userId: user.id, count })
 
   return NextResponse.redirect(
     `${SITE_URL}/dashboard/einstellung/social?disconnected=${provider}`

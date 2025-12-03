@@ -26,8 +26,9 @@ export async function GET() {
   const state = randomState()
   const redirectUri = `${SITE_URL}/api/social/callback/linkedin`
 
-  // 👉 Nur Standard-Scopes, die immer gehen
-  const scope = ['r_liteprofile', 'r_emailaddress', 'w_member_social'].join(' ')
+  const scope = ['r_liteprofile', 'r_emailaddress', 'w_member_social'].join(
+    ' '
+  )
 
   const authUrl = new URL('https://www.linkedin.com/oauth/v2/authorization')
   authUrl.searchParams.set('response_type', 'code')
@@ -37,7 +38,7 @@ export async function GET() {
   authUrl.searchParams.set('scope', scope)
 
   const res = NextResponse.redirect(authUrl.toString())
-  res.cookies.set('li_oauth_state', state, {
+  ;(await cookies()).set('li_oauth_state', state, {
     httpOnly: true,
     secure: true,
     path: '/',

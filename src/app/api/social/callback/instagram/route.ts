@@ -27,7 +27,6 @@ export async function GET() {
   const state = randomState()
   const redirectUri = `${SITE_URL}/api/social/callback/instagram`
 
-  // Instagram Basic Display Login
   const authUrl = new URL('https://api.instagram.com/oauth/authorize')
   authUrl.searchParams.set('client_id', INSTAGRAM_APP_ID)
   authUrl.searchParams.set('redirect_uri', redirectUri)
@@ -36,7 +35,7 @@ export async function GET() {
   authUrl.searchParams.set('state', state)
 
   const res = NextResponse.redirect(authUrl.toString())
-  res.cookies.set('ig_oauth_state', state, {
+  ;(await cookies()).set('ig_oauth_state', state, {
     httpOnly: true,
     secure: true,
     path: '/',

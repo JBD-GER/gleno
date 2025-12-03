@@ -17,7 +17,9 @@ export async function GET(req: Request) {
   if (error) {
     console.error('LinkedIn OAuth error', error)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_oauth`
+      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_oauth_${encodeURIComponent(
+        error
+      )}`
     )
   }
 
@@ -48,7 +50,7 @@ export async function GET(req: Request) {
 
   const redirectUri = `${SITE_URL}/api/social/callback/linkedin`
 
-  // 1) Code -> Access Token
+  // 1) Code → Access Token
   const tokenRes = await fetch(
     'https://www.linkedin.com/oauth/v2/accessToken',
     {
@@ -68,15 +70,25 @@ export async function GET(req: Request) {
 
   const tokenData = await tokenRes.json()
   if (!tokenRes.ok || !tokenData.access_token) {
-    console.error('LinkedIn token error', tokenData)
+    console.error('LinkedIn token error', tokenRes.status, tokenData)
+
+    const liErr =
+      tokenData.error_description ||
+      tokenData.error ||
+      JSON.stringify(tokenData)
+
+    const errShort = encodeURIComponent(
+      String(liErr).substring(0, 180)
+    )
+
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_token`
+      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_token_${errShort}`
     )
   }
 
   const accessToken = tokenData.access_token as string
 
-  // 2) Userinfo holen (OpenID/Userinfo Endpoint)
+  // 2) Userinfo holen
   const meRes = await fetch('https://api.linkedin.com/v2/userinfo', {
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -96,22 +108,23 @@ export async function GET(req: Request) {
     me.name ||
     'LinkedIn Profil'
 
-  const rows = [
+  const { error: upsertError } = await supa.from('social_accounts').upsert(
+    [
+      {
+        user_id: user.id,
+        provider: 'linkedin',
+        account_type: 'profile',
+        external_id: String(me.sub),
+        display_name: fullName,
+        avatar_url: me.picture ?? null,
+        access_token: accessToken,
+        scopes: ['r_liteprofile', 'r_emailaddress', 'w_member_social'],
+      },
+    ],
     {
-      user_id: user.id,
-      provider: 'linkedin',
-      account_type: 'profile',
-      external_id: String(me.sub),
-      display_name: fullName,
-      avatar_url: me.picture ?? null,
-      access_token: accessToken,
-      scopes: ['r_liteprofile', 'r_emailaddress', 'w_member_social'],
-    },
-  ]
-
-  const { error: upsertError } = await supa
-    .from('social_accounts')
-    .upsert(rows, { onConflict: 'user_id,provider,external_id' })
+      onConflict: 'user_id,provider,external_id',
+    }
+  )
 
   if (upsertError) {
     console.error('upsert linkedin social_accounts error', upsertError)

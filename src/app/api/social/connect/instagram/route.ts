@@ -18,7 +18,9 @@ export async function GET(req: Request) {
   if (error) {
     console.error('IG OAuth error', error)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=instagram_oauth`
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_oauth_${encodeURIComponent(
+        error
+      )}`
     )
   }
 
@@ -49,7 +51,7 @@ export async function GET(req: Request) {
 
   const redirectUri = `${SITE_URL}/api/social/callback/instagram`
 
-  // 1) Code -> Access Token
+  // 1) Code → Access Token
   const tokenRes = await fetch('https://api.instagram.com/oauth/access_token', {
     method: 'POST',
     body: new URLSearchParams({
@@ -63,16 +65,26 @@ export async function GET(req: Request) {
 
   const tokenData = await tokenRes.json()
   if (!tokenRes.ok || !tokenData.access_token) {
-    console.error('IG token error', tokenData)
+    console.error('IG token error', tokenRes.status, tokenData)
+
+    const igErr =
+      tokenData.error_message ||
+      tokenData.error_description ||
+      JSON.stringify(tokenData)
+
+    const errShort = encodeURIComponent(
+      String(igErr).substring(0, 180)
+    )
+
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=instagram_token`
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_token_${errShort}`
     )
   }
 
   const accessToken = tokenData.access_token as string
   const userId = tokenData.user_id as string
 
-  // 2) Profil holen (Basic Display / Graph)
+  // 2) Profil holen
   const meRes = await fetch(
     `https://graph.instagram.com/me?fields=id,username,account_type&access_token=${accessToken}`
   )
@@ -85,22 +97,23 @@ export async function GET(req: Request) {
     )
   }
 
-  const rows = [
+  const { error: upsertError } = await supa.from('social_accounts').upsert(
+    [
+      {
+        user_id: user.id,
+        provider: 'instagram',
+        account_type: 'profile',
+        external_id: String(me.id || userId),
+        display_name: me.username || 'Instagram Account',
+        avatar_url: null,
+        access_token: accessToken,
+        scopes: ['user_profile'],
+      },
+    ],
     {
-      user_id: user.id,
-      provider: 'instagram',
-      account_type: 'profile',
-      external_id: String(me.id || userId),
-      display_name: me.username || 'Instagram Account',
-      avatar_url: null,
-      access_token: accessToken,
-      scopes: ['user_profile'],
-    },
-  ]
-
-  const { error: upsertError } = await supa
-    .from('social_accounts')
-    .upsert(rows, { onConflict: 'user_id,provider,external_id' })
+      onConflict: 'user_id,provider,external_id',
+    }
+  )
 
   if (upsertError) {
     console.error('upsert instagram social_accounts error', upsertError)

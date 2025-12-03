@@ -18,7 +18,9 @@ export async function GET(req: Request) {
   if (error) {
     console.error('FB OAuth error', error)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=facebook_oauth`
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_oauth_${encodeURIComponent(
+        error
+      )}`
     )
   }
 
@@ -49,7 +51,7 @@ export async function GET(req: Request) {
 
   const redirectUri = `${SITE_URL}/api/social/callback/facebook`
 
-  // 1) Code -> Access Token
+  // 1) Code → Access Token
   const tokenRes = await fetch(
     `https://graph.facebook.com/v21.0/oauth/access_token?` +
       new URLSearchParams({
@@ -62,15 +64,25 @@ export async function GET(req: Request) {
   const tokenData = await tokenRes.json()
 
   if (!tokenRes.ok || !tokenData.access_token) {
-    console.error('FB token error', tokenData)
+    console.error('FB token error', tokenRes.status, tokenData)
+
+    const fbErr =
+      tokenData.error?.message ||
+      tokenData.error_description ||
+      JSON.stringify(tokenData)
+
+    const errShort = encodeURIComponent(
+      String(fbErr).substring(0, 180)
+    )
+
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=facebook_token`
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_token_${errShort}`
     )
   }
 
   const accessToken = tokenData.access_token as string
 
-  // 2) Userprofil holen
+  // 2) Profil holen (einfaches Profil für den Anfang)
   const meRes = await fetch(
     'https://graph.facebook.com/v21.0/me?fields=id,name,picture{url}',
     {
@@ -88,22 +100,23 @@ export async function GET(req: Request) {
     )
   }
 
-  const rows = [
+  const { error: upsertError } = await supa.from('social_accounts').upsert(
+    [
+      {
+        user_id: user.id,
+        provider: 'facebook',
+        account_type: 'profile',
+        external_id: String(me.id),
+        display_name: me.name || 'Facebook Profil',
+        avatar_url: me.picture?.data?.url ?? null,
+        access_token: accessToken,
+        scopes: ['public_profile', 'email'],
+      },
+    ],
     {
-      user_id: user.id,
-      provider: 'facebook',
-      account_type: 'profile',
-      external_id: String(me.id),
-      display_name: me.name || 'Facebook Profil',
-      avatar_url: me.picture?.data?.url ?? null,
-      access_token: accessToken,
-      scopes: ['public_profile', 'email'],
-    },
-  ]
-
-  const { error: upsertError } = await supa
-    .from('social_accounts')
-    .upsert(rows, { onConflict: 'user_id,provider,external_id' })
+      onConflict: 'user_id,provider,external_id',
+    }
+  )
 
   if (upsertError) {
     console.error('upsert facebook social_accounts error', upsertError)

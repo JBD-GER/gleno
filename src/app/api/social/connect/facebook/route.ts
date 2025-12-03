@@ -18,6 +18,7 @@ export async function GET() {
     data: { user },
   } = await supa.auth.getUser()
 
+  // Nicht eingeloggt → erst Login, danach zurück zu Social-Einstellungen
   if (!user) {
     return NextResponse.redirect(
       `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
@@ -27,7 +28,7 @@ export async function GET() {
   const state = randomState()
   const redirectUri = `${SITE_URL}/api/social/callback/facebook`
 
-  // 👉 Minimal-Scopes, die immer gehen
+  // Erstmal nur Basis-Scopes, damit nichts blockiert wird
   const scope = ['public_profile', 'email'].join(',')
 
   const authUrl = new URL('https://www.facebook.com/v21.0/dialog/oauth')
@@ -38,7 +39,7 @@ export async function GET() {
   authUrl.searchParams.set('response_type', 'code')
 
   const res = NextResponse.redirect(authUrl.toString())
-  res.cookies.set('fb_oauth_state', state, {
+  ;(await cookies()).set('fb_oauth_state', state, {
     httpOnly: true,
     secure: true,
     path: '/',

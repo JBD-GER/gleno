@@ -20,13 +20,13 @@ export async function GET(req: Request) {
     return NextResponse.redirect(
       `${SITE_URL}/dashboard/einstellung/social?error=instagram_oauth_${encodeURIComponent(
         error
-      )}`,
+      )}`
     )
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=instagram_invalid`,
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_invalid`
     )
   }
 
@@ -35,7 +35,7 @@ export async function GET(req: Request) {
   if (!cookieState || cookieState !== state) {
     console.error('IG state mismatch', { cookieState, state })
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=instagram_state`,
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_state`
     )
   }
 
@@ -46,7 +46,7 @@ export async function GET(req: Request) {
 
   if (!user) {
     return NextResponse.redirect(
-      `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`,
+      `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
     )
   }
 
@@ -72,43 +72,46 @@ export async function GET(req: Request) {
     const igErr =
       tokenData.error_message ||
       tokenData.error_description ||
+      tokenData.error?.message ||
       JSON.stringify(tokenData)
 
     const errShort = encodeURIComponent(String(igErr).substring(0, 180))
 
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=instagram_token_${errShort}`,
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_token_${errShort}`
     )
   }
 
   const accessToken = tokenData.access_token as string
 
-  // 2) Instagram User holen (Business Login)
+  // 2) Profil holen
   const meRes = await fetch(
-    `https://graph.instagram.com/me?fields=id,username,account_type&access_token=${accessToken}`,
+    `https://graph.instagram.com/me?fields=id,username,account_type&access_token=${accessToken}`
   )
   const me = await meRes.json()
 
   if (!meRes.ok || !me.id) {
     console.error('IG me error', meRes.status, me)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=instagram_me`,
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_me`
     )
   }
 
   const scopes = [
     'instagram_business_basic',
+    'instagram_manage_comments',
     'instagram_business_manage_messages',
-    'instagram_business_manage_comments',
     'instagram_business_content_publish',
   ]
 
+  // 3) Upsert in social_accounts – HIER der wichtige Teil
   const { error: upsertError } = await supa.from('social_accounts').upsert(
     [
       {
         user_id: user.id,
         provider: 'instagram',
-        account_type: me.account_type || 'business',
+        // Fix: Immer einen Wert verwenden, der vom CHECK-Constraint erlaubt ist
+        account_type: 'profile', // <-- statt me.account_type
         external_id: String(me.id),
         display_name: me.username || 'Instagram Account',
         avatar_url: null,
@@ -118,7 +121,7 @@ export async function GET(req: Request) {
     ],
     {
       onConflict: 'user_id,provider,external_id',
-    },
+    }
   )
 
   if (upsertError) {
@@ -127,16 +130,16 @@ export async function GET(req: Request) {
       String(
         upsertError.message ??
           upsertError.details ??
-          JSON.stringify(upsertError),
-      ).substring(0, 180),
+          JSON.stringify(upsertError)
+      ).substring(0, 180)
     )
 
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=instagram_upsert_${errShort}`,
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_upsert_${errShort}`
     )
   }
 
   return NextResponse.redirect(
-    `${SITE_URL}/dashboard/einstellung/social?connected=instagram`,
+    `${SITE_URL}/dashboard/einstellung/social?connected=instagram`
   )
 }

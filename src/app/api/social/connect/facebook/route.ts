@@ -36,8 +36,6 @@ export async function GET() {
   authUrl.searchParams.set('response_type', 'code')
 
   const res = NextResponse.redirect(authUrl.toString())
-
-  // 🔥 WICHTIG: Cookie über Response setzen, nicht über cookies()
   res.cookies.set('fb_oauth_state', state, {
     httpOnly: true,
     secure: true,

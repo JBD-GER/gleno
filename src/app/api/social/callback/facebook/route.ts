@@ -33,6 +33,7 @@ export async function GET(req: Request) {
   const cookieStore = await cookies()
   const cookieState = cookieStore.get('fb_oauth_state')?.value
   if (!cookieState || cookieState !== state) {
+    console.error('FB state mismatch', { cookieState, state })
     return NextResponse.redirect(
       `${SITE_URL}/dashboard/einstellung/social?error=facebook_state`
     )
@@ -100,30 +101,37 @@ export async function GET(req: Request) {
     )
   }
 
-  const { error: upsertError } = await supa.from('social_accounts').upsert(
-    [
-      {
-        user_id: user.id,
-        provider: 'facebook',
-        account_type: 'profile',
-        external_id: String(me.id),
-        display_name: me.name || 'Facebook Profil',
-        avatar_url: me.picture?.data?.url ?? null,
-        access_token: accessToken,
-        scopes: ['public_profile', 'email'],
-      },
-    ],
-    {
-      onConflict: 'user_id,provider,external_id',
-    }
-  )
+  // 3) EINFACHER Insert (kein upsert, keine scopes)
+  const row = {
+    user_id: user.id,
+    provider: 'facebook',
+    account_type: 'profile' as const,
+    external_id: String(me.id),
+    display_name: me.name || 'Facebook Profil',
+    avatar_url: me.picture?.data?.url ?? null,
+    access_token: accessToken,
+  }
 
-  if (upsertError) {
-    console.error('upsert facebook social_accounts error', upsertError)
+  const { data: inserted, error: insertError } = await supa
+    .from('social_accounts')
+    .insert(row)
+    .select('id')
+    .maybeSingle()
+
+  if (insertError) {
+    console.error('insert facebook social_accounts error', insertError)
+    const errShort = encodeURIComponent(
+      String(insertError.message ?? insertError.details ?? 'unknown').substring(
+        0,
+        180
+      )
+    )
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=facebook_upsert`
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_upsert_${errShort}`
     )
   }
+
+  console.log('facebook account inserted', inserted)
 
   return NextResponse.redirect(
     `${SITE_URL}/dashboard/einstellung/social?connected=facebook`

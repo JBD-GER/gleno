@@ -1,6 +1,5 @@
 // app/api/social/connect/facebook/route.ts
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { supabaseServer } from '@/lib/supabase-server'
 
 const SITE_URL =
@@ -18,7 +17,6 @@ export async function GET() {
     data: { user },
   } = await supa.auth.getUser()
 
-  // Nicht eingeloggt → erst Login, danach zurück zu Social-Einstellungen
   if (!user) {
     return NextResponse.redirect(
       `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
@@ -28,7 +26,6 @@ export async function GET() {
   const state = randomState()
   const redirectUri = `${SITE_URL}/api/social/callback/facebook`
 
-  // Erstmal nur Basis-Scopes, damit nichts blockiert wird
   const scope = ['public_profile', 'email'].join(',')
 
   const authUrl = new URL('https://www.facebook.com/v21.0/dialog/oauth')
@@ -39,11 +36,14 @@ export async function GET() {
   authUrl.searchParams.set('response_type', 'code')
 
   const res = NextResponse.redirect(authUrl.toString())
-  ;(await cookies()).set('fb_oauth_state', state, {
+
+  // 🔥 WICHTIG: Cookie über Response setzen, nicht über cookies()
+  res.cookies.set('fb_oauth_state', state, {
     httpOnly: true,
     secure: true,
     path: '/',
     maxAge: 10 * 60,
   })
+
   return res
 }

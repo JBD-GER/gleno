@@ -1,42 +1,16 @@
-// app/api/social/callback/linkedin/route.ts
+// app/api/social/connect/linkedin/route.ts
 import { NextResponse } from 'next/server'
-import { cookies } from 'next/headers'
 import { supabaseServer } from '@/lib/supabase-server'
 
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://www.gleno.de'
 const LINKEDIN_CLIENT_ID = process.env.LINKEDIN_CLIENT_ID!
-const LINKEDIN_CLIENT_SECRET = process.env.LINKEDIN_CLIENT_SECRET!
 
-export async function GET(req: Request) {
-  const url = new URL(req.url)
-  const code = url.searchParams.get('code')
-  const state = url.searchParams.get('state')
-  const error = url.searchParams.get('error')
+function randomState() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
 
-  if (error) {
-    console.error('LinkedIn OAuth error', error)
-    return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_oauth_${encodeURIComponent(
-        error
-      )}`
-    )
-  }
-
-  if (!code || !state) {
-    return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_invalid`
-    )
-  }
-
-  const cookieStore = await cookies()
-  const cookieState = cookieStore.get('li_oauth_state')?.value
-  if (!cookieState || cookieState !== state) {
-    return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_state`
-    )
-  }
-
+export async function GET() {
   const supa = await supabaseServer()
   const {
     data: { user },
@@ -48,92 +22,28 @@ export async function GET(req: Request) {
     )
   }
 
+  const state = randomState()
   const redirectUri = `${SITE_URL}/api/social/callback/linkedin`
 
-  // 1) Code → Access Token
-  const tokenRes = await fetch(
-    'https://www.linkedin.com/oauth/v2/accessToken',
-    {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        redirect_uri: redirectUri,
-        client_id: LINKEDIN_CLIENT_ID,
-        client_secret: LINKEDIN_CLIENT_SECRET,
-      }),
-    }
+  const scope = ['r_liteprofile', 'r_emailaddress', 'w_member_social'].join(
+    ' '
   )
 
-  const tokenData = await tokenRes.json()
-  if (!tokenRes.ok || !tokenData.access_token) {
-    console.error('LinkedIn token error', tokenRes.status, tokenData)
+  const authUrl = new URL('https://www.linkedin.com/oauth/v2/authorization')
+  authUrl.searchParams.set('response_type', 'code')
+  authUrl.searchParams.set('client_id', LINKEDIN_CLIENT_ID)
+  authUrl.searchParams.set('redirect_uri', redirectUri)
+  authUrl.searchParams.set('state', state)
+  authUrl.searchParams.set('scope', scope)
 
-    const liErr =
-      tokenData.error_description ||
-      tokenData.error ||
-      JSON.stringify(tokenData)
+  const res = NextResponse.redirect(authUrl.toString())
 
-    const errShort = encodeURIComponent(
-      String(liErr).substring(0, 180)
-    )
-
-    return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_token_${errShort}`
-    )
-  }
-
-  const accessToken = tokenData.access_token as string
-
-  // 2) Userinfo holen
-  const meRes = await fetch('https://api.linkedin.com/v2/userinfo', {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+  res.cookies.set('li_oauth_state', state, {
+    httpOnly: true,
+    secure: true,
+    path: '/',
+    maxAge: 10 * 60,
   })
 
-  const me = await meRes.json()
-  if (!meRes.ok || !me.sub) {
-    console.error('LinkedIn me error', me)
-    return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_me`
-    )
-  }
-
-  const fullName =
-    [me.given_name, me.family_name].filter(Boolean).join(' ') ||
-    me.name ||
-    'LinkedIn Profil'
-
-  const { error: upsertError } = await supa.from('social_accounts').upsert(
-    [
-      {
-        user_id: user.id,
-        provider: 'linkedin',
-        account_type: 'profile',
-        external_id: String(me.sub),
-        display_name: fullName,
-        avatar_url: me.picture ?? null,
-        access_token: accessToken,
-        scopes: ['r_liteprofile', 'r_emailaddress', 'w_member_social'],
-      },
-    ],
-    {
-      onConflict: 'user_id,provider,external_id',
-    }
-  )
-
-  if (upsertError) {
-    console.error('upsert linkedin social_accounts error', upsertError)
-    return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_upsert`
-    )
-  }
-
-  return NextResponse.redirect(
-    `${SITE_URL}/dashboard/einstellung/social?connected=linkedin`
-  )
+  return res
 }

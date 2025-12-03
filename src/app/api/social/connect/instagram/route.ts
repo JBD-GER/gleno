@@ -4,8 +4,8 @@ import { supabaseServer } from '@/lib/supabase-server'
 const SITE_URL =
   process.env.NEXT_PUBLIC_SITE_URL || 'https://www.gleno.de'
 
-const INSTAGRAM_APP_ID = process.env.INSTAGRAM_APP_ID!
-// Facebook / Graph API Version
+// ⚠️ Für den Login hier wieder die Facebook-App-ID verwenden
+const META_APP_ID = process.env.META_APP_ID!
 const FB_API_VERSION = 'v21.0'
 
 function randomState() {
@@ -27,7 +27,7 @@ export async function GET() {
   const state = randomState()
   const redirectUri = `${SITE_URL}/api/social/callback/instagram`
 
-  // Scopes passend zu deiner Meta-Konfiguration
+  // Scopes passend zu deinem Use Case / Meta-Setup
   const scopes = [
     'email',
     'instagram_basic',
@@ -36,15 +36,15 @@ export async function GET() {
     'instagram_business_manage_messages',
   ]
 
-  // WICHTIG: Für Instagram Graph API läuft das Login über Facebook OAuth
+  // Login läuft über Facebook OAuth Dialog
   const authUrl = new URL(
     `https://www.facebook.com/${FB_API_VERSION}/dialog/oauth`
   )
-  authUrl.searchParams.set('client_id', INSTAGRAM_APP_ID)
+  authUrl.searchParams.set('client_id', META_APP_ID)
   authUrl.searchParams.set('redirect_uri', redirectUri)
   authUrl.searchParams.set('response_type', 'code')
-  authUrl.searchParams.set('state', state)
   authUrl.searchParams.set('scope', scopes.join(','))
+  authUrl.searchParams.set('state', state)
 
   const res = NextResponse.redirect(authUrl.toString())
 

@@ -18,13 +18,13 @@ export async function GET(req: Request) {
   if (error) {
     console.error('IG OAuth error', error)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=instagram_oauth`
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_oauth`
     )
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=instagram_invalid`
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_invalid`
     )
   }
 
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   const cookieState = cookieStore.get('ig_oauth_state')?.value
   if (!cookieState || cookieState !== state) {
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=instagram_state`
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_state`
     )
   }
 
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 
   if (!user) {
     return NextResponse.redirect(
-      `${SITE_URL}/login?returnTo=/dashboard/einstellungen/social`
+      `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
     )
   }
 
@@ -65,7 +65,7 @@ export async function GET(req: Request) {
   if (!tokenRes.ok || !tokenData.access_token) {
     console.error('IG token error', tokenData)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=instagram_token`
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_token`
     )
   }
 
@@ -81,7 +81,7 @@ export async function GET(req: Request) {
   if (!meRes.ok || !me.id) {
     console.error('IG me error', me)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=instagram_me`
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_me`
     )
   }
 
@@ -105,11 +105,11 @@ export async function GET(req: Request) {
   if (upsertError) {
     console.error('upsert instagram social_accounts error', upsertError)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=instagram_upsert`
+      `${SITE_URL}/dashboard/einstellung/social?error=instagram_upsert`
     )
   }
 
   return NextResponse.redirect(
-    `${SITE_URL}/dashboard/einstellungen/social?connected=instagram`
+    `${SITE_URL}/dashboard/einstellung/social?connected=instagram`
   )
 }

@@ -1,4 +1,4 @@
-// app/(app)/dashboard/einstellungen/social/page.tsx
+// app/(app)/dashboard/einstellung/social/page.tsx
 import Link from 'next/link'
 import { supabaseServer } from '@/lib/supabase-server'
 

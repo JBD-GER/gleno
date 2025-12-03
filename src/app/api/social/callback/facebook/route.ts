@@ -18,13 +18,13 @@ export async function GET(req: Request) {
   if (error) {
     console.error('FB OAuth error', error)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=facebook_oauth`
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_oauth`
     )
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=facebook_invalid`
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_invalid`
     )
   }
 
@@ -32,7 +32,7 @@ export async function GET(req: Request) {
   const cookieState = cookieStore.get('fb_oauth_state')?.value
   if (!cookieState || cookieState !== state) {
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=facebook_state`
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_state`
     )
   }
 
@@ -43,7 +43,7 @@ export async function GET(req: Request) {
 
   if (!user) {
     return NextResponse.redirect(
-      `${SITE_URL}/login?returnTo=/dashboard/einstellungen/social`
+      `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
     )
   }
 
@@ -64,7 +64,7 @@ export async function GET(req: Request) {
   if (!tokenRes.ok || !tokenData.access_token) {
     console.error('FB token error', tokenData)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=facebook_token`
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_token`
     )
   }
 
@@ -84,7 +84,7 @@ export async function GET(req: Request) {
   if (!meRes.ok || !me.id) {
     console.error('FB me error', me)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=facebook_me`
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_me`
     )
   }
 
@@ -108,11 +108,11 @@ export async function GET(req: Request) {
   if (upsertError) {
     console.error('upsert facebook social_accounts error', upsertError)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=facebook_upsert`
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_upsert`
     )
   }
 
   return NextResponse.redirect(
-    `${SITE_URL}/dashboard/einstellungen/social?connected=facebook`
+    `${SITE_URL}/dashboard/einstellung/social?connected=facebook`
   )
 }

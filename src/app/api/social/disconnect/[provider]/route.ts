@@ -22,7 +22,7 @@ export async function GET(
 
   if (!user) {
     return NextResponse.redirect(
-      `${SITE_URL}/login?returnTo=/dashboard/einstellungen/social`
+      `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
     )
   }
 
@@ -35,11 +35,11 @@ export async function GET(
   if (error) {
     console.error('disconnect error', error)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=${provider}_disconnect`
+      `${SITE_URL}/dashboard/einstellung/social?error=${provider}_disconnect`
     )
   }
 
   return NextResponse.redirect(
-    `${SITE_URL}/dashboard/einstellungen/social?disconnected=${provider}`
+    `${SITE_URL}/dashboard/einstellung/social?disconnected=${provider}`
   )
 }

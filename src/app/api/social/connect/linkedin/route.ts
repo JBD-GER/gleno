@@ -17,13 +17,13 @@ export async function GET(req: Request) {
   if (error) {
     console.error('LinkedIn OAuth error', error)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=linkedin_oauth`
+      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_oauth`
     )
   }
 
   if (!code || !state) {
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=linkedin_invalid`
+      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_invalid`
     )
   }
 
@@ -31,7 +31,7 @@ export async function GET(req: Request) {
   const cookieState = cookieStore.get('li_oauth_state')?.value
   if (!cookieState || cookieState !== state) {
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=linkedin_state`
+      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_state`
     )
   }
 
@@ -42,7 +42,7 @@ export async function GET(req: Request) {
 
   if (!user) {
     return NextResponse.redirect(
-      `${SITE_URL}/login?returnTo=/dashboard/einstellungen/social`
+      `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
     )
   }
 
@@ -70,7 +70,7 @@ export async function GET(req: Request) {
   if (!tokenRes.ok || !tokenData.access_token) {
     console.error('LinkedIn token error', tokenData)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=linkedin_token`
+      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_token`
     )
   }
 
@@ -87,7 +87,7 @@ export async function GET(req: Request) {
   if (!meRes.ok || !me.sub) {
     console.error('LinkedIn me error', me)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=linkedin_me`
+      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_me`
     )
   }
 
@@ -116,11 +116,11 @@ export async function GET(req: Request) {
   if (upsertError) {
     console.error('upsert linkedin social_accounts error', upsertError)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=linkedin_upsert`
+      `${SITE_URL}/dashboard/einstellung/social?error=linkedin_upsert`
     )
   }
 
   return NextResponse.redirect(
-    `${SITE_URL}/dashboard/einstellungen/social?connected=linkedin`
+    `${SITE_URL}/dashboard/einstellung/social?connected=linkedin`
   )
 }

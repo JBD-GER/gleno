@@ -19,7 +19,7 @@ export async function GET() {
 
   if (!user) {
     return NextResponse.redirect(
-      `${SITE_URL}/login?returnTo=/dashboard/einstellungen/social`
+      `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
     )
   }
 

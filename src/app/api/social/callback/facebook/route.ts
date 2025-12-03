@@ -30,9 +30,8 @@ export async function GET(req: Request) {
     )
   }
 
-const cookieStore = await cookies()
-const cookieState = cookieStore.get('fb_oauth_state')?.value
-const userIdFromCookie = cookieStore.get('gl_social_uid')?.value
+  const cookieStore = await cookies()
+  const cookieState = cookieStore.get('fb_oauth_state')?.value
 
   if (!cookieState || cookieState !== state) {
     console.error('FB state mismatch', { cookieState, state })
@@ -41,14 +40,17 @@ const userIdFromCookie = cookieStore.get('gl_social_uid')?.value
     )
   }
 
-  if (!userIdFromCookie) {
-    console.error('No gl_social_uid cookie found')
+  const supa = await supabaseServer()
+  const {
+    data: { user },
+  } = await supa.auth.getUser()
+
+  if (!user) {
+    console.error('No Supabase user in callback')
     return NextResponse.redirect(
       `${SITE_URL}/dashboard/einstellung/social?error=facebook_no_user`
     )
   }
-
-  const supa = await supabaseServer()
 
   const redirectUri = `${SITE_URL}/api/social/callback/facebook`
 
@@ -101,7 +103,7 @@ const userIdFromCookie = cookieStore.get('gl_social_uid')?.value
 
   // 3) Insert in social_accounts
   const row = {
-    user_id: userIdFromCookie,
+    user_id: user.id,
     provider: 'facebook',
     account_type: 'profile' as const,
     external_id: String(me.id),

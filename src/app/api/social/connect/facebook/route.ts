@@ -37,16 +37,7 @@ export async function GET() {
 
   const res = NextResponse.redirect(authUrl.toString())
 
-  // ✅ State-Cookie für CSRF-Schutz
   res.cookies.set('fb_oauth_state', state, {
-    httpOnly: true,
-    secure: true,
-    path: '/',
-    maxAge: 10 * 60,
-  })
-
-  // ✅ eigene User-ID merken (entkoppelt von Supabase-Auth im Callback)
-  res.cookies.set('gl_social_uid', user.id, {
     httpOnly: true,
     secure: true,
     path: '/',

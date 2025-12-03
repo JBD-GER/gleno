@@ -28,7 +28,6 @@ export async function GET(req: Request) {
     )
   }
 
-  // 👇 FIX: cookies() awaiten
   const cookieStore = await cookies()
   const cookieState = cookieStore.get('fb_oauth_state')?.value
   if (!cookieState || cookieState !== state) {
@@ -60,8 +59,8 @@ export async function GET(req: Request) {
         code,
       })
   )
-
   const tokenData = await tokenRes.json()
+
   if (!tokenRes.ok || !tokenData.access_token) {
     console.error('FB token error', tokenData)
     return NextResponse.redirect(
@@ -69,57 +68,48 @@ export async function GET(req: Request) {
     )
   }
 
-  const userAccessToken = tokenData.access_token as string
-  const effectiveToken = userAccessToken
+  const accessToken = tokenData.access_token as string
 
-  // 2) Pages holen
-  const pagesRes = await fetch(
-    'https://graph.facebook.com/v21.0/me/accounts?' +
-      new URLSearchParams({
-        fields: 'name,id,access_token,picture{url}',
-      }),
+  // 2) Userprofil holen
+  const meRes = await fetch(
+    'https://graph.facebook.com/v21.0/me?fields=id,name,picture{url}',
     {
       headers: {
-        Authorization: `Bearer ${effectiveToken}`,
+        Authorization: `Bearer ${accessToken}`,
       },
     }
   )
+  const me = await meRes.json()
 
-  const pagesData = await pagesRes.json()
-  if (!pagesRes.ok) {
-    console.error('FB pages error', pagesData)
+  if (!meRes.ok || !me.id) {
+    console.error('FB me error', me)
     return NextResponse.redirect(
-      `${SITE_URL}/dashboard/einstellungen/social?error=facebook_pages`
+      `${SITE_URL}/dashboard/einstellungen/social?error=facebook_me`
     )
   }
 
-  const pages: any[] = pagesData.data ?? []
-  const rows: any[] = []
-
-  for (const page of pages) {
-    rows.push({
+  const rows = [
+    {
       user_id: user.id,
       provider: 'facebook',
-      account_type: 'page',
-      external_id: page.id,
-      display_name: page.name,
-      avatar_url: page.picture?.data?.url ?? null,
-      access_token: page.access_token,
-      scopes: ['pages_manage_posts', 'pages_show_list'],
-    })
-  }
+      account_type: 'profile',
+      external_id: String(me.id),
+      display_name: me.name || 'Facebook Profil',
+      avatar_url: me.picture?.data?.url ?? null,
+      access_token: accessToken,
+      scopes: ['public_profile', 'email'],
+    },
+  ]
 
-  if (rows.length > 0) {
-    const { error: upsertError } = await supa.from('social_accounts').upsert(
-      rows,
-      { onConflict: 'user_id,provider,external_id' }
+  const { error: upsertError } = await supa
+    .from('social_accounts')
+    .upsert(rows, { onConflict: 'user_id,provider,external_id' })
+
+  if (upsertError) {
+    console.error('upsert facebook social_accounts error', upsertError)
+    return NextResponse.redirect(
+      `${SITE_URL}/dashboard/einstellungen/social?error=facebook_upsert`
     )
-    if (upsertError) {
-      console.error('upsert social_accounts error', upsertError)
-      return NextResponse.redirect(
-        `${SITE_URL}/dashboard/einstellungen/social?error=facebook_upsert`
-      )
-    }
   }
 
   return NextResponse.redirect(

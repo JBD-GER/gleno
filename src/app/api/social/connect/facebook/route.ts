@@ -27,13 +27,8 @@ export async function GET() {
   const state = randomState()
   const redirectUri = `${SITE_URL}/api/social/callback/facebook`
 
-  const scope = [
-    'public_profile',
-    'email',
-    'pages_show_list',
-    'pages_read_engagement',
-    'pages_manage_posts',
-  ].join(',')
+  // 👉 Minimal-Scopes, die immer gehen
+  const scope = ['public_profile', 'email'].join(',')
 
   const authUrl = new URL('https://www.facebook.com/v21.0/dialog/oauth')
   authUrl.searchParams.set('client_id', META_APP_ID)

@@ -248,14 +248,15 @@ export default async function SocialSettingsPage(props: SocialSettingsPageProps)
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              {facebookCount > 0 && (
-                <Link
-                  href="/api/social/disconnect/facebook"
-                  className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
-                >
-                  Verbindung trennen
-                </Link>
-              )}
+{facebookCount > 0 && (
+  <a
+    href="/api/social/disconnect/facebook"
+    className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
+  >
+    Verbindung trennen
+  </a>
+)}
+
               <Link
                 href="/api/social/connect/facebook"
                 className="rounded-xl bg-[#0866FF] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[#0750c7]"
@@ -291,14 +292,14 @@ export default async function SocialSettingsPage(props: SocialSettingsPageProps)
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              {instagramCount > 0 && (
-                <Link
-                  href="/api/social/disconnect/instagram"
-                  className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
-                >
-                  Verbindung trennen
-                </Link>
-              )}
+{instagramCount > 0 && (
+  <a
+    href="/api/social/disconnect/instagram"
+    className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
+  >
+    Verbindung trennen
+  </a>
+)}
               <Link
                 href="/api/social/connect/instagram"
                 className="rounded-xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition"
@@ -334,14 +335,14 @@ export default async function SocialSettingsPage(props: SocialSettingsPageProps)
             </div>
 
             <div className="mt-3 flex flex-wrap gap-2">
-              {linkedinCount > 0 && (
-                <Link
-                  href="/api/social/disconnect/linkedin"
-                  className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
-                >
-                  Verbindung trennen
-                </Link>
-              )}
+{linkedinCount > 0 && (
+  <a
+    href="/api/social/disconnect/linkedin"
+    className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
+  >
+    Verbindung trennen
+  </a>
+)}
               <Link
                 href="/api/social/connect/linkedin"
                 className="rounded-xl bg-[#0A66C2] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[#084f97]"

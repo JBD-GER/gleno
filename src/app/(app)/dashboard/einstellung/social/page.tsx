@@ -12,8 +12,16 @@ type SocialSettingsPageProps = {
   searchParams: Promise<RawSearchParams>
 }
 
+type SocialAccountRow = {
+  id: string
+  provider: 'facebook' | 'instagram' | 'linkedin'
+  account_type: 'profile' | 'page' | 'business' | 'company' | null
+  display_name: string | null
+  external_id: string | null
+  avatar_url: string | null
+}
+
 export default async function SocialSettingsPage(props: SocialSettingsPageProps) {
-  // ✅ Next 13.5+ – searchParams awaiten
   const { connected, disconnected, error } = await props.searchParams
 
   const providerLabel =
@@ -48,22 +56,51 @@ export default async function SocialSettingsPage(props: SocialSettingsPageProps)
     data: { user },
   } = await supa.auth.getUser()
 
-  let facebookCount = 0
-  let instagramCount = 0
-  let linkedinCount = 0
+  let facebookProfile: SocialAccountRow | null = null
+  let facebookPages: SocialAccountRow[] = []
+  let instagramProfile: SocialAccountRow | null = null
+  let linkedinProfile: SocialAccountRow | null = null
+  let linkedinCompanies: SocialAccountRow[] = []
 
   if (user) {
     const { data: accounts, error: accountsError } = await supa
       .from('social_accounts')
-      .select('id, provider')
+      .select(
+        'id, provider, account_type, display_name, external_id, avatar_url'
+      )
       .eq('user_id', user.id)
 
     if (!accountsError && accounts) {
-      facebookCount = accounts.filter((a) => a.provider === 'facebook').length
-      instagramCount = accounts.filter((a) => a.provider === 'instagram').length
-      linkedinCount = accounts.filter((a) => a.provider === 'linkedin').length
+      const rows = accounts as unknown as SocialAccountRow[]
+
+      facebookProfile =
+        rows.find(
+          (a) => a.provider === 'facebook' && a.account_type === 'profile'
+        ) ?? null
+      facebookPages = rows.filter(
+        (a) => a.provider === 'facebook' && a.account_type === 'page'
+      )
+
+      instagramProfile =
+        rows.find(
+          (a) => a.provider === 'instagram' && a.account_type === 'profile'
+        ) ?? null
+
+      linkedinProfile =
+        rows.find(
+          (a) => a.provider === 'linkedin' && a.account_type === 'profile'
+        ) ?? null
+      linkedinCompanies = rows.filter(
+        (a) => a.provider === 'linkedin' && a.account_type === 'company'
+      )
     }
   }
+
+  const facebookCount =
+    (facebookProfile ? 1 : 0) + (facebookPages?.length ?? 0)
+  const instagramCount = instagramProfile ? 1 : 0
+  const linkedinCount =
+    (linkedinProfile ? 1 : 0) + (linkedinCompanies?.length ?? 0)
 
   const hasAnyConnection =
     facebookCount > 0 || instagramCount > 0 || linkedinCount > 0
@@ -164,6 +201,7 @@ export default async function SocialSettingsPage(props: SocialSettingsPageProps)
             )}
           </div>
 
+          {/* Kleine Status-Tabelle */}
           <div className="overflow-hidden rounded-2xl border border-slate-100/80 bg-slate-50/60 text-xs shadow-sm">
             <div className="grid grid-cols-[1.2fr_1fr_1fr] border-b border-slate-100/80 bg-white/70 px-3 py-2 font-medium text-slate-500 backdrop-blur">
               <div>Kanal</div>
@@ -216,6 +254,7 @@ export default async function SocialSettingsPage(props: SocialSettingsPageProps)
             </div>
           </div>
 
+          {/* Hinweis */}
           <p className="mt-2 text-[11px] text-slate-500">
             Tipp: Später kannst du hier auch sehen, welche Seite welchem GLENO
             Workspace zugeordnet ist.
@@ -226,7 +265,7 @@ export default async function SocialSettingsPage(props: SocialSettingsPageProps)
         <div className="space-y-4">
           {/* Facebook Card */}
           <div className="group rounded-3xl border border-white/70 bg-white/85 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.12)] backdrop-blur-xl transition-transform duration-150 hover:-translate-y-0.5 sm:p-5">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Kanal
@@ -245,30 +284,52 @@ export default async function SocialSettingsPage(props: SocialSettingsPageProps)
                   </span>
                 </p>
               </div>
-            </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-{facebookCount > 0 && (
-  <a
-    href="/api/social/disconnect/facebook"
-    className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
-  >
-    Verbindung trennen
-  </a>
-)}
+              {/* Verknüpfte Seiten anzeigen */}
+              {facebookPages.length > 0 && (
+                <div className="mt-1 rounded-2xl border border-slate-100 bg-slate-50/70 text-[11px]">
+                  <div className="border-b border-slate-100 px-3 py-1.5 font-medium uppercase tracking-[0.16em] text-slate-500">
+                    Verknüpfte Seiten
+                  </div>
+                  {facebookPages.map((p) => (
+                    <div
+                      key={p.id}
+                      className="flex items-center justify-between gap-2 px-3 py-1.5 text-[12px]"
+                    >
+                      <span className="truncate text-slate-700">
+                        {p.display_name ?? p.external_id ?? 'Unbenannte Seite'}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        ID: {p.external_id}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
 
-              <Link
-                href="/api/social/connect/facebook"
-                className="rounded-xl bg-[#0866FF] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[#0750c7]"
-              >
-                Verbinden
-              </Link>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {facebookCount > 0 && (
+                  <a
+                    href="/api/social/disconnect/facebook"
+                    className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
+                  >
+                    Verbindung trennen
+                  </a>
+                )}
+
+                <Link
+                  href="/api/social/connect/facebook"
+                  className="rounded-xl bg-[#0866FF] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[#0750c7]"
+                >
+                  Verbinden
+                </Link>
+              </div>
             </div>
           </div>
 
-          {/* Instagram Card */}
+          {/* Instagram Card (noch ohne Seitenliste, kannst du später ähnlich erweitern) */}
           <div className="group rounded-3xl border border-white/70 bg-white/85 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.12)] backdrop-blur-xl transition-transform duration-150 hover:-translate-y-0.5 sm:p-5">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Kanal
@@ -289,29 +350,29 @@ export default async function SocialSettingsPage(props: SocialSettingsPageProps)
                   </span>
                 </p>
               </div>
-            </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-{instagramCount > 0 && (
-  <a
-    href="/api/social/disconnect/instagram"
-    className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
-  >
-    Verbindung trennen
-  </a>
-)}
-              <Link
-                href="/api/social/connect/instagram"
-                className="rounded-xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition"
-              >
-                Verbinden
-              </Link>
+              <div className="mt-3 flex flex-wrap gap-2">
+                {instagramCount > 0 && (
+                  <a
+                    href="/api/social/disconnect/instagram"
+                    className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
+                  >
+                    Verbindung trennen
+                  </a>
+                )}
+                <Link
+                  href="/api/social/connect/instagram"
+                  className="rounded-xl bg-gradient-to-tr from-[#F58529] via-[#DD2A7B] to-[#8134AF] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition"
+                >
+                  Verbinden
+                </Link>
+              </div>
             </div>
           </div>
 
-          {/* LinkedIn Card */}
+          {/* LinkedIn Card mit Unternehmensseiten */}
           <div className="group rounded-3xl border border-white/70 bg-white/85 p-4 shadow-[0_12px_32px_rgba(15,23,42,0.12)] backdrop-blur-xl transition-transform duration-150 hover:-translate-y-0.5 sm:p-5">
-            <div className="flex items-start justify-between gap-3">
+            <div className="flex flex-col gap-3">
               <div>
                 <div className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">
                   Kanal
@@ -332,23 +393,44 @@ export default async function SocialSettingsPage(props: SocialSettingsPageProps)
                   </span>
                 </p>
               </div>
-            </div>
 
-            <div className="mt-3 flex flex-wrap gap-2">
-{linkedinCount > 0 && (
-  <a
-    href="/api/social/disconnect/linkedin"
-    className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
-  >
-    Verbindung trennen
-  </a>
-)}
-              <Link
-                href="/api/social/connect/linkedin"
-                className="rounded-xl bg-[#0A66C2] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[#084f97]"
-              >
-                Verbinden
-              </Link>
+              {linkedinCompanies.length > 0 && (
+                <div className="mt-1 rounded-2xl border border-slate-100 bg-slate-50/70 text-[11px]">
+                  <div className="border-b border-slate-100 px-3 py-1.5 font-medium uppercase tracking-[0.16em] text-slate-500">
+                    Verknüpfte Unternehmensseiten
+                  </div>
+                  {linkedinCompanies.map((c) => (
+                    <div
+                      key={c.id}
+                      className="flex items-center justify-between gap-2 px-3 py-1.5 text-[12px]"
+                    >
+                      <span className="truncate text-slate-700">
+                        {c.display_name ?? c.external_id ?? 'Unbenannte Company'}
+                      </span>
+                      <span className="text-[10px] text-slate-400">
+                        ID: {c.external_id}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="mt-3 flex flex-wrap gap-2">
+                {linkedinCount > 0 && (
+                  <a
+                    href="/api/social/disconnect/linkedin"
+                    className="rounded-xl border border-slate-200/80 bg-white/95 px-3 py-1.5 text-xs font-medium text-slate-700 shadow-sm backdrop-blur transition hover:bg-slate-50"
+                  >
+                    Verbindung trennen
+                  </a>
+                )}
+                <Link
+                  href="/api/social/connect/linkedin"
+                  className="rounded-xl bg-[#0A66C2] px-3 py-1.5 text-xs font-medium text-white shadow-sm transition hover:bg-[#084f97]"
+                >
+                  Verbinden
+                </Link>
+              </div>
             </div>
           </div>
         </div>

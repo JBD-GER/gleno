@@ -30,8 +30,10 @@ export async function GET(req: Request) {
     )
   }
 
-  const cookieStore = await cookies()
+  const cookieStore = cookies()
   const cookieState = cookieStore.get('fb_oauth_state')?.value
+  const userIdFromCookie = cookieStore.get('gl_social_uid')?.value
+
   if (!cookieState || cookieState !== state) {
     console.error('FB state mismatch', { cookieState, state })
     return NextResponse.redirect(
@@ -39,16 +41,14 @@ export async function GET(req: Request) {
     )
   }
 
-  const supa = await supabaseServer()
-  const {
-    data: { user },
-  } = await supa.auth.getUser()
-
-  if (!user) {
+  if (!userIdFromCookie) {
+    console.error('No gl_social_uid cookie found')
     return NextResponse.redirect(
-      `${SITE_URL}/login?returnTo=/dashboard/einstellung/social`
+      `${SITE_URL}/dashboard/einstellung/social?error=facebook_no_user`
     )
   }
+
+  const supa = await supabaseServer()
 
   const redirectUri = `${SITE_URL}/api/social/callback/facebook`
 
@@ -72,9 +72,7 @@ export async function GET(req: Request) {
       tokenData.error_description ||
       JSON.stringify(tokenData)
 
-    const errShort = encodeURIComponent(
-      String(fbErr).substring(0, 180)
-    )
+    const errShort = encodeURIComponent(String(fbErr).substring(0, 180))
 
     return NextResponse.redirect(
       `${SITE_URL}/dashboard/einstellung/social?error=facebook_token_${errShort}`
@@ -83,7 +81,7 @@ export async function GET(req: Request) {
 
   const accessToken = tokenData.access_token as string
 
-  // 2) Profil holen (einfaches Profil für den Anfang)
+  // 2) Profil holen
   const meRes = await fetch(
     'https://graph.facebook.com/v21.0/me?fields=id,name,picture{url}',
     {
@@ -101,9 +99,9 @@ export async function GET(req: Request) {
     )
   }
 
-  // 3) EINFACHER Insert (kein upsert, keine scopes)
+  // 3) Insert in social_accounts – ohne Supabase-Auth, nur mit userIdFromCookie
   const row = {
-    user_id: user.id,
+    user_id: userIdFromCookie,
     provider: 'facebook',
     account_type: 'profile' as const,
     external_id: String(me.id),
@@ -120,12 +118,15 @@ export async function GET(req: Request) {
 
   if (insertError) {
     console.error('insert facebook social_accounts error', insertError)
+
     const errShort = encodeURIComponent(
-      String(insertError.message ?? insertError.details ?? 'unknown').substring(
-        0,
-        180
-      )
+      String(
+        insertError.message ??
+          insertError.details ??
+          JSON.stringify(insertError)
+      ).substring(0, 180)
     )
+
     return NextResponse.redirect(
       `${SITE_URL}/dashboard/einstellung/social?error=facebook_upsert_${errShort}`
     )

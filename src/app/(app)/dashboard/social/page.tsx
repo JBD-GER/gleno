@@ -94,9 +94,7 @@ function getFirstSchedule(post: SocialPost): Date | null {
   return dates[0]
 }
 
-/* ------------------------------------------------------------------ */
-/*                         Haupt-Komponente                           */
-/* ------------------------------------------------------------------ */
+/* ----------------- Haupt-Komponente ----------------- */
 
 export default function SocialPlannerPage() {
   const [view, setView] = useState<ViewMode>('calendar')
@@ -121,12 +119,16 @@ export default function SocialPlannerPage() {
   )
   const [mediaPreviewUrl, setMediaPreviewUrl] = useState<string | null>(null)
   const [mediaIsVideo, setMediaIsVideo] = useState(false)
+
+  // Map: media_path -> signed URL
   const [mediaUrlMap, setMediaUrlMap] = useState<Record<string, string>>({})
+
   const [uploadingMedia, setUploadingMedia] = useState(false)
   const fileInputRef = useRef<HTMLInputElement | null>(null)
 
   const [selectedNetworks, setSelectedNetworks] = useState<Provider[]>([])
-  const [previewNetwork, setPreviewNetwork] = useState<Provider | null>(null)
+  const [previewNetwork, setPreviewNetwork] =
+    useState<Provider | null>(null)
 
   const captionLimit = 2200
   const captionLength = caption.length
@@ -157,13 +159,13 @@ export default function SocialPlannerPage() {
 
   const hasAnyConnection = availableProviders.length > 0
 
-  /* ----------------- Helper: signed URLs für Media ----------------- */
+  /* ----------------- Signed URLs für Media auflösen ----------------- */
 
-  async function resolveMediaUrls(postsToResolve: SocialPost[]) {
+  async function resolveMediaUrls(posts: SocialPost[]): Promise<void> {
     const supa = supabaseClient()
 
     const uniquePaths = new Set<string>()
-    postsToResolve.forEach((p) => {
+    posts.forEach((p) => {
       if (p.media_path) uniquePaths.add(p.media_path)
     })
 
@@ -192,10 +194,7 @@ export default function SocialPlannerPage() {
       }),
     )
 
-    setMediaUrlMap((prev) => ({
-      ...prev,
-      ...Object.fromEntries(entries),
-    }))
+    setMediaUrlMap(Object.fromEntries(entries))
   }
 
   /* ----------------- Daten laden ----------------- */
@@ -300,7 +299,7 @@ export default function SocialPlannerPage() {
     setIsEditorOpen(true)
   }
 
-  const openEditorForEdit = async (post: SocialPost) => {
+  const openEditorForEdit = (post: SocialPost) => {
     setEditingPost(post)
     setCaption(post.caption ?? '')
     setHashtagsInput((post.hashtags ?? []).map((h) => `#${h}`).join(' '))
@@ -319,32 +318,17 @@ export default function SocialPlannerPage() {
     }
 
     setMediaFile(null)
-    setExistingMediaPath(post.media_path ?? null)
-    setMediaIsVideo(isVideoPath(post.media_path))
+    const path = post.media_path ?? null
+    setExistingMediaPath(path)
 
-    // Bild/Vorschau holen – zuerst aus Map, sonst neue signed URL holen
-    let preview: string | null = null
-    if (post.media_path) {
-      preview = mediaUrlMap[post.media_path] ?? null
-      if (!preview) {
-        try {
-          const supa = supabaseClient()
-          const { data, error } = await supa.storage
-            .from('socialmedia')
-            .createSignedUrl(post.media_path, 60 * 60)
-          if (!error && data?.signedUrl) {
-            preview = data.signedUrl
-            setMediaUrlMap((prev) => ({
-              ...prev,
-              [post.media_path!]: data.signedUrl,
-            }))
-          }
-        } catch (e) {
-          console.error('[socialmedia] signedUrl in editor error', e)
-        }
-      }
+    if (path) {
+      const url = mediaUrlMap[path] ?? null
+      setMediaPreviewUrl(url)
+      setMediaIsVideo(isVideoPath(path))
+    } else {
+      setMediaPreviewUrl(null)
+      setMediaIsVideo(false)
     }
-    setMediaPreviewUrl(preview)
 
     setIsEditorOpen(true)
   }
@@ -395,14 +379,19 @@ export default function SocialPlannerPage() {
         .toString(36)
         .slice(2)}.${ext}`
 
-      const { data, error } = await supa.storage
+      const res = await supa.storage
         .from('socialmedia')
         .upload(path, mediaFile, {
           cacheControl: '3600',
           upsert: true,
         })
 
+      console.log('Upload response', res)
+
+      const { data, error } = res
+
       if (error || !data) {
+        console.error('Upload error message:', error?.message)
         console.error('Upload error full:', error)
         alert(
           `Fehler beim Upload des Mediums${
@@ -906,9 +895,7 @@ export default function SocialPlannerPage() {
   )
 }
 
-/* ------------------------------------------------------------------ */
-/*                         Subcomponents                              */
-/* ------------------------------------------------------------------ */
+/* ------------------------ Subcomponents ------------------------ */
 
 function TabButton({
   icon: Icon,
@@ -1122,9 +1109,8 @@ function ListView({
     <div className="space-y-2 text-sm text-slate-700">
       {posts.map((post) => {
         const path = post.media_path ?? null
-        const mediaUrl =
-          path && mediaUrlMap[path] ? mediaUrlMap[path] : null
-        const isVideo = isVideoPath(post.media_path)
+        const mediaUrl = path ? mediaUrlMap[path] ?? null : null
+        const isVideo = isVideoPath(path)
         const created = new Date(post.created_at)
 
         return (

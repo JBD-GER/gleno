@@ -48,6 +48,7 @@ export async function GET() {
   } = await supa.auth.getUser()
 
   if (userError || !user) {
+    // Kein User → leere Liste zurück
     return NextResponse.json({ posts: [] }, { status: 200 })
   }
 
@@ -102,15 +103,18 @@ export async function POST(req: Request) {
   const hashtags = Array.isArray(body.hashtags)
     ? body.hashtags.slice(0, 30)
     : []
+
   const providers = Array.isArray(body.providers)
     ? (body.providers.filter((p) =>
         ['facebook', 'instagram', 'linkedin'].includes(p as string),
       ) as Provider[])
     : []
-  const scheduledAt =
+
+  const scheduledIso =
     body.scheduledAt && typeof body.scheduledAt === 'string'
-      ? new Date(body.scheduledAt)
+      ? new Date(body.scheduledAt).toISOString()
       : null
+
   const mediaPath =
     typeof body.mediaPath === 'string' && body.mediaPath.length > 0
       ? body.mediaPath
@@ -167,27 +171,38 @@ export async function POST(req: Request) {
     )
   }
 
-  // 2) Targets pro Kanal anlegen
-  if (providers.length > 0) {
-    const targetsInsert = providers.map((p) => ({
+  // 2) Targets pro Provider anlegen (ohne account_id, nur user_id + provider)
+  const targetsInsert =
+    providers.map((p) => ({
       post_id: post.id,
       user_id: user.id,
       provider: p,
       status: 'planned' as Status,
-      scheduled_at: scheduledAt,
-    }))
+      scheduled_at: scheduledIso,
+      published_at: null,
+    })) ?? []
 
+  if (targetsInsert.length > 0) {
     const { error: targetsError } = await supa
       .from('social_post_targets')
       .insert(targetsInsert)
 
     if (targetsError) {
       console.error('social_post_targets insert error', targetsError)
-      // Aber wir lassen den Post trotzdem existieren
+      // Post existiert, aber keine Targets → 500 mit Info
+      return NextResponse.json(
+        {
+          error:
+            'Post wurde angelegt, aber Ziel-Kanäle konnten nicht gespeichert werden.',
+          details: targetsError.message,
+          postId: post.id,
+        },
+        { status: 500 },
+      )
     }
   }
 
-  // 3) Post mit Targets zurückgeben
+  // 3) Post inkl. Targets zurückgeben
   const { data: fullPost, error: fullError } = await supa
     .from('social_posts')
     .select(
@@ -219,6 +234,7 @@ export async function POST(req: Request) {
 
   if (fullError || !fullPost) {
     console.error('re-fetch fullPost error', fullError)
+    // Fallback: Post ohne Targets
     return NextResponse.json(post as SocialPostRow, { status: 201 })
   }
 

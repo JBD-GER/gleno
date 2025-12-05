@@ -10,15 +10,12 @@ const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://gleno.de'
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   title: {
-    // Neuer Fokus: Unternehmenssoftware statt „Marktplatz, CRM & Website“
     default:
       'GLENO – Cloudbasierte All-in-One Unternehmenssoftware für Dienstleister & KMU',
     template: '%s | GLENO',
   },
-  // Kurzbeschreibung mit Fokus auf Auftrags-/Projekt-/Rechnungsmanagement etc.
   description:
     'GLENO ist die cloudbasierte All-in-One Unternehmenssoftware für Dienstleister und KMU. Auftragsmanagement, Projektmanagement, Rechnungsmanagement, Zeiterfassung, Termine & Team – alles in einer Plattform statt Tool-Chaos.',
-  // Canonical lieber auf die echte Domain legen
   alternates: { canonical: siteUrl },
   robots: {
     index: true,
@@ -35,15 +32,13 @@ export const metadata: Metadata = {
     type: 'website',
     url: siteUrl,
     siteName: 'GLENO',
-    // Neuer OG-Titel mit Unternehmenssoftware-Fokus
     title:
       'GLENO – Cloudbasierte All-in-One Unternehmenssoftware für Dienstleister & KMU',
-    // Neue OG-Description mit deinen Kernfunktionen
     description:
       'Weniger Aufwand, weniger Kosten, mehr Zeit: GLENO bündelt Auftragsmanagement, Projektmanagement, Rechnungsmanagement, Zeiterfassung, Termine & Team in einer cloudbasierten Unternehmenssoftware.',
     images: [
       {
-        url: `${siteUrl}/og.png`, // absoluter Pfad, Bildname bleibt wie gehabt
+        url: `${siteUrl}/og.png`,
         width: 1200,
         height: 630,
         alt: 'GLENO – All-in-One Unternehmenssoftware für Dienstleister & KMU',
@@ -91,10 +86,15 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
         <Footer />
       </MaybeChrome>
 
-      {/* Chatwoot Live Chat Widget */}
+      {/* Chatwoot Live Chat Widget – nicht auf /dashboard */}
       <Script id="chatwoot-widget" strategy="afterInteractive">
         {`
           (function(d,t) {
+            // nicht im Dashboard anzeigen
+            if (window.location.pathname.startsWith('/dashboard')) {
+              return;
+            }
+
             var BASE_URL="https://app.chatwoot.com";
             var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
             g.src=BASE_URL+"/packs/js/sdk.js";

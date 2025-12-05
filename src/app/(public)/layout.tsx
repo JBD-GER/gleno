@@ -1,4 +1,5 @@
 import type { Metadata } from 'next'
+import Script from 'next/script'
 import Header from './components/Header'
 import Footer from './components/Footer'
 import CookieBanner from './components/CookieBanner'
@@ -89,6 +90,25 @@ export default function PublicLayout({ children }: { children: React.ReactNode }
       <MaybeChrome>
         <Footer />
       </MaybeChrome>
+
+      {/* Chatwoot Live Chat Widget */}
+      <Script id="chatwoot-widget" strategy="afterInteractive">
+        {`
+          (function(d,t) {
+            var BASE_URL="https://app.chatwoot.com";
+            var g=d.createElement(t),s=d.getElementsByTagName(t)[0];
+            g.src=BASE_URL+"/packs/js/sdk.js";
+            g.async = true;
+            s.parentNode.insertBefore(g,s);
+            g.onload=function(){
+              window.chatwootSDK.run({
+                websiteToken: 'BnoGKe44ekNKvigmJFCE6CSX',
+                baseUrl: BASE_URL
+              })
+            }
+          })(document,"script");
+        `}
+      </Script>
     </div>
   )
 }

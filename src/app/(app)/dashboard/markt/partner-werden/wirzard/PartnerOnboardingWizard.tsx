@@ -1472,7 +1472,6 @@ export default function PartnerOnboardingWizard() {
 
 <div className="mt-2 flex flex-col items-stretch gap-2 lg:flex-row">
   <div className="relative flex-1 w-full">
-
                 <input
                   className="w-full rounded-2xl border border-slate-200 px-3 py-2 text-xs sm:text-sm"
                   placeholder={

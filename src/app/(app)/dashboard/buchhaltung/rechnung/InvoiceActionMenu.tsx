@@ -768,6 +768,10 @@ export default function InvoiceActionsMenu({
 }) {
   const [open, setOpen] = useState(false)
   const [loading, setLoading] = useState<'sent' | 'reset' | 'paid' | null>(null)
+
+  // NEU: eigener Loading-State für E-Rechnung
+  const [eInvLoading, setEInvLoading] = useState(false)
+
   const [automationOpen, setAutomationOpen] = useState(false)
 
   const router = useRouter()
@@ -826,6 +830,60 @@ export default function InvoiceActionsMenu({
     }
   }
 
+  // NEU: E-Rechnung erzeugen + direkt herunterladen
+  const handleCreateEInvoice = async () => {
+    try {
+      setEInvLoading(true)
+
+      const res = await fetch('/api/rechnung/e-invoice', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Cache-Control': 'no-store',
+        },
+        body: JSON.stringify({
+          invoiceNumber,
+        }),
+      })
+
+      const payload = await res.json().catch(() => ({} as any))
+      if (!res.ok) {
+        throw new Error(
+          payload?.message || 'E-Rechnung konnte nicht erzeugt werden.'
+        )
+      }
+
+      const { filename, downloadUrl } = payload as {
+        filename?: string
+        downloadUrl?: string
+      }
+
+      if (downloadUrl) {
+        const dlRes = await fetch(downloadUrl, { cache: 'no-store' })
+        if (!dlRes.ok) throw new Error('Download der E-Rechnung fehlgeschlagen.')
+        const blob = await dlRes.blob()
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        a.download = filename || `${invoiceNumber || 'Rechnung'}.xml`
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        setTimeout(() => URL.revokeObjectURL(url), 1500)
+      } else {
+        alert('E-Rechnung wurde erzeugt.')
+      }
+
+      router.refresh()
+    } catch (e: any) {
+      console.error(e)
+      alert(e?.message || 'E-Rechnung konnte nicht erzeugt werden.')
+    } finally {
+      setEInvLoading(false)
+      setOpen(false)
+    }
+  }
+
   const s = (currentStatus ?? 'Erstellt').toString().toLowerCase()
   const isErstellt = s === 'erstellt'
   const isVerschickt = s === 'verschickt'
@@ -837,7 +895,7 @@ export default function InvoiceActionsMenu({
         <button
           ref={btnRef}
           onClick={() => setOpen((o) => !o)}
-          disabled={!!loading}
+          disabled={!!loading || eInvLoading}
           aria-haspopup="menu"
           aria-expanded={open}
           className={[
@@ -848,7 +906,7 @@ export default function InvoiceActionsMenu({
             'disabled:opacity-60 disabled:cursor-not-allowed',
           ].join(' ')}
         >
-          {loading ? (
+          {loading || eInvLoading ? (
             <span className="inline-flex items-center gap-2">
               <svg
                 className="h-4 w-4 animate-spin"
@@ -982,6 +1040,41 @@ export default function InvoiceActionsMenu({
                     </svg>
                     Bearbeiten
                   </a>
+                </li>
+
+                {/* E-Rechnung (XML) erzeugen */}
+                <li>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={handleCreateEInvoice}
+                    disabled={eInvLoading}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none disabled:opacity-60"
+                  >
+                    <svg
+                      className="h-4 w-4 text-emerald-600"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                      <path
+                        d="M9 13h6M9 17h4M14 2v5h5"
+                        stroke="currentColor"
+                        strokeWidth="1.7"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      />
+                    </svg>
+                    {eInvLoading
+                      ? 'E-Rechnung wird erzeugt…'
+                      : 'E-Rechnung (XML) erzeugen'}
+                  </button>
                 </li>
 
                 {/* Automatisierung */}
@@ -1169,7 +1262,7 @@ export default function InvoiceActionsMenu({
         )}
       </div>
 
-      {/* Modal für Automatisierung (auch mobil fullscreen) */}
+      {/* Modal für Automatisierung */}
       <AutomationModal
         invoiceNumber={invoiceNumber}
         open={automationOpen}

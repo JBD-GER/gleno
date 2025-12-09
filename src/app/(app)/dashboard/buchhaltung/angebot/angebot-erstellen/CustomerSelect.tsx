@@ -241,8 +241,7 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
               <div className="font-medium">KI-Entwurf gefunden</div>
               <p className="mt-1 text-xs sm:text-sm text-indigo-800">
                 Für dieses Angebot liegt ein gespeicherter KI-Entwurf vor. Wähle zuerst einen Kunden
-                und übernimm dann den Entwurf, um Titel, Einleitung, Positionen und Rabatt automatisch
-                zu befüllen.
+                und übernimm dann den Entwurf.
               </p>
               {aiApplied && (
                 <p className="mt-1 text-xs text-emerald-700">
@@ -271,7 +270,7 @@ export default function CustomerSelect({ onNext }: { onNext?: () => void }) {
                 }`}
                 title={!selectedCustomer ? 'Bitte zuerst einen Kunden wählen' : 'Entwurf übernehmen'}
               >
-                KI-Entwurf anwenden
+                Anwenden
               </button>
             </div>
           </div>

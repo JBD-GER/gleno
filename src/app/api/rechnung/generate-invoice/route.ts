@@ -45,9 +45,13 @@ function sanitize(text: string): string {
     .replace(/[\u201C\u201D]/g, '"')
     .replace(/[\u2018\u2019]/g, "'")
     .replace(/[\u2013\u2014]/g, '-')
-    .replace(/[^\x00-\x7F]/g, '')
 }
-const fmtNumber = (v: number) => v.toFixed(2).replace('.', ',')
+
+const fmtNumber = (v: number) =>
+  new Intl.NumberFormat('de-DE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(v) ? v : 0)
 
 function toDbDate(input?: string | null): string | null {
   const v = (input ?? '').trim()
@@ -187,14 +191,11 @@ export async function POST(req: NextRequest) {
     let userId: string
 
     if (isAutomationCall) {
-      // Sonderfall: Cronjob / Automation darf ohne Browser-Login rein,
-      // muss aber explizit eine userId mitgeben.
       if (!systemUserId || typeof systemUserId !== 'string') {
         throw new Error('systemUserId fehlt für Automation-Aufruf')
       }
       userId = systemUserId
     } else {
-      // Normaler Aufruf: nur eingeloggte User
       const supabase = await supabaseServer()
       const {
         data: { user },
@@ -214,7 +215,7 @@ export async function POST(req: NextRequest) {
       invoiceNumber: existingInvoiceNumber,
       discount: metaDiscount,
       commit, // Preview vs. Commit
-      idempotencyKey, // nur für CREATE relevant
+      idempotencyKey,
     } = (meta ?? {}) as {
       date?: string
       title: string
@@ -277,7 +278,6 @@ export async function POST(req: NextRequest) {
     let invoiceNumber = existingInvoiceNumber?.trim() || ''
 
     if (!isPreview && !isUpdate) {
-      // Neuerstellung + commit -> wir brauchen eine echte Nummer
       if (!idempotencyKey || typeof idempotencyKey !== 'string') {
         throw new Error('idempotencyKey fehlt')
       }
@@ -326,7 +326,8 @@ export async function POST(req: NextRequest) {
     // --- 10) Logo-Zone ---
     const M = 32
     const reservedLogoH = 120
-    const reservedLogoW = Math.min(width - 2 * (M + 8), 420)
+    const maxLogoDrawH = 80
+    const reservedLogoW = Math.min(width - 2 * (M + 8), 260)
     const topY = height - M
     const logoBoxBottom = topY - reservedLogoH
     let logoImage: any = null
@@ -353,7 +354,7 @@ export async function POST(req: NextRequest) {
         }
         if (logoImage) {
           const sW = reservedLogoW / logoImage.width
-          const sH = reservedLogoH / logoImage.height
+          const sH = maxLogoDrawH / logoImage.height
           const s = Math.min(1, sW, sH)
           imgDims = { width: logoImage.width * s, height: logoImage.height * s }
           imgX = (width - imgDims.width) / 2
@@ -414,7 +415,7 @@ export async function POST(req: NextRequest) {
 
     // --- 12) Layout-Konstanten ---
     const grayLine = rgb(0.8, 0.8, 0.8)
-    const footerH = height * 0.1
+    const footerH = 40
     const minSpaceToFooter = 5
     const lineH = 12
     const rowSpacing = 4
@@ -536,16 +537,30 @@ export async function POST(req: NextRequest) {
     // Titel & Intro
     let y0 = Math.min(custY, metaY) - 70
 
-    page.drawText(String(title || ''), {
+    const heading = String(title || '')
+    const maxTitleWidth = width - 2 * M
+    const maxSize = 16
+    const minSize = 10
+    let headingSize = 14
+    let testSize = maxSize
+    let headingWidth = fontBold.widthOfTextAtSize(heading, testSize)
+    if (headingWidth > maxTitleWidth) {
+      const scale = maxTitleWidth / headingWidth
+      testSize = Math.max(minSize, Math.floor(testSize * scale))
+    }
+    headingSize = testSize
+
+    page.drawText(heading, {
       x: M,
       y: y0,
-      size: 14,
+      size: headingSize,
       font: fontBold,
     })
-    y0 -= titleGap
+    y0 -= headingSize + (titleGap - 14)
 
     const introText = (intro ??
-      'Vielen Dank für Ihren Auftrag. Nachfolgend die abgerechneten Positionen:')
+      'Vielen Dank für Ihren Auftrag. Nachfolgend die abgerechneten Positionen:'
+    )
       .toString()
       .replace(/\r\n/g, '\n')
 
@@ -937,7 +952,6 @@ export async function POST(req: NextRequest) {
       const isUpdateCommit = isUpdate
 
       if (isUpdateCommit) {
-        // UPDATE einer bestehenden Rechnung
         if (!invoiceNumber) {
           throw new Error('Rechnungsnummer fehlt beim Update')
         }
@@ -1002,7 +1016,6 @@ export async function POST(req: NextRequest) {
             .is('status', null)
         } catch {}
       } else {
-        // CREATE neue Rechnung
         if (!idempotencyKey || typeof idempotencyKey !== 'string') {
           throw new Error('idempotencyKey fehlt')
         }

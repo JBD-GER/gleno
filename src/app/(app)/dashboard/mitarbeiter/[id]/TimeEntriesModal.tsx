@@ -143,6 +143,10 @@ export default function TimeEntriesModal({
   const [statusFilter, setStatusFilter] =
     useState<'alle' | 'laufend' | 'fertig'>('alle')
 
+  // Pagination
+  const PAGE_SIZE = 5
+  const [page, setPage] = useState(1)
+
   // Projekte für den Mitarbeiter
   const [projects, setProjects] = useState<ProjectOption[]>([])
   const [projectsLoading, setProjectsLoading] = useState(false)
@@ -286,6 +290,12 @@ export default function TimeEntriesModal({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, from, to, employeeId])
 
+  // Bei Filterwechsel auf Seite 1 springen
+  useEffect(() => {
+    if (!open) return
+    setPage(1)
+  }, [from, to, statusFilter, open])
+
   // Gesamtzeit im Zeitraum (immer alle, unabhängig vom Filter)
   const total = useMemo(() => {
     return rows.reduce((acc, r) => {
@@ -309,6 +319,20 @@ export default function TimeEntriesModal({
       return true
     })
   }, [rows, edit, statusFilter])
+
+  // Pagination auf gefilterten Einträgen
+  const pageCount = Math.max(
+    1,
+    Math.ceil(filteredRows.length / PAGE_SIZE) || 1,
+  )
+  const currentPage = Math.min(page, pageCount)
+  const startIndex = (currentPage - 1) * PAGE_SIZE
+  const endIndex = Math.min(startIndex + PAGE_SIZE, filteredRows.length)
+
+  const pagedRows = useMemo(
+    () => filteredRows.slice(startIndex, endIndex),
+    [filteredRows, startIndex, endIndex],
+  )
 
   const save = async (id: string) => {
     const base = rows.find((r) => r.id === id)
@@ -792,7 +816,7 @@ export default function TimeEntriesModal({
                       </div>
 
                       <div className="grid gap-3 md:grid-cols-12 md:items-end">
-                        {/* Datum */}
+                        {/* Datum des Eintrags (intern, aber weiter bearbeitbar) */}
                         <div className="md:col-span-2">
                           <label className="mb-1 block text-[11px] text-slate-600">
                             Datum
@@ -937,7 +961,7 @@ export default function TimeEntriesModal({
 
                   {/* Mobile & Tablet & kleine Laptops (bis < xl): Karten */}
                   <div className="space-y-3 xl:hidden">
-                    {filteredRows.length === 0 && !loading && (
+                    {pagedRows.length === 0 && !loading && (
                       <div className="rounded-2xl border border-slate-200 bg-white/95 p-4 text-sm text-slate-600 shadow-sm">
                         Keine Einträge im Zeitraum.
                       </div>
@@ -952,7 +976,7 @@ export default function TimeEntriesModal({
                         ))}
                       </div>
                     )}
-                    {filteredRows.map((r) => {
+                    {pagedRows.map((r) => {
                       const m = merged(r)
                       const dur = Math.max(
                         0,
@@ -967,21 +991,9 @@ export default function TimeEntriesModal({
                           className="rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm transition hover:-translate-y-[1px] hover:shadow-md"
                         >
                           <div className="grid grid-cols-1 gap-3">
+                            {/* Dauer + Status */}
                             <div className="flex items-center justify-between gap-2">
-                              <div className="flex-1">
-                                <label className="mb-1 block text-[11px] text-slate-600">
-                                  Datum
-                                </label>
-                                <input
-                                  type="date"
-                                  value={m.work_date ?? ''}
-                                  onChange={(e) =>
-                                    onEdit(r.id, { work_date: e.target.value })
-                                  }
-                                  className="w-full rounded-xl border border-slate-200 bg-white/95 px-2 py-1.5 text-sm shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-indigo-200"
-                                />
-                              </div>
-                              <div className="text-right text-xs text-slate-700">
+                              <div className="text-xs text-slate-700">
                                 <div>
                                   Dauer:{' '}
                                   <span className="font-mono font-semibold">
@@ -1119,7 +1131,7 @@ export default function TimeEntriesModal({
 
                   {/* Desktop (ab xl): Tabelle */}
                   <div className="hidden xl:block">
-                    {filteredRows.length === 0 && !loading && (
+                    {pagedRows.length === 0 && !loading && (
                       <div className="rounded-2xl border border-slate-200 bg-white/95 p-6 text-sm text-slate-600 shadow-sm">
                         Keine Einträge im Zeitraum.
                       </div>
@@ -1136,16 +1148,15 @@ export default function TimeEntriesModal({
                       </div>
                     )}
 
-                    {filteredRows.length > 0 && (
+                    {pagedRows.length > 0 && (
                       <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white/95 shadow-sm">
                         {/* Kopfzeile */}
                         <div
                           className="grid grid-cols-12 items-center border-b border-slate-100 bg-slate-50/80 px-3 py-2 text-[12px] font-medium text-slate-600 backdrop-blur-sm"
                           style={{ gridTemplateColumns: 'repeat(12, minmax(0, 1fr))' }}
                         >
-                          <div className="col-span-2">Datum</div>
-                          <div className="col-span-2">Start</div>
-                          <div className="col-span-2">Ende</div>
+                          <div className="col-span-3">Start</div>
+                          <div className="col-span-3">Ende</div>
                           <div className="col-span-1 text-right">Pause (Min)</div>
                           <div className="col-span-2">Projekt</div>
                           {/* Dauer-Header mit min-width */}
@@ -1157,7 +1168,7 @@ export default function TimeEntriesModal({
 
                         {/* Zeilen */}
                         <div className="divide-y divide-slate-100">
-                          {filteredRows.map((r) => {
+                          {pagedRows.map((r) => {
                             const m = merged(r)
                             const dur = Math.max(
                               0,
@@ -1178,20 +1189,8 @@ export default function TimeEntriesModal({
                                       'repeat(12, minmax(0, 1fr))',
                                   }}
                                 >
-                                  {/* Datum */}
-                                  <div className="col-span-12 sm:col-span-2">
-                                    <input
-                                      type="date"
-                                      value={m.work_date ?? ''}
-                                      onChange={(e) =>
-                                        onEdit(r.id, { work_date: e.target.value })
-                                      }
-                                      className="w-full rounded-lg border border-slate-200 bg-white/95 px-2 py-1 text-sm shadow-sm outline-none focus:border-slate-300 focus:ring-2 focus:ring-indigo-200"
-                                    />
-                                  </div>
-
                                   {/* Start */}
-                                  <div className="col-span-12 sm:col-span-2">
+                                  <div className="col-span-12 sm:col-span-3">
                                     <input
                                       type="datetime-local"
                                       value={toLocalDatetimeInput(m.start_time)}
@@ -1207,7 +1206,7 @@ export default function TimeEntriesModal({
                                   </div>
 
                                   {/* Ende */}
-                                  <div className="col-span-12 sm:col-span-2">
+                                  <div className="col-span-12 sm:col-span-3">
                                     <input
                                       type="datetime-local"
                                       value={toLocalDatetimeInput(m.end_time)}
@@ -1315,6 +1314,39 @@ export default function TimeEntriesModal({
                       </div>
                     )}
                   </div>
+
+                  {/* Pagination (gemeinsam für beide Layouts) */}
+                  {filteredRows.length > PAGE_SIZE && (
+                    <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600">
+                      <span>
+                        Einträge {startIndex + 1}–{endIndex} von{' '}
+                        {filteredRows.length}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => setPage((p) => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 shadow-sm outline-none hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Zurück
+                        </button>
+                        <span>
+                          Seite {currentPage} / {pageCount}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setPage((p) => Math.min(pageCount, p + 1))
+                          }
+                          disabled={currentPage === pageCount}
+                          className="rounded-full border border-slate-200 bg-white px-3 py-1 text-[11px] font-medium text-slate-700 shadow-sm outline-none hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          Weiter
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 {/* Footer Desktop */}

@@ -18,7 +18,9 @@ import {
   ClipboardDocumentCheckIcon,
   WrenchScrewdriverIcon,
   ChevronDownIcon,
+  DocumentTextIcon,
 } from '@heroicons/react/24/outline'
+import { DateInputWithCalendar } from '@/components/ui/DateInputs'
 
 type ChangeEvt =
   | React.ChangeEvent<
@@ -31,7 +33,7 @@ type FormState = {
   last_name: string
   email: string
   phone: string
-  date_of_birth: string
+  birth_date: string
   // Job
   role: string
   specialization: string
@@ -39,6 +41,7 @@ type FormState = {
   start_date: string
   hourly_rate: string
   monthly_salary: string
+  working_hours_per_week: string
   vacation_days: string
   overtime_balance: string
   // Adresse
@@ -58,6 +61,9 @@ type FormState = {
   emergency_contact_name: string
   emergency_contact_phone: string
   notes: string
+  // Bankdaten
+  bank_iban: string
+  bank_bic: string
 }
 
 export default function AddEmployeeModal() {
@@ -71,13 +77,14 @@ export default function AddEmployeeModal() {
     last_name: '',
     email: '',
     phone: '',
-    date_of_birth: '',
+    birth_date: '',
     role: '',
     specialization: '',
     employment_type: 'Vollzeit',
     start_date: '',
     hourly_rate: '',
     monthly_salary: '',
+    working_hours_per_week: '',
     vacation_days: '',
     overtime_balance: '',
     street: '',
@@ -94,6 +101,8 @@ export default function AddEmployeeModal() {
     emergency_contact_name: '',
     emergency_contact_phone: '',
     notes: '',
+    bank_iban: '',
+    bank_bic: '',
   })
 
   const toggle = () => {
@@ -163,11 +172,13 @@ export default function AddEmployeeModal() {
         'hourly_rate',
         'monthly_salary',
         'overtime_balance',
+        'working_hours_per_week',
       ] as const) {
         if (body[k] !== '')
           body[k] = Number(String(body[k]).replace(',', '.'))
         else delete body[k]
       }
+
       if (body.vacation_days !== '')
         body.vacation_days = Number(body.vacation_days)
       else delete body.vacation_days
@@ -176,6 +187,9 @@ export default function AddEmployeeModal() {
       const tools = asJsonArray(form.tools)
       if (cert) body.certifications = JSON.parse(cert)
       if (tools) body.tools = JSON.parse(tools)
+
+      if (!body.bank_iban) delete body.bank_iban
+      if (!body.bank_bic) delete body.bank_bic
 
       const res = await fetch('/api/employees', {
         method: 'POST',
@@ -309,14 +323,27 @@ export default function AddEmployeeModal() {
                             value={form.phone}
                             onChange={onChange}
                           />
-                          <Input
-                            icon={<CalendarDaysIcon className="h-5 w-5" />}
+
+                          {/* Geburtsdatum mit DateInputWithCalendar */}
+                          <FieldShell
                             label="Geburtsdatum"
-                            name="date_of_birth"
-                            type="date"
-                            value={form.date_of_birth}
-                            onChange={onChange}
-                          />
+                            icon={<CalendarDaysIcon className="h-5 w-5" />}
+                          >
+                            <DateInputWithCalendar
+                              value={form.birth_date}
+                              onChange={(val) =>
+                                setForm((f) => ({
+                                  ...f,
+                                  birth_date: val,
+                                }))
+                              }
+                              wrapperClassName="w-full"
+                              inputClassName={
+                                'w-full h-7 rounded-lg border text-sm leading-5 text-slate-900 placeholder:text-slate-400 outline-none ' +
+                                'border-white/60 bg-white/80 backdrop-blur focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 ring-offset-2 pl-10 pr-3'
+                              }
+                            />
+                          </FieldShell>
                         </div>
                       </Section>
                     )}
@@ -358,15 +385,28 @@ export default function AddEmployeeModal() {
                               'Freelancer',
                             ]}
                           />
-                          <Input
-                            icon={<CalendarDaysIcon className="h-5 w-5" />}
+
+                          {/* Eingestellt am mit DateInputWithCalendar */}
+                          <FieldShell
                             label="Eingestellt am *"
-                            name="start_date"
-                            type="date"
-                            value={form.start_date}
-                            onChange={onChange}
-                            required
-                          />
+                            icon={<CalendarDaysIcon className="h-5 w-5" />}
+                          >
+                            <DateInputWithCalendar
+                              value={form.start_date}
+                              onChange={(val) =>
+                                setForm((f) => ({
+                                  ...f,
+                                  start_date: val,
+                                }))
+                              }
+                              wrapperClassName="w-full"
+                              inputClassName={
+                                'w-full h-7 rounded-lg border text-sm leading-5 text-slate-900 placeholder:text-slate-400 outline-none ' +
+                                'border-white/60 bg-white/80 backdrop-blur focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 ring-offset-2 pl-11 pr-3'
+                              }
+                            />
+                          </FieldShell>
+
                           <Input
                             icon={<CurrencyEuroIcon className="h-5 w-5" />}
                             label="Stundenlohn (€)"
@@ -382,6 +422,14 @@ export default function AddEmployeeModal() {
                             value={form.monthly_salary}
                             onChange={onChange}
                             placeholder="z. B. 3200"
+                          />
+                          <Input
+                            icon={<DocumentTextIcon className="h-5 w-5" />}
+                            label="Arbeitsstunden/Woche"
+                            name="working_hours_per_week"
+                            value={form.working_hours_per_week}
+                            onChange={onChange}
+                            placeholder="z. B. 40"
                           />
                           <Input
                             icon={
@@ -402,6 +450,22 @@ export default function AddEmployeeModal() {
                             value={form.overtime_balance}
                             onChange={onChange}
                             placeholder="z. B. 3.5"
+                          />
+                          <Input
+                            icon={<IdentificationIcon className="h-5 w-5" />}
+                            label="IBAN"
+                            name="bank_iban"
+                            value={form.bank_iban}
+                            onChange={onChange}
+                            placeholder="z. B. DE12 3456 7890 1234 5678 00"
+                          />
+                          <Input
+                            icon={<IdentificationIcon className="h-5 w-5" />}
+                            label="BIC"
+                            name="bank_bic"
+                            value={form.bank_bic}
+                            onChange={onChange}
+                            placeholder="z. B. GENODEF1XXX"
                           />
                         </div>
                       </Section>
@@ -500,14 +564,27 @@ export default function AddEmployeeModal() {
                             onChange={onChange}
                             options={['', 'Ja', 'Nein']}
                           />
-                          <Input
-                            icon={<CalendarDaysIcon className="h-5 w-5" />}
+
+                          {/* Erste-Hilfe gültig bis mit DateInputWithCalendar */}
+                          <FieldShell
                             label="Erste-Hilfe gültig bis"
-                            name="first_aid_valid_until"
-                            type="date"
-                            value={form.first_aid_valid_until}
-                            onChange={onChange}
-                          />
+                            icon={<CalendarDaysIcon className="h-5 w-5" />}
+                          >
+                            <DateInputWithCalendar
+                              value={form.first_aid_valid_until}
+                              onChange={(val) =>
+                                setForm((f) => ({
+                                  ...f,
+                                  first_aid_valid_until: val,
+                                }))
+                              }
+                              wrapperClassName="w-full"
+                              inputClassName={
+                                'w-full h-11 rounded-lg border text-sm leading-5 text-slate-900 placeholder:text-slate-400 outline-none ' +
+                                'border-white/60 bg-white/80 backdrop-blur focus:border-indigo-300 focus:ring-2 focus:ring-indigo-200 ring-offset-2 pl-10 pr-3'
+                              }
+                            />
+                          </FieldShell>
                         </div>
                       </Section>
                     )}

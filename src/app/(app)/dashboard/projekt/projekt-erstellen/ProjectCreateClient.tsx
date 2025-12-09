@@ -15,6 +15,7 @@ import {
   CheckCircleIcon,
   PlusIcon,
   TrashIcon,
+  MapPinIcon,
 } from '@heroicons/react/24/outline'
 import { DateInputWithCalendar } from '@/components/ui/DateInputs'
 
@@ -26,6 +27,11 @@ type Customer = {
   id: string
   first_name: string | null
   last_name: string | null
+  street?: string | null
+  house_number?: string | null
+  postal_code?: string | null
+  city?: string | null
+  address?: string | null
 }
 
 type Employee = {
@@ -183,19 +189,17 @@ export default function ProjectCreateClient({
       )
     : []
 
-const initialTodoDrafts: TodoDraft[] = Array.isArray(baseDetails.todo_drafts)
-  ? baseDetails.todo_drafts.map((t: any) => ({
-      id: createLocalId(),
-      title: t?.title ?? '',
-      description: t?.description ?? '',
-      // sicherstellen, dass wir wirklich string-IDs im State haben
-      assigneeIds: Array.isArray(t?.assignee_ids)
-        ? t.assignee_ids
-            .filter((v: unknown) => typeof v === 'string')
-        : [],
-    }))
-  : []
-
+  const initialTodoDrafts: TodoDraft[] = Array.isArray(baseDetails.todo_drafts)
+    ? baseDetails.todo_drafts.map((t: any) => ({
+        id: createLocalId(),
+        title: t?.title ?? '',
+        description: t?.description ?? '',
+        // sicherstellen, dass wir wirklich string-IDs im State haben
+        assigneeIds: Array.isArray(t?.assignee_ids)
+          ? t.assignee_ids.filter((v: unknown) => typeof v === 'string')
+          : [],
+      }))
+    : []
 
   // ---------------------------------------------------
   // State
@@ -313,7 +317,9 @@ const initialTodoDrafts: TodoDraft[] = Array.isArray(baseDetails.todo_drafts)
         const [{ data: custs }, { data: emps }] = await Promise.all([
           supa
             .from('customers')
-            .select('id, first_name, last_name')
+            .select(
+              'id, first_name, last_name, street, house_number, postal_code, city, address',
+            )
             .eq('user_id', companyId)
             .order('first_name', {
               ascending: true,
@@ -514,7 +520,7 @@ const initialTodoDrafts: TodoDraft[] = Array.isArray(baseDetails.todo_drafts)
       return
     }
 
-        setSubmitting(true)
+    setSubmitting(true)
     try {
       // Bestehende Details aus der DB als Basis verwenden,
       // damit beim Bearbeiten nichts "weggewischt" wird
@@ -664,7 +670,6 @@ const initialTodoDrafts: TodoDraft[] = Array.isArray(baseDetails.todo_drafts)
     }
   }
 
-
   const headerTitle = isEdit ? 'Projekt bearbeiten' : 'Projekt anlegen'
   const headerBadge = isEdit ? 'Projekt' : 'Neues Projekt'
   const headerSubtitle = isEdit
@@ -703,7 +708,7 @@ const initialTodoDrafts: TodoDraft[] = Array.isArray(baseDetails.todo_drafts)
                 <p className="inline-flex items-center gap-2 rounded-full bg-slate-900 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-white shadow-sm whitespace-nowrap">
                   {headerBadge}
                   <span className="h-1 w-1 rounded-full bg-white/80" />
-                  Wizard
+                  <span>Wizard</span>
                 </p>
                 <h1 className="mt-1 text-xl font-semibold tracking-tight text-slate-900 sm:text-2xl">
                   {headerTitle}
@@ -853,6 +858,8 @@ const initialTodoDrafts: TodoDraft[] = Array.isArray(baseDetails.todo_drafts)
             {step === 3 && (
               <Step3Details
                 kind={kind}
+                customers={customers}
+                customerId={customerId}
                 address={address}
                 setAddress={setAddress}
                 objectName={objectName}
@@ -1604,6 +1611,8 @@ function Step2Zuweisungen(props: Step2Props) {
  * -----------------------------------------------------*/
 type Step3Props = {
   kind: ProjectKind
+  customers: Customer[]
+  customerId: string
   address: string
   setAddress: (v: string) => void
   objectName: string
@@ -1659,6 +1668,8 @@ type Step3Props = {
 function Step3Details(props: Step3Props) {
   const {
     kind,
+    customers,
+    customerId,
     address,
     setAddress,
     objectName,
@@ -1711,6 +1722,33 @@ function Step3Details(props: Step3Props) {
     setItAccessNotes,
   } = props
 
+  const selectedCustomer = useMemo(
+    () => customers.find((c) => c.id === customerId) ?? null,
+    [customers, customerId],
+  )
+
+  const applyCustomerAddress = () => {
+    if (!selectedCustomer) return
+
+    const line1 = [selectedCustomer.street, selectedCustomer.house_number]
+      .filter((v) => v && v.toString().trim().length > 0)
+      .join(' ')
+    const line2 = [selectedCustomer.postal_code, selectedCustomer.city]
+      .filter((v) => v && v.toString().trim().length > 0)
+      .join(' ')
+
+    const combined = [line1, line2]
+      .filter((p) => p && p.trim().length > 0)
+      .join(', ')
+
+    const fallback = (selectedCustomer.address ?? '').toString().trim()
+    const finalAddress = (combined || '').trim() || fallback
+
+    if (finalAddress) {
+      setAddress(finalAddress)
+    }
+  }
+
   return (
     <section className={`${cardBase} px-4 py-4 sm:px-6 sm:py-5`}>
       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1748,7 +1786,7 @@ function Step3Details(props: Step3Props) {
                 className={inputBase}
                 value={successMetric}
                 onChange={(e) => setSuccessMetric(e.target.value)}
-                placeholder="z.B. 'Mind. 20 qualifizierte Leads pro Monat', 'Fehlerquote < 1%' …"
+                placeholder="z.B. 'Mind. 20 qualifizierte Leads pro Monat', 'Fehlerquote &lt; 1%' …"
               />
             </div>
           </div>
@@ -1922,9 +1960,18 @@ function Step3Details(props: Step3Props) {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-slate-600">
-                Adresse
-              </label>
+              <span className="mb-1 flex items-center justify-between text-xs font-medium text-slate-600">
+                <span>Adresse</span>
+                <button
+                  type="button"
+                  onClick={applyCustomerAddress}
+                  disabled={!selectedCustomer}
+                  className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-white/90 px-2.5 py-1 text-[11px] font-medium text-slate-700 shadow-sm hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <MapPinIcon className="h-3 w-3" />
+                  Kundenadresse übernehmen
+                </button>
+              </span>
               <input
                 className={inputBase}
                 value={address}

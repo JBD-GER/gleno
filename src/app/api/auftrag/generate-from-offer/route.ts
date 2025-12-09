@@ -58,7 +58,7 @@ type OfferRow = {
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!,
 )
 
 /* ======================= Helpers ======================= */
@@ -71,7 +71,12 @@ function sanitize(text: string) {
     .replace(/[\u2013\u2014]/g, '-')
 }
 
-function getWrappedLines(text: string, maxWidth: number, font: PDFFont, size: number): string[] {
+function getWrappedLines(
+  text: string,
+  maxWidth: number,
+  font: PDFFont,
+  size: number,
+): string[] {
   const words = sanitize(text).split(' ')
   const lines: string[] = []
   let line = ''
@@ -89,54 +94,94 @@ function getWrappedLines(text: string, maxWidth: number, font: PDFFont, size: nu
 }
 
 function drawLines(
-  page: PDFPage, lines: string[], x: number, y: number,
-  lineHeight: number, font: PDFFont, size: number
+  page: PDFPage,
+  lines: string[],
+  x: number,
+  y: number,
+  lineHeight: number,
+  font: PDFFont,
+  size: number,
 ): number {
   let cursorY = y
   for (const ln of lines) {
     page.drawText(ln, { x, y: cursorY, size, font })
     cursorY -= lineHeight
   }
-  return lines.length ? (y - (lines.length - 1) * lineHeight) : y
+  return lines.length ? y - (lines.length - 1) * lineHeight : y
 }
 
 function drawTableHeader(
-  page: PDFPage, M: number, width: number, y0: number,
-  gray: ReturnType<typeof rgb>, bold: PDFFont, priceX: number, totalX: number
+  page: PDFPage,
+  M: number,
+  width: number,
+  y0: number,
+  gray: ReturnType<typeof rgb>,
+  bold: PDFFont,
+  priceX: number,
+  totalX: number,
 ) {
-  page.drawText('Position', { x: M + 4, y: y0 + 6, size: 10, font: bold })
-  page.drawText('Anzahl',   { x: M + 260, y: y0 + 6, size: 10, font: bold })
-  page.drawText('Einheit',  { x: M + 320, y: y0 + 6, size: 10, font: bold })
-  page.drawText('Preis',    { x: priceX,  y: y0 + 6, size: 10, font: bold })
+  page.drawText('Position', {
+    x: M + 4,
+    y: y0 + 6,
+    size: 10,
+    font: bold,
+  })
+  page.drawText('Anzahl', {
+    x: M + 260,
+    y: y0 + 6,
+    size: 10,
+    font: bold,
+  })
+  page.drawText('Einheit', {
+    x: M + 320,
+    y: y0 + 6,
+    size: 10,
+    font: bold,
+  })
+  page.drawText('Preis', { x: priceX, y: y0 + 6, size: 10, font: bold })
   const tl = 'Total'
   const tw = bold.widthOfTextAtSize(tl, 10)
-  page.drawText(tl, { x: totalX - tw, y: y0 + 6, size: 10, font: bold })
+  page.drawText(tl, {
+    x: totalX - tw,
+    y: y0 + 6,
+    size: 10,
+    font: bold,
+  })
   page.drawLine({
     start: { x: M, y: y0 },
-    end:   { x: width - M, y: y0 },
+    end: { x: width - M, y: y0 },
     thickness: 0.5,
-    color: gray
+    color: gray,
   })
 }
 
-const fmt = (v: number) => v.toFixed(2).replace('.', ',')
+// Deutsche Formatierung wie 1.000.000,00
+const fmt = (v: number) =>
+  new Intl.NumberFormat('de-DE', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(v) ? v : 0)
 
 /* ======================= Handler ======================= */
 export async function POST(req: NextRequest) {
   try {
     // Auth
     const supabase = await supabaseServer()
-    const { data: { user }, error: authErr } = await supabase.auth.getUser()
+    const {
+      data: { user },
+      error: authErr,
+    } = await supabase.auth.getUser()
     if (authErr || !user) throw new Error('Nicht eingeloggt')
 
     // Payload
-    const { offerNumber } = await req.json() as { offerNumber: string }
+    const { offerNumber } = (await req.json()) as { offerNumber: string }
     if (!offerNumber) throw new Error('offerNumber fehlt')
 
-    // Angebot + Kunde (ohne Kommentare in .select()!)
+    // Angebot + Kunde
     const { data: offer, error: offErr } = await supabaseAdmin
       .from('offers')
-      .select(`
+      .select(
+        `
         id, user_id, customer_id, offer_number, date, valid_until,
         title, intro, tax_rate, positions, pdf_path, status,
         discount,
@@ -145,7 +190,8 @@ export async function POST(req: NextRequest) {
           email, street, house_number, address,
           postal_code, city, customer_number
         )
-      `)
+      `,
+      )
       .eq('user_id', user.id)
       .eq('offer_number', offerNumber)
       .single()
@@ -155,8 +201,8 @@ export async function POST(req: NextRequest) {
     const o = offer as unknown as OfferRow
     const rawCustomer = o.customers
     const customer: CustomerRow | null = Array.isArray(rawCustomer)
-      ? (rawCustomer[0] as CustomerRow | undefined) ?? null
-      : (rawCustomer as CustomerRow | null)
+      ? ((rawCustomer[0] as CustomerRow | undefined) ?? null)
+      : ((rawCustomer as CustomerRow | null) ?? null)
 
     if (!customer) throw new Error('Kunde zum Angebot nicht gefunden')
 
@@ -165,7 +211,9 @@ export async function POST(req: NextRequest) {
     // Billing-Settings (OC)
     const { data: bs, error: bsErr } = await supabaseAdmin
       .from('billing_settings')
-      .select('order_confirmation_prefix, order_confirmation_start, order_confirmation_suffix, template, account_holder, iban, bic, billing_phone, billing_email')
+      .select(
+        'order_confirmation_prefix, order_confirmation_start, order_confirmation_suffix, template, account_holder, iban, bic, billing_phone, billing_email',
+      )
       .eq('user_id', user.id)
       .single()
     if (bsErr || !bs) throw new Error('Billing-Settings nicht gefunden')
@@ -173,14 +221,18 @@ export async function POST(req: NextRequest) {
     // Profil
     const { data: prof, error: profErr } = await supabaseAdmin
       .from('profiles')
-      .select('first_name,last_name,company_name,street,house_number,postal_code,city,logo_path,website')
+      .select(
+        'first_name,last_name,company_name,street,house_number,postal_code,city,logo_path,website',
+      )
       .eq('id', user.id)
       .single()
     if (profErr || !prof) throw new Error('Profil-Daten nicht gefunden')
 
     // OC-Nummer
     const nextNr = (bs.order_confirmation_start ?? 0) + 1
-    const ocNumber = `${bs.order_confirmation_prefix ?? ''}${nextNr}${bs.order_confirmation_suffix ?? ''}`
+    const ocNumber = `${bs.order_confirmation_prefix ?? ''}${nextNr}${
+      bs.order_confirmation_suffix ?? ''
+    }`
     const { error: updStartErr } = await supabaseAdmin
       .from('billing_settings')
       .update({ order_confirmation_start: nextNr })
@@ -188,7 +240,11 @@ export async function POST(req: NextRequest) {
     if (updStartErr) throw new Error('Konnte neue OC-Nummer nicht speichern')
 
     // Template
-    const { data: { publicUrl } } = supabaseAdmin.storage.from('rechnungvorlagen').getPublicUrl(bs.template)
+    const {
+      data: { publicUrl },
+    } = supabaseAdmin.storage
+      .from('rechnungvorlagen')
+      .getPublicUrl(bs.template)
     if (!publicUrl) throw new Error('Template nicht gefunden')
     const tplBytes = await (await fetch(publicUrl)).arrayBuffer()
     const tplDoc = await PDFDocument.load(tplBytes)
@@ -203,12 +259,13 @@ export async function POST(req: NextRequest) {
 
     // Layout
     const M = 32
-    const reservedLogoH = 120
-    const reservedLogoW = Math.min(width - 2 * (M + 8), 420)
+    const reservedLogoH = 120 // Layout-Box wie beim Angebot
+    const maxLogoDrawH = 80   // tatsächliche max. Logohöhe (kleiner)
+    const reservedLogoW = Math.min(width - 2 * (M + 8), 260)
     const topY = height - M
     const logoBoxBottom = topY - reservedLogoH
     const gray = rgb(0.8, 0.8, 0.8)
-    const footerH = height * 0.10
+    const footerH = 40 // Footer weiter nach unten
     const minSpaceToFooter = 5
     const lineH = 12
     const rowSpacing = 4
@@ -225,23 +282,42 @@ export async function POST(req: NextRequest) {
     let imgDims = { width: 0, height: 0 }
     let imgX = 0
     if (prof.logo_path) {
-      const { data: blob } = await supabaseAdmin.storage.from('logo').download(prof.logo_path)
+      const { data: blob } = await supabaseAdmin.storage
+        .from('logo')
+        .download(prof.logo_path)
       if (blob) {
         const arr = await (blob as Blob).arrayBuffer()
         const mime = (blob as Blob).type || ''
         try {
           if (/png/i.test(mime)) logoImage = await pdf.embedPng(arr)
           else if (/jpe?g/i.test(mime)) logoImage = await pdf.embedJpg(arr)
-          else { try { logoImage = await pdf.embedJpg(arr) } catch { logoImage = await pdf.embedPng(arr) } }
-        } catch { logoImage = await pdf.embedPng(arr) }
+          else {
+            try {
+              logoImage = await pdf.embedJpg(arr)
+            } catch {
+              logoImage = await pdf.embedPng(arr)
+            }
+          }
+        } catch {
+          logoImage = await pdf.embedPng(arr)
+        }
         if (logoImage) {
           const sW = reservedLogoW / logoImage.width
-          const sH = reservedLogoH / logoImage.height
+          const sH = maxLogoDrawH / logoImage.height
           const s = Math.min(1, sW, sH)
-          imgDims = { width: logoImage.width * s, height: logoImage.height * s }
+          imgDims = {
+            width: logoImage.width * s,
+            height: logoImage.height * s,
+          }
           imgX = (width - imgDims.width) / 2
-          const imgY = logoBoxBottom + (reservedLogoH - imgDims.height) / 2
-          page.drawImage(logoImage, { x: imgX, y: imgY, width: imgDims.width, height: imgDims.height })
+          const imgY =
+            logoBoxBottom + (reservedLogoH - imgDims.height) / 2
+          page.drawImage(logoImage, {
+            x: imgX,
+            y: imgY,
+            width: imgDims.width,
+            height: imgDims.height,
+          })
         }
       }
     }
@@ -255,87 +331,156 @@ export async function POST(req: NextRequest) {
       : `${prof.first_name} ${prof.last_name}`
     page.drawText(
       `${companyOrName} – ${prof.street} ${prof.house_number} – ${prof.postal_code} ${prof.city}`,
-      { x: M, y: baseY, size: 9, font }
+      { x: M, y: baseY, size: 9, font },
     )
 
-    // Kunde – DisplayName & Adresse korrekt (Firma > Name)
-    const displayName = (customer.company?.trim())
+    // Kunde – DisplayName & Adresse
+    const displayName = customer.company?.trim()
       ? customer.company!.trim()
       : `${(customer.first_name ?? '').trim()} ${(customer.last_name ?? '').trim()}`.trim()
 
-    const streetLine = (customer.street?.trim() || customer.house_number?.trim())
-      ? `${customer.street ?? ''} ${customer.house_number ?? ''}`.trim()
-      : (customer.address ?? '').trim()
+    const streetLine =
+      (customer.street?.trim() || customer.house_number?.trim())
+        ? `${customer.street ?? ''} ${customer.house_number ?? ''}`.trim()
+        : (customer.address ?? '').trim()
 
     let custY = baseY - 20
     page.drawText(displayName, { x: M, y: custY, size: 10, font: bold })
-    if (streetLine) { custY -= 13; page.drawText(streetLine, { x: M, y: custY, size: 10, font }) }
-    const cityLine = `${customer.postal_code ?? ''} ${customer.city ?? ''}`.trim()
-    if (cityLine) { custY -= 13; page.drawText(cityLine, { x: M, y: custY, size: 10, font }) }
+    if (streetLine) {
+      custY -= 13
+      page.drawText(streetLine, { x: M, y: custY, size: 10, font })
+    }
+    const cityLine = `${customer.postal_code ?? ''} ${
+      customer.city ?? ''
+    }`.trim()
+    if (cityLine) {
+      custY -= 13
+      page.drawText(cityLine, { x: M, y: custY, size: 10, font })
+    }
 
     // Meta rechts
     let metaY = baseY
     const metaX = width - M - 170
-    page.drawText('Auftragsbestätigungsnr.:', { x: metaX, y: metaY, size: 10, font: bold })
-    page.drawText(String(ocNumber), { x: metaX + 140, y: metaY, size: 10, font }); metaY -= 13
-    page.drawText('Datum:', { x: metaX, y: metaY, size: 10, font: bold })
-    page.drawText(String(o.date ?? ''), { x: metaX + 140, y: metaY, size: 10, font }); metaY -= 13
+    page.drawText('Auftragsbestätigungsnr.:', {
+      x: metaX,
+      y: metaY,
+      size: 10,
+      font: bold,
+    })
+    page.drawText(String(ocNumber), {
+      x: metaX + 140,
+      y: metaY,
+      size: 10,
+      font,
+    })
+    metaY -= 13
+    page.drawText('Datum:', {
+      x: metaX,
+      y: metaY,
+      size: 10,
+      font: bold,
+    })
+    page.drawText(String(o.date ?? ''), {
+      x: metaX + 140,
+      y: metaY,
+      size: 10,
+      font,
+    })
+    metaY -= 13
     if (customer.customer_number) {
-      page.drawText('Kundennr.:', { x: metaX, y: metaY, size: 10, font: bold })
-      page.drawText(String(customer.customer_number), { x: metaX + 140, y: metaY, size: 10, font }); metaY -= 13
+      page.drawText('Kundennr.:', {
+        x: metaX,
+        y: metaY,
+        size: 10,
+        font: bold,
+      })
+      page.drawText(String(customer.customer_number), {
+        x: metaX + 140,
+        y: metaY,
+        size: 10,
+        font,
+      })
+      metaY -= 13
     }
 
-    // Titel & Intro (mehrzeilig mit Umbruch + Platzprüfung vor Tabellenstart)
-let y0 = Math.min(custY, metaY) - 70
+    // Titel & Intro (mit Umbruch + Platzprüfung)
+    let y0 = Math.min(custY, metaY) - 70
 
-// Überschrift
-const heading = `Auftragsbestätigung – ${displayName}`
-page.drawText(heading, { x: M, y: y0, size: 14, font: bold })
-y0 -= titleGap
+    // Dynamische Überschrift-Größe
+    const headingBase = `Auftragsbestätigung – ${displayName}`
+    const maxTitleWidth = width - 2 * M
+    const maxSize = 16
+    const minSize = 10
+    let headingSize = 14
 
-// Intro-Text: vorhandenes o.intro verwenden, sonst Fallback
-const introText =
-  (o.intro ?? 'Vielen Dank für Ihre Auftragsbestätigung. Nachfolgend die bestätigten Positionen:')
-    .toString()
-    .replace(/\r\n/g, '\n')
+    let testSize = maxSize
+    let headingWidth = bold.widthOfTextAtSize(headingBase, testSize)
+    if (headingWidth > maxTitleWidth) {
+      const scale = maxTitleWidth / headingWidth
+      testSize = Math.max(minSize, Math.floor(testSize * scale))
+    }
+    headingSize = testSize
 
-if (introText.trim()) {
-  const introMaxW = width - 2 * M
-  const introLineH = lineH // 12
-  const paras = introText.split('\n').map(s => s.trim())
+    page.drawText(headingBase, {
+      x: M,
+      y: y0,
+      size: headingSize,
+      font: bold,
+    })
+    y0 -= headingSize + (titleGap - 14) // ungefähr gleicher Abstand wie vorher
 
-  let cursorY = y0
-  for (const p of paras) {
-    if (!p) { cursorY -= introLineH; continue } // leerer Absatz = kleiner Abstand
-    const lines = getWrappedLines(p, introMaxW, font, 10)
-    cursorY = drawLines(page, lines, M, cursorY, introLineH, font, 10) - introLineH // Absatzabstand
-  }
-  y0 = cursorY - 6 // kleiner Gap nach Intro
-} else {
-  y0 -= 18
-}
+    // Intro-Text: vorhandenes o.intro verwenden, sonst Fallback
+    const introText = (o.intro ??
+      'Vielen Dank für Ihre Auftragsbestätigung. Nachfolgend die bestätigten Positionen:'
+    )
+      .toString()
+      .replace(/\r\n/g, '\n')
 
-// Tabelle: erst beginnen, wenn genug Platz — sonst neue Seite
-let tableY0 = y0 - headerOffsetFirst
-if (tableY0 < footerH + minSpaceToFooter + 40) {
-  const [p] = await pdf.copyPages(tplDoc, [0])
-  page = pdf.addPage(p)
+    if (introText.trim()) {
+      const introMaxW = width - 2 * M
+      const introLineH = lineH
+      const paras = introText.split('\n').map((s) => s.trim())
 
-  // Logo auf neuer Seite erneut rendern
-  const topY2 = height - M
-  const logoBoxBottom2 = topY2 - reservedLogoH
-  if (logoImage) {
-    const imgY2 = logoBoxBottom2 + (reservedLogoH - imgDims.height) / 2
-    page.drawImage(logoImage, { x: imgX, y: imgY2, width: imgDims.width, height: imgDims.height })
-  }
+      let cursorY = y0
+      for (const p of paras) {
+        if (!p) {
+          cursorY -= introLineH
+          continue
+        }
+        const lines = getWrappedLines(p, introMaxW, font, 10)
+        cursorY =
+          drawLines(page, lines, M, cursorY, introLineH, font, 10) -
+          introLineH
+      }
+      y0 = cursorY - 6
+    } else {
+      y0 -= 18
+    }
 
-  // Tabellenkopf auf neuer Seite
-  tableY0 = logoBoxBottom2 - 34
-}
+    // Tabelle: Platz prüfen, ggf. neue Seite
+    let tableY0 = y0 - headerOffsetFirst
+    if (tableY0 < footerH + minSpaceToFooter + 40) {
+      const [p] = await pdf.copyPages(tplDoc, [0])
+      page = pdf.addPage(p)
 
-drawTableHeader(page, M, width, tableY0, gray, bold, priceX, totalX)
-let rowY = tableY0 - initialGapFirst
+      const topY2 = height - M
+      const logoBoxBottom2 = topY2 - reservedLogoH
+      if (logoImage) {
+        const imgY2 =
+          logoBoxBottom2 + (reservedLogoH - imgDims.height) / 2
+        page.drawImage(logoImage, {
+          x: imgX,
+          y: imgY2,
+          width: imgDims.width,
+          height: imgDims.height,
+        })
+      }
 
+      tableY0 = logoBoxBottom2 - 34
+    }
+
+    drawTableHeader(page, M, width, tableY0, gray, bold, priceX, totalX)
+    let rowY = tableY0 - initialGapFirst
 
     const newPage = async () => {
       const [p] = await pdf.copyPages(tplDoc, [0])
@@ -343,8 +488,14 @@ let rowY = tableY0 - initialGapFirst
       const topY2 = height - M
       const logoBoxBottom2 = topY2 - reservedLogoH
       if (logoImage) {
-        const imgY2 = logoBoxBottom2 + (reservedLogoH - imgDims.height) / 2
-        page.drawImage(logoImage, { x: imgX, y: imgY2, width: imgDims.width, height: imgDims.height })
+        const imgY2 =
+          logoBoxBottom2 + (reservedLogoH - imgDims.height) / 2
+        page.drawImage(logoImage, {
+          x: imgX,
+          y: imgY2,
+          width: imgDims.width,
+          height: imgDims.height,
+        })
       }
       tableY0 = logoBoxBottom2 - headerOffsetNext
       drawTableHeader(page, M, width, tableY0, gray, bold, priceX, totalX)
@@ -361,22 +512,52 @@ let rowY = tableY0 - initialGapFirst
         lines = getWrappedLines(p.description || '', descW, font, 10)
         requiredH = Math.max(1, lines.length) * lineH + rowSpacing
       } else if (p.type === 'description') {
-        lines = getWrappedLines(p.description || '', (width - M - descX), font, 10)
+        lines = getWrappedLines(
+          p.description || '',
+          width - M - descX,
+          font,
+          10,
+        )
         requiredH = Math.max(1, lines.length) * lineH + rowSpacing
       }
       if (rowY - requiredH < footerH + minSpaceToFooter) await newPage()
 
       if (p.type === 'item') {
         const endY = drawLines(page, lines, descX, rowY, lineH, font, 10)
-        page.drawText(((p.quantity ?? 0)).toString(), { x: M + 260, y: rowY, size: 10, font })
-        page.drawText(p.unit ?? '', { x: M + 320, y: rowY, size: 10, font })
-        page.drawText(fmt(p.unitPrice ?? 0), { x: priceX, y: rowY, size: 10, font })
+        page.drawText((p.quantity ?? 0).toString(), {
+          x: M + 260,
+          y: rowY,
+          size: 10,
+          font,
+        })
+        page.drawText(p.unit ?? '', {
+          x: M + 320,
+          y: rowY,
+          size: 10,
+          font,
+        })
+        page.drawText(fmt(p.unitPrice ?? 0), {
+          x: priceX,
+          y: rowY,
+          size: 10,
+          font,
+        })
         const tot = fmt((p.quantity ?? 0) * (p.unitPrice ?? 0))
         const tw = font.widthOfTextAtSize(tot, 10)
-        page.drawText(tot, { x: totalX - tw, y: rowY, size: 10, font })
+        page.drawText(tot, {
+          x: totalX - tw,
+          y: rowY,
+          size: 10,
+          font,
+        })
         rowY = endY - lineH - rowSpacing
       } else if (p.type === 'heading') {
-        page.drawText(p.description ?? '', { x: descX, y: rowY, size: 10, font: bold })
+        page.drawText(p.description ?? '', {
+          x: descX,
+          y: rowY,
+          size: 10,
+          font: bold,
+        })
         rowY -= lineH + rowSpacing
       } else if (p.type === 'description') {
         const endY = drawLines(page, lines, descX, rowY, lineH, font, 10)
@@ -384,13 +565,35 @@ let rowY = tableY0 - initialGapFirst
       } else if (p.type === 'subtotal') {
         const sub = positions
           .slice(0, i)
-          .reduce((s, pp) => s + (pp.type === 'item' ? (pp.quantity ?? 0) * (pp.unitPrice ?? 0) : 0), 0)
+          .reduce(
+            (s, pp) =>
+              s +
+              (pp.type === 'item'
+                ? (pp.quantity ?? 0) * (pp.unitPrice ?? 0)
+                : 0),
+            0,
+          )
         const subStr = fmt(sub)
-        page.drawText('Zwischensumme:', { x: descX, y: rowY, size: 10, font: bold })
-        page.drawText(subStr, { x: totalX - bold.widthOfTextAtSize(subStr, 10), y: rowY, size: 10, font: bold })
+        page.drawText('Zwischensumme:', {
+          x: descX,
+          y: rowY,
+          size: 10,
+          font: bold,
+        })
+        page.drawText(subStr, {
+          x: totalX - bold.widthOfTextAtSize(subStr, 10),
+          y: rowY,
+          size: 10,
+          font: bold,
+        })
         rowY -= lineH + rowSpacing
       } else if (p.type === 'separator') {
-        page.drawLine({ start: { x: M, y: rowY }, end: { x: width - M, y: rowY }, thickness: 0.5, color: gray })
+        page.drawLine({
+          start: { x: M, y: rowY },
+          end: { x: width - M, y: rowY },
+          thickness: 0.5,
+          color: gray,
+        })
         rowY -= lineH + rowSpacing
       }
     }
@@ -399,8 +602,12 @@ let rowY = tableY0 - initialGapFirst
     const taxRate = Number(o.tax_rate ?? 0)
     const taxFactor = 1 + taxRate / 100
     const netSubtotal = positions.reduce<number>(
-      (s, p) => s + (p.type === 'item' ? (p.quantity ?? 0) * (p.unitPrice ?? 0) : 0),
-      0
+      (s, p) =>
+        s +
+        (p.type === 'item'
+          ? (p.quantity ?? 0) * (p.unitPrice ?? 0)
+          : 0),
+      0,
     )
     const grossBefore = netSubtotal * taxFactor
 
@@ -422,19 +629,27 @@ let rowY = tableY0 - initialGapFirst
 
     if (discount.enabled && discount.value > 0) {
       if (discount.base === 'net') {
-        discountAmount = discount.type === 'percent'
-          ? (netSubtotal * discount.value) / 100
-          : discount.value
-        discountAmount = Math.min(Math.max(0, discountAmount), netSubtotal)
+        discountAmount =
+          discount.type === 'percent'
+            ? (netSubtotal * discount.value) / 100
+            : discount.value
+        discountAmount = Math.min(
+          Math.max(0, discountAmount),
+          netSubtotal,
+        )
         netAfterDiscount = clamp(netSubtotal - discountAmount)
         taxAmount = netAfterDiscount * (taxFactor - 1)
         grossTotal = netAfterDiscount + taxAmount
       } else {
         // base: 'gross'
-        discountAmount = discount.type === 'percent'
-          ? (grossBefore * discount.value) / 100
-          : discount.value
-        discountAmount = Math.min(Math.max(0, discountAmount), grossBefore)
+        discountAmount =
+          discount.type === 'percent'
+            ? (grossBefore * discount.value) / 100
+            : discount.value
+        discountAmount = Math.min(
+          Math.max(0, discountAmount),
+          grossBefore,
+        )
         const grossAfter = clamp(grossBefore - discountAmount)
         netAfterDiscount = grossAfter / taxFactor
         taxAmount = grossAfter - netAfterDiscount
@@ -446,8 +661,9 @@ let rowY = tableY0 - initialGapFirst
     }
 
     // Platz für Summenblock prüfen
-    const linesCount = (discount.enabled && discount.value > 0) ? 5 : 3
-    const summaryBlockH = 20 + (linesCount * 16) + 12
+    const linesCount =
+      discount.enabled && discount.value > 0 ? 5 : 3
+    const summaryBlockH = 20 + linesCount * 16 + 12
     if (rowY - summaryBlockH < footerH + minSpaceToFooter) {
       await newPage()
       rowY = tableY0 - 10
@@ -456,91 +672,210 @@ let rowY = tableY0 - initialGapFirst
     const sumY = rowY - 40
     page.drawLine({
       start: { x: M, y: sumY + 18 },
-      end:   { x: width - M, y: sumY + 18 },
-      thickness: 0.5, color: gray
+      end: { x: width - M, y: sumY + 18 },
+      thickness: 0.5,
+      color: gray,
     })
 
     let sy = sumY + 2
     // Netto
     page.drawText('Netto', { x: M, y: sy, size: 10, font })
     page.drawText('EUR', { x: priceX, y: sy, size: 10, font })
-    { const s = fmt(netSubtotal); page.drawText(s, { x: totalX - font.widthOfTextAtSize(s, 10), y: sy, size: 10, font }) }
+    {
+      const s = fmt(netSubtotal)
+      page.drawText(s, {
+        x: totalX - font.widthOfTextAtSize(s, 10),
+        y: sy,
+        size: 10,
+        font,
+      })
+    }
     sy -= 16
 
     // Rabatt (falls aktiv)
     if (discount.enabled && discount.value > 0) {
-      const label = discount.label?.trim() ? discount.label.trim() : 'Rabatt'
-      const suffix = discount.type === 'percent' ? ` (${String(discount.value).replace('.', ',')}%)` : ''
-      const basis = discount.base === 'net' ? 'auf Netto' : 'auf Brutto'
-      page.drawText(`${label} – ${basis}${suffix}`, { x: M, y: sy, size: 10, font })
+      const label = discount.label?.trim()
+        ? discount.label.trim()
+        : 'Rabatt'
+      const suffix =
+        discount.type === 'percent'
+          ? ` (${String(discount.value).replace('.', ',')}%)`
+          : ''
+      const basis =
+        discount.base === 'net' ? 'auf Netto' : 'auf Brutto'
+      page.drawText(`${label} – ${basis}${suffix}`, {
+        x: M,
+        y: sy,
+        size: 10,
+        font,
+      })
       page.drawText('EUR', { x: priceX, y: sy, size: 10, font })
-      { const s = `-${fmt(discountAmount)}`; page.drawText(s, { x: totalX - font.widthOfTextAtSize(s, 10), y: sy, size: 10, font }) }
+      {
+        const s = `-${fmt(discountAmount)}`
+        page.drawText(s, {
+          x: totalX - font.widthOfTextAtSize(s, 10),
+          y: sy,
+          size: 10,
+          font,
+        })
+      }
       sy -= 16
 
-      page.drawText('Netto nach Rabatt', { x: M, y: sy, size: 10, font })
+      page.drawText('Netto nach Rabatt', {
+        x: M,
+        y: sy,
+        size: 10,
+        font,
+      })
       page.drawText('EUR', { x: priceX, y: sy, size: 10, font })
-      { const s = fmt(netAfterDiscount); page.drawText(s, { x: totalX - font.widthOfTextAtSize(s, 10), y: sy, size: 10, font }) }
+      {
+        const s = fmt(netAfterDiscount)
+        page.drawText(s, {
+          x: totalX - font.widthOfTextAtSize(s, 10),
+          y: sy,
+          size: 10,
+          font,
+        })
+      }
       sy -= 16
     }
 
     // USt
     {
-      const taxLabel = `USt (${taxRate.toFixed(2).replace('.', ',')} %)`
-      page.drawText(taxLabel, { x: M, y: sy, size: 10, font })
+      const taxLabel = `USt (${taxRate
+        .toFixed(2)
+        .replace('.', ',')} %)`
+      page.drawText(taxLabel, {
+        x: M,
+        y: sy,
+        size: 10,
+        font,
+      })
       page.drawText('EUR', { x: priceX, y: sy, size: 10, font })
       const s = fmt(taxAmount)
-      page.drawText(s, { x: totalX - font.widthOfTextAtSize(s, 10), y: sy, size: 10, font })
+      page.drawText(s, {
+        x: totalX - font.widthOfTextAtSize(s, 10),
+        y: sy,
+        size: 10,
+        font,
+      })
     }
     sy -= 16
 
     // Brutto
     page.drawText('Brutto', { x: M, y: sy, size: 10, font })
     page.drawText('EUR', { x: priceX, y: sy, size: 10, font })
-    { const s = fmt(grossTotal); page.drawText(s, { x: totalX - font.widthOfTextAtSize(s, 10), y: sy, size: 10, font }) }
+    {
+      const s = fmt(grossTotal)
+      page.drawText(s, {
+        x: totalX - font.widthOfTextAtSize(s, 10),
+        y: sy,
+        size: 10,
+        font,
+      })
+    }
     sy -= 16
 
     // Hinweiszeile (Rabatt)
     if (discount.enabled && discount.value > 0) {
-      const note = `Hinweis: Es wurde ein Rabatt namens "${discount.label?.trim() || 'Rabatt'}" angewendet.`
+      const note = `Hinweis: Es wurde ein Rabatt namens "${
+        discount.label?.trim() || 'Rabatt'
+      }" angewendet.`
       const noteY = Math.max(footerH + 22, sy - 22)
-      page.drawText(note, { x: M, y: noteY, size: 9, font, color: rgb(0.25, 0.25, 0.25) })
+      page.drawText(note, {
+        x: M,
+        y: noteY,
+        size: 9,
+        font,
+        color: rgb(0.25, 0.25, 0.25),
+      })
     }
 
     // Fußzeilen
     const pages = pdf.getPages()
     for (const pg of pages) {
-      pg.drawLine({ start: { x: M, y: footerH }, end: { x: width - M, y: footerH }, thickness: 0.5, color: gray })
+      pg.drawLine({
+        start: { x: M, y: footerH },
+        end: { x: width - M, y: footerH },
+        thickness: 0.5,
+        color: gray,
+      })
       const left = prof.company_name?.trim()
-        ? [prof.company_name, `${prof.street} ${prof.house_number}`, `${prof.postal_code} ${prof.city}`]
-        : [`${prof.first_name} ${prof.last_name}`, `${prof.street} ${prof.house_number}`, `${prof.postal_code} ${prof.city}`]
-      left.forEach((t, i) => pg.drawText(t, { x: M, y: footerH - 12 - i * 11, size: 9, font }))
+        ? [
+            prof.company_name,
+            `${prof.street} ${prof.house_number}`,
+            `${prof.postal_code} ${prof.city}`,
+          ]
+        : [
+            `${prof.first_name} ${prof.last_name}`,
+            `${prof.street} ${prof.house_number}`,
+            `${prof.postal_code} ${prof.city}`,
+          ]
+      left.forEach((t, i) =>
+        pg.drawText(t, {
+          x: M,
+          y: footerH - 12 - i * 11,
+          size: 9,
+          font,
+        }),
+      )
 
-      const mid = [`Kontoinhaber: ${bs.account_holder}`, `IBAN: ${bs.iban}`, `BIC: ${bs.bic}`]
+      const mid = [
+        `Kontoinhaber: ${bs.account_holder}`,
+        `IBAN: ${bs.iban}`,
+        `BIC: ${bs.bic}`,
+      ]
       mid.forEach((t, i) => {
         const w = font.widthOfTextAtSize(t, 9)
-        pg.drawText(t, { x: width / 2 - w / 2, y: footerH - 12 - i * 11, size: 9, font })
+        pg.drawText(t, {
+          x: width / 2 - w / 2,
+          y: footerH - 12 - i * 11,
+          size: 9,
+          font,
+        })
       })
 
-      const right = [`Tel: ${bs.billing_phone}`, `E-Mail: ${bs.billing_email}`, prof.website ?? '']
+      const right = [
+        `Tel: ${bs.billing_phone}`,
+        `E-Mail: ${bs.billing_email}`,
+        prof.website ?? '',
+      ]
       right.forEach((t, i) => {
         const w = font.widthOfTextAtSize(t, 9)
-        pg.drawText(t, { x: width - M - w, y: footerH - 12 - i * 11, size: 9, font })
+        pg.drawText(t, {
+          x: width - M - w,
+          y: footerH - 12 - i * 11,
+          size: 9,
+          font,
+        })
       })
     }
 
     // Datei speichern / hochladen
     const bytes = await pdf.save()
-    const safe = (s: string) => (s || '').replace(/[^\p{L}\p{N}]+/gu, '_').replace(/^_+|_+$/g, '')
-    const fname = ['Auftragsbestaetigung', safe(ocNumber), safe(customer.customer_number ?? '')]
-      .filter(Boolean).join('_') + '.pdf'
+    const safe = (s: string) =>
+      (s || '')
+        .replace(/[^\p{L}\p{N}]+/gu, '_')
+        .replace(/^_+|_+$/g, '')
+    const fname =
+      [
+        'Auftragsbestaetigung',
+        safe(ocNumber),
+        safe(customer.customer_number ?? ''),
+      ]
+        .filter(Boolean)
+        .join('_') + '.pdf'
     const filePath = `auftrag/${fname}`
 
     const { error: upErr } = await supabaseAdmin
       .storage.from('dokumente')
-      .upload(filePath, Buffer.from(bytes), { upsert: true, contentType: 'application/pdf' })
+      .upload(filePath, Buffer.from(bytes), {
+        upsert: true,
+        contentType: 'application/pdf',
+      })
     if (upErr) throw new Error('Upload fehlgeschlagen')
 
-    // ⬇️⬇️ EINZIGE inhaltliche Änderung: Rabatt & Summen *mit* persistieren
+    // Payload inkl. Rabatt/Summen
     const payload = {
       user_id: user.id,
       customer_id: o.customer_id,
@@ -548,14 +883,13 @@ let rowY = tableY0 - initialGapFirst
       from_offer_number: o.offer_number,
       date: o.date,
       title: `Auftragsbestätigung – ${displayName}`,
-      intro: 'Vielen Dank für Ihre Auftragsbestätigung. Nachfolgend die bestätigten Positionen:',
+      intro:
+        'Vielen Dank für Ihre Auftragsbestätigung. Nachfolgend die bestätigten Positionen:',
       tax_rate: o.tax_rate,
       positions,
       pdf_path: filePath,
       status: 'Erstellt' as const,
       status_changed_at: new Date().toISOString(),
-
-      // >>> diese Felder sind in deinem Schema vorhanden (order_confirmations)
       discount: {
         enabled: !!discount.enabled,
         label: discount.label ?? 'Rabatt',
@@ -563,12 +897,13 @@ let rowY = tableY0 - initialGapFirst
         base: discount.base,
         value: Number(discount.value ?? 0),
       },
-      net_subtotal:       Number(netSubtotal.toFixed(2)),
-      discount_amount:    Number(discountAmount.toFixed(2)),
+      net_subtotal: Number(netSubtotal.toFixed(2)),
+      discount_amount: Number(discountAmount.toFixed(2)),
       net_after_discount: Number(netAfterDiscount.toFixed(2)),
-      tax_amount:         Number(taxAmount.toFixed(2)),
-      gross_total:        Number(grossTotal.toFixed(2)),
+      tax_amount: Number(taxAmount.toFixed(2)),
+      gross_total: Number(grossTotal.toFixed(2)),
     }
+
     const { error: insertErr } = await supabaseAdmin
       .from('order_confirmations')
       .insert(payload)
@@ -584,10 +919,14 @@ let rowY = tableY0 - initialGapFirst
       })
       .eq('user_id', user.id)
       .eq('offer_number', offerNumber)
-    if (statusErr) console.error('Status-Update fehlgeschlagen:', statusErr)
+    if (statusErr)
+      console.error('Status-Update fehlgeschlagen:', statusErr)
 
     // Download
-    const ab = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer
+    const ab = bytes.buffer.slice(
+      bytes.byteOffset,
+      bytes.byteOffset + bytes.byteLength,
+    ) as ArrayBuffer
     return new NextResponse(ab, {
       headers: {
         'Content-Type': 'application/pdf',
@@ -595,7 +934,13 @@ let rowY = tableY0 - initialGapFirst
       },
     })
   } catch (err: any) {
-    console.error('[auftrag/generate-from-offer] ERROR:', err?.message || err)
-    return NextResponse.json({ message: err?.message || 'Fehler' }, { status: 500 })
+    console.error(
+      '[auftrag/generate-from-offer] ERROR:',
+      err?.message || err,
+    )
+    return NextResponse.json(
+      { message: err?.message || 'Fehler' },
+      { status: 500 },
+    )
   }
 }

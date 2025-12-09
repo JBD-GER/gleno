@@ -250,7 +250,7 @@ export default function HomePage() {
     </Link>
 
     <Link
-      href="/login" // wenn du eine eigene Registrierungsseite hast, z.B. "/register" hier anpassen
+      href="/registrieren" // wenn du eine eigene Registrierungsseite hast, z.B. "/register" hier anpassen
       className="inline-flex items-center justify-center whitespace-nowrap rounded-2xl border border-white/70 bg-transparent px-7 py-3 text-sm font-semibold text-slate-50/95 shadow-[0_10px_40px_rgba(0,0,0,0.6)] backdrop-blur hover:bg-white/10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-300"
     >
       Direkt kostenlos starten

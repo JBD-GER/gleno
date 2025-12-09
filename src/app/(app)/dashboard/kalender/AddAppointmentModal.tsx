@@ -27,7 +27,15 @@ type Person = {
   first_name: string | null
   last_name?: string | null
   email?: string | null
+
+  // für Kunden zusätzlich verfügbar (API liefert das jetzt mit):
+  street?: string | null
+  house_number?: string | null
+  postal_code?: string | null
+  city?: string | null
+  address?: string | null
 }
+
 type Project = { id: string; title: string }
 
 type AddAppointmentModalProps = {
@@ -119,6 +127,29 @@ export default function AddAppointmentModal({
   const [selectedEmployees, setSelectedEmployees] = useState<Person[]>([])
 
   const [saving, setSaving] = useState(false)
+
+  /** Adresse des ausgewählten Kunden in das Adressfeld übernehmen */
+  const applyCustomerAddress = () => {
+    if (!selectedCustomer) return
+
+    const line1 = [selectedCustomer.street, selectedCustomer.house_number]
+      .filter((v) => v && v.toString().trim().length > 0)
+      .join(' ')
+    const line2 = [selectedCustomer.postal_code, selectedCustomer.city]
+      .filter((v) => v && v.toString().trim().length > 0)
+      .join(' ')
+
+    const combined = [line1, line2]
+      .filter((p) => p && p.trim().length > 0)
+      .join(', ')
+
+    const fallback = (selectedCustomer.address ?? '').toString().trim()
+    const finalAddress = (combined || '').trim() || fallback
+
+    if (finalAddress) {
+      setAddress(finalAddress)
+    }
+  }
 
   /* wenn initialStart sich ändert (Slot-Klick), Start entsprechend setzen */
   useEffect(() => {
@@ -330,7 +361,7 @@ export default function AddAppointmentModal({
                   >
                     <XMarkIcon className="h-5 w-5" />
                   </button>
-                  <Dialog.Title className="px-5 pb-1 pt-4 text-base font-semibold text-slate-900 sm:px-6 sm:text-lg">
+                  <Dialog.Title className="px-5 pb-1 pt-4 text.base font-semibold text-slate-900 sm:px-6 sm:text-lg">
                     Termin erstellen
                   </Dialog.Title>
                   <p className="px-5 pb-3 text-xs text-slate-500 sm:px-6">
@@ -386,7 +417,7 @@ export default function AddAppointmentModal({
 
                   {/* Kunde */}
                   <div className="col-span-1 md:col-span-2">
-                    <span className="mb-1 block text-sm font-medium text-slate-700">
+                    <span className="mb-1 block text-sm font.medium text-slate-700">
                       Kunde
                     </span>
                     <Combobox
@@ -491,15 +522,26 @@ export default function AddAppointmentModal({
 
                   {/* Ort/Adresse */}
                   <label className="col-span-1 md:col-span-2">
-                    <span className="mb-1 flex items-center gap-2 text-sm font-medium text-slate-700">
-                      <MapPinIcon className="h-4 w-4" /> Ort / Adresse
-                      (optional)
+                    <span className="mb-1 flex items-center justify-between text-sm font-medium text-slate-700">
+                      <span className="inline-flex items-center gap-2">
+                        <MapPinIcon className="h-4 w-4" /> Ort / Adresse
+                        (optional)
+                      </span>
+                      <button
+                        type="button"
+                        onClick={applyCustomerAddress}
+                        disabled={!selectedCustomer}
+                        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white/70 px-2.5 py-1 text-[11px] font-medium text-slate-700 shadow-sm backdrop-blur-sm hover:bg-white disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <MapPinIcon className="h-3 w-3" />
+                        Kundenadresse übernehmen
+                      </button>
                     </span>
                     <input
                       type="text"
                       value={address}
                       onChange={(e) => setAddress(e.target.value)}
-                      placeholder="z. B. Musterstraße 12, Berlin"
+                      placeholder="z. B. Musterstraße 12, 12345 Musterstadt"
                       className="w-full rounded-xl border border-slate-100 bg-white/80 px-3 py-2 text-sm text-slate-900 outline-none backdrop-blur focus:ring-2 focus:ring-slate-200"
                     />
                   </label>
@@ -592,7 +634,7 @@ export default function AddAppointmentModal({
 
                   {/* Dauer – ganzzeilig */}
                   <label className="col-span-1 md:col-span-2">
-                    <span className="mb-1 flex items-center gap-2 text-sm font-medium text-slate-700">
+                    <span className="mb-1 flex items.center gap-2 text-sm font-medium text-slate-700">
                       <ClockIcon className="h-4 w-4" /> Dauer
                     </span>
                     <div className="rounded-xl border border-slate-100 bg-white/70 p-1 backdrop-blur">

@@ -13,8 +13,8 @@ import {
 } from '@heroicons/react/24/outline'
 import { StarIcon } from '@heroicons/react/24/solid'
 
-const primaryCtaHref = '/registrierung'
-const secondaryCtaHref = '/demo-termin'
+const primaryCtaHref = '/registrieren'
+const secondaryCtaHref = '/beratung'
 
 const reviews = [
   {

@@ -313,6 +313,7 @@ export async function POST(req: NextRequest) {
     const startTimeFormatted = start.toLocaleString('de-DE', {
       dateStyle: 'full',
       timeStyle: 'short',
+      timeZone: 'Europe/Berlin',
     })
 
     const icsContent = buildICS({

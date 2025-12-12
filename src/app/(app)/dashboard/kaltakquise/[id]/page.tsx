@@ -49,6 +49,8 @@ type LiveSuggestResponse = {
   reasoning: string | null
   closingPriority: string | null
   closingPriorityLabel: string | null
+  stopSignal?: string | null
+  pauseQuestion?: string | null
 }
 
 type CallRow = {
@@ -61,6 +63,8 @@ type TranscriptTurn = {
   text: string
   ts: number
 }
+
+type CallState = 'idle' | 'starting' | 'ringing' | 'in_call' | 'ending'
 
 function clsx(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(' ')
@@ -102,6 +106,18 @@ function normalizePhone(input: string) {
   return (input || '').trim().replace(/[^\d+]/g, '')
 }
 
+function isEndedStatus(x: string | null | undefined) {
+  const v = (x || '').toLowerCase()
+  return (
+    v === 'completed' ||
+    v === 'busy' ||
+    v === 'failed' ||
+    v === 'no-answer' ||
+    v === 'canceled' ||
+    v === 'cancelled'
+  )
+}
+
 export default function AcquisitionProfileCallConsolePage() {
   const params = useParams<{ id: string }>()
   const profileId = params?.id
@@ -118,9 +134,7 @@ export default function AcquisitionProfileCallConsolePage() {
 
   // Call state
   const [phone, setPhone] = useState('')
-  const [callState, setCallState] = useState<
-    'idle' | 'starting' | 'ringing' | 'in_call' | 'ending'
-  >('idle')
+  const [callState, setCallState] = useState<CallState>('idle')
   const [callStartedAt, setCallStartedAt] = useState<number | null>(null)
   const [callAnsweredAt, setCallAnsweredAt] = useState<number | null>(null)
   const [callRow, setCallRow] = useState<CallRow | null>(null)
@@ -152,6 +166,9 @@ export default function AcquisitionProfileCallConsolePage() {
   const [postBusy, setPostBusy] = useState(false)
   const [postAI, setPostAI] = useState<any>(null)
   const [postErr, setPostErr] = useState<string | null>(null)
+
+  // ✅ pro Call nur 1x Initial-Suggest
+  const initialSuggestDoneRef = useRef(false)
 
   // Cleanup: Verbindung sauber trennen
   useEffect(() => {
@@ -362,6 +379,35 @@ export default function AcquisitionProfileCallConsolePage() {
     }
   }, [callState, callDurationSec, live?.objectionType, live?.objectionLabel, turns, stage])
 
+  /* ----------------------------- Helpers: Live Suggest Fetch ----------------------------- */
+
+  async function fetchLiveSuggestion(snippet: string, forceStage?: LiveStage) {
+    if (!profileId) return
+    try {
+      setLiveBusy(true)
+      setLiveErr(null)
+
+      const res = await fetch('/api/ai/acquisition/suggest-live', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          profileId,
+          transcriptSnippet: snippet,
+          stage: (forceStage || stage) as any,
+          direction: 'outbound',
+          language: profile?.language || 'de',
+        }),
+      })
+      const j = await res.json()
+      if (!res.ok) throw new Error(j?.error || 'Live-Vorschlag fehlgeschlagen.')
+      setLive(j as LiveSuggestResponse)
+    } catch (e: any) {
+      setLiveErr(e?.message || 'Live-Vorschlag fehlgeschlagen.')
+    } finally {
+      setLiveBusy(false)
+    }
+  }
+
   /* ----------------------------- Live Suggest (throttled) ----------------------------- */
 
   useEffect(() => {
@@ -404,6 +450,65 @@ export default function AcquisitionProfileCallConsolePage() {
     }
   }, [throttledSnippet, stage, callState, profileId, profile?.language])
 
+  /* ----------------------------- ✅ Initial Suggest on Call Start ----------------------------- */
+
+  useEffect(() => {
+    if (!(callState === 'ringing' || callState === 'in_call')) return
+    if (!profileId) return
+    if (!profile) return
+    if (initialSuggestDoneRef.current) return
+    if (turns.length > 0) return
+
+    initialSuggestDoneRef.current = true
+
+    const bootstrapSnippet =
+      'Call startet jetzt. Kunde hat noch nichts gesagt. Formuliere den ersten Satz für ein seriöses B2B-Intro.'
+
+    fetchLiveSuggestion(bootstrapSnippet, 'intro')
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callState, profileId, profile, turns.length])
+
+  /* ----------------------------- ✅ Poll DB for Remote Hangup ----------------------------- */
+
+  useEffect(() => {
+    if (!(callState === 'starting' || callState === 'ringing' || callState === 'in_call')) return
+    if (!callRow?.id) return
+
+    let alive = true
+
+    const t = setInterval(async () => {
+      try {
+        const res = await fetch(`/api/telephony/calls?id=${encodeURIComponent(callRow.id)}`, {
+          method: 'GET',
+          cache: 'no-store',
+        })
+        const j = await res.json()
+        if (!res.ok) return
+        if (!alive) return
+
+        const c = j?.call
+        const endedAt = c?.ended_at || c?.endedAt || null
+        const result = c?.result || null
+
+        // sobald DB sagt "beendet" -> UI sauber schließen
+        // FIX TS2367: hier callState bereits auf starting|ringing|in_call eingeengt,
+        // daher keine Vergleiche mit 'idle'/'ending' (unmöglich) mehr.
+        if (endedAt || isEndedStatus(result)) {
+          const reason = result ? `twilio_${String(result)}` : 'remote_completed'
+          await endCallInternal(reason)
+        }
+      } catch {
+        // polling errors ignorieren
+      }
+    }, 1500)
+
+    return () => {
+      alive = false
+      clearInterval(t)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [callState, callRow?.id])
+
   /* ----------------------------- Twilio: call ----------------------------- */
 
   async function startCall() {
@@ -422,6 +527,9 @@ export default function AcquisitionProfileCallConsolePage() {
       setPostAI(null)
       setPostErr(null)
       setShowPost(false)
+
+      // ✅ reset initial suggest flag pro Call
+      initialSuggestDoneRef.current = false
 
       // Reset minimal post state
       setOutcome('fail')

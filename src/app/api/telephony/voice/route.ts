@@ -1,148 +1,103 @@
 // src/app/api/telephony/voice/route.ts
-import { NextResponse } from 'next/server'
-import twilio from 'twilio'
-import { createClient } from '@supabase/supabase-js'
-
 export const runtime = 'nodejs'
+
+import { NextResponse } from 'next/server'
+import { createClient } from '@supabase/supabase-js'
+import twilio from 'twilio'
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
-function normalizeWsUrl(base: string): string {
-  // akzeptiert:
-  // - wss://phone.gleno.de
-  // - https://phone.gleno.de
-  // - wss://phone.gleno.de/twilio
-  // - https://phone.gleno.de/twilio
-  let b = (base || '').trim().replace(/\/+$/, '')
-  if (!b) return ''
-
-  // falls jemand aus Versehen https:// einträgt
-  if (b.startsWith('https://')) b = 'wss://' + b.slice('https://'.length)
-  if (b.startsWith('http://')) b = 'ws://' + b.slice('http://'.length)
-
-  return b.endsWith('/twilio') ? b : `${b}/twilio`
-}
-
-function getPublicUrlFromRequest(req: Request): string {
-  const u = new URL(req.url)
-  const proto = req.headers.get('x-forwarded-proto') || u.protocol.replace(':', '') || 'https'
-  const host =
-    req.headers.get('x-forwarded-host') ||
-    req.headers.get('host') ||
-    u.host
-
-  // Wichtig: Twilio signiert gegen die "vollständige" URL (ohne Query i.d.R.)
-  return `${proto}://${host}${u.pathname}`
-}
-
-// Optional: im Browser sichtbar, dass POST erwartet wird
-export async function GET() {
-  return NextResponse.json({
-    ok: true,
-    hint: 'This endpoint is called by Twilio via HTTP POST (TwiML).',
+function xml(res: any) {
+  return new NextResponse(res.toString(), {
+    status: 200,
+    headers: { 'Content-Type': 'text/xml; charset=utf-8' },
   })
+}
+
+function baseUrl() {
+  // ✅ wichtig: fallback auf gleno.de (ohne www)
+  return (process.env.NEXT_PUBLIC_SITE_URL || 'https://gleno.de').replace(/\/$/, '')
 }
 
 export async function POST(req: Request) {
-  const VoiceResponse = twilio.twiml.VoiceResponse
-  const twiml = new VoiceResponse()
+  // Twilio sendet x-www-form-urlencoded
+  const bodyText = await req.text()
+  const params = new URLSearchParams(bodyText)
 
-  let form: FormData
+  const CallSid = params.get('CallSid') || ''
+  const To = params.get('To') || '' // aus Device.connect params
+  const callId = params.get('callId') || '' // aus Device.connect params
+  const profileId = params.get('profileId') || null
+
+  if (!callId) {
+    const vr = new twilio.twiml.VoiceResponse()
+    vr.say({ language: 'de-DE' }, 'Fehler. Call ID fehlt.')
+    vr.hangup()
+    return xml(vr)
+  }
+
+  // CallSid in DB mappen, damit StatusCallback später updaten kann
   try {
-    form = await req.formData()
+    await supabaseAdmin
+      .from('telephony_calls')
+      .update({
+        twilio_call_sid: CallSid || null,
+        result: 'initiated',
+      })
+      .eq('id', callId)
   } catch {
-    twiml.say('Technischer Fehler beim Verarbeiten des Anrufs.')
-    twiml.hangup()
-    return new NextResponse(twiml.toString(), {
-      status: 200,
-      headers: { 'Content-Type': 'text/xml' },
+    // ignore
+  }
+
+  const vr = new twilio.twiml.VoiceResponse()
+
+  // OPTIONAL: Media Stream parallel (falls du TELEPHONY_STREAM_WSS_URL nutzt)
+  if (process.env.TELEPHONY_STREAM_WSS_URL) {
+    const connect = vr.connect()
+    connect.stream({
+      url: process.env.TELEPHONY_STREAM_WSS_URL,
     })
   }
 
-  // FormData -> Plain Object für Twilio Signatur-Validation
-  const params: Record<string, string> = {}
-  for (const [k, v] of form.entries()) params[k] = String(v)
+  const b = baseUrl()
 
-  const to = (params.To || '').trim()
-  const accountSid = (params.AccountSid || '').trim()
+  // ✅ StatusCallback serverseitig, damit UI sicher updatet
+  const statusUrl =
+    `${b}` +
+    `/api/telephony/status?callId=${encodeURIComponent(callId)}` +
+    (process.env.TELEPHONY_WEBHOOK_SECRET
+      ? `&secret=${encodeURIComponent(process.env.TELEPHONY_WEBHOOK_SECRET)}`
+      : '')
 
-  // Diese kommen bei Twilio Client (Device.connect({ params })) als Request-Params mit
-  const profileId = (params.profileId || '').trim()
-  const callId = (params.callId || '').trim()
+  // ✅ Action URL (wird nach Dial aufgerufen) -> updated DB als Backup
+  const actionUrl =
+    `${b}` +
+    `/api/telephony/voice/action?callId=${encodeURIComponent(callId)}` +
+    (process.env.TELEPHONY_WEBHOOK_SECRET
+      ? `&secret=${encodeURIComponent(process.env.TELEPHONY_WEBHOOK_SECRET)}`
+      : '')
 
-  if (!to || !accountSid) {
-    twiml.say('Konfiguration fehlerhaft.')
-    twiml.hangup()
-    return new NextResponse(twiml.toString(), {
-      status: 200,
-      headers: { 'Content-Type': 'text/xml' },
-    })
-  }
+  const dial = vr.dial({
+    callerId: undefined, // CallerId setzt du in TwiML-App oder hier, je nach Flow
+    action: actionUrl,
+    method: 'POST',
+  })
 
-  // Settings holen (inkl. Auth Token für Signatur-Prüfung)
-  const { data: settings, error } = await supabaseAdmin
-    .from('telephony_settings')
-    .select('twilio_caller_id, twilio_auth_token')
-    .eq('twilio_account_sid', accountSid)
-    .single()
-
-  if (error || !settings?.twilio_caller_id || !settings?.twilio_auth_token) {
-    twiml.say('Keine Telefon-Konfiguration für dieses Konto gefunden.')
-    twiml.hangup()
-    return new NextResponse(twiml.toString(), {
-      status: 200,
-      headers: { 'Content-Type': 'text/xml' },
-    })
-  }
-
-  // ✅ Twilio Request-Signatur validieren (wichtig!)
-  const signature = req.headers.get('x-twilio-signature') || ''
-  const url = getPublicUrlFromRequest(req)
-  const valid = twilio.validateRequest(
-    settings.twilio_auth_token,
-    signature,
-    url,
-    params
+  // Zielnummer (To) – kommt aus deinem Device.connect({params:{To}})
+  dial.number(
+    {
+      statusCallback: statusUrl,
+      statusCallbackEvent: ['initiated', 'ringing', 'answered', 'completed'],
+      statusCallbackMethod: 'POST',
+    },
+    To
   )
 
-  if (!valid) {
-    // nicht XML nötig – Twilio kann das ab, aber wir geben sauber XML zurück
-    twiml.say('Unauthorized.')
-    twiml.hangup()
-    return new NextResponse(twiml.toString(), {
-      status: 403,
-      headers: { 'Content-Type': 'text/xml' },
-    })
-  }
+  // wenn Dial fertig ist, soll die WebRTC-Leg nicht offen bleiben
+  vr.hangup()
 
-  // 1) Media Stream Start (wss://...)
-  const baseWsUrl = (process.env.TELEPHONY_STREAM_WSS_URL || '').trim()
-  const secret = (process.env.TELEPHONY_STREAM_SECRET || '').trim()
-
-  if (baseWsUrl) {
-    const wsUrl = normalizeWsUrl(baseWsUrl)
-
-    const stream = twiml.start().stream({
-      url: wsUrl,
-      track: 'both_tracks',
-    })
-
-    // Custom Parameters -> kommen im WS Server unter start.customParameters an
-    if (secret) stream.parameter({ name: 'secret', value: secret })
-    if (profileId) stream.parameter({ name: 'profileId', value: profileId })
-    if (callId) stream.parameter({ name: 'callId', value: callId })
-    stream.parameter({ name: 'direction', value: 'outbound' })
-  }
-
-  // 2) Dial
-  const dial = twiml.dial({ callerId: settings.twilio_caller_id })
-  dial.number(to)
-
-  return new NextResponse(twiml.toString(), {
-    status: 200,
-    headers: { 'Content-Type': 'text/xml' },
-  })
+  return xml(vr)
 }

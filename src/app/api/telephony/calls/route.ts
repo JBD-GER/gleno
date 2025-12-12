@@ -48,6 +48,40 @@ function maskPhone(number: string): string {
   return `${prefix}••••${last4}`
 }
 
+/* ----------------------------- GET (Read one) ----------------------------- */
+
+export async function GET(req: Request) {
+  const supabase = await supabaseServer()
+  const {
+    data: { user },
+  } = await supabase.auth.getUser()
+
+  if (!user) {
+    return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
+  }
+
+  const { searchParams } = new URL(req.url)
+  const id = (searchParams.get('id') || '').trim()
+
+  if (!id) {
+    return NextResponse.json({ error: 'id ist erforderlich.' }, { status: 400 })
+  }
+
+  // ownership: created_by == auth user
+  const { data, error } = await supabase
+    .from('telephony_calls')
+    .select('*')
+    .eq('id', id)
+    .eq('created_by', user.id)
+    .single()
+
+  if (error || !data) {
+    return NextResponse.json({ error: 'Call nicht gefunden.' }, { status: 404 })
+  }
+
+  return NextResponse.json({ call: data })
+}
+
 /* ----------------------------- POST (Create) ----------------------------- */
 
 export async function POST(req: Request) {

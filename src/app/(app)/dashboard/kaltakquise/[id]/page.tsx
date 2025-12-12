@@ -64,8 +64,6 @@ type TranscriptTurn = {
   ts: number
 }
 
-type CallState = 'idle' | 'starting' | 'ringing' | 'in_call' | 'ending'
-
 function clsx(...s: Array<string | false | null | undefined>) {
   return s.filter(Boolean).join(' ')
 }
@@ -134,7 +132,9 @@ export default function AcquisitionProfileCallConsolePage() {
 
   // Call state
   const [phone, setPhone] = useState('')
-  const [callState, setCallState] = useState<CallState>('idle')
+  const [callState, setCallState] = useState<
+    'idle' | 'starting' | 'ringing' | 'in_call' | 'ending'
+  >('idle')
   const [callStartedAt, setCallStartedAt] = useState<number | null>(null)
   const [callAnsweredAt, setCallAnsweredAt] = useState<number | null>(null)
   const [callRow, setCallRow] = useState<CallRow | null>(null)
@@ -490,9 +490,7 @@ export default function AcquisitionProfileCallConsolePage() {
         const endedAt = c?.ended_at || c?.endedAt || null
         const result = c?.result || null
 
-        // sobald DB sagt "beendet" -> UI sauber schließen
-        // FIX TS2367: hier callState bereits auf starting|ringing|in_call eingeengt,
-        // daher keine Vergleiche mit 'idle'/'ending' (unmöglich) mehr.
+        // ✅ FIX: keine unnötigen Vergleiche gegen 'idle'/'ending' im narrowed scope
         if (endedAt || isEndedStatus(result)) {
           const reason = result ? `twilio_${String(result)}` : 'remote_completed'
           await endCallInternal(reason)

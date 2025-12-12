@@ -51,6 +51,13 @@ type InvoiceRow = {
   status_changed_at?: string | null
   due_date?: string | null
 
+  // ✅ STORNO-FELDER (NEU fürs sichere Anzeigen/Disable)
+  is_cancellation?: boolean | null
+  cancels_invoice_number?: string | null
+  cancelled_by_invoice_number?: string | null
+  cancelled_at?: string | null
+  cancellation_reason?: string | null
+
   // optionale, bereits persistierte Summen
   discount?: Discount | null
   net_subtotal?: number | null
@@ -123,6 +130,32 @@ function computeNetTotalInvoice(inv: InvoiceRow): number {
   }
 }
 
+/** Anzeige-Status:
+ * - "Storniert" (Status ODER Storno-Felder) darf NIE zu "Überfällig" werden.
+ * - "Bezahlt" ebenso nicht.
+ * - Nur wenn NICHT bezahlt/storniert und Zahlungsziel vorbei → "Überfällig".
+ */
+function getDisplayStatus(inv: InvoiceRow): string {
+  const rawStatus = (inv.status ?? 'Erstellt').toString().trim()
+  const normalized = rawStatus.toLowerCase()
+
+  // ✅ Storno sicher erkennen (Status ODER Felder)
+  const cancelled =
+    !!inv.cancelled_by_invoice_number ||
+    !!inv.cancelled_at ||
+    !!inv.is_cancellation ||
+    normalized === 'storniert' ||
+    normalized.includes('storno')
+
+  if (cancelled) return 'Storniert'
+  if (normalized === 'bezahlt') return 'Bezahlt'
+
+  const due = inv.due_date ?? inv.valid_until
+  if (isPast(due)) return 'Überfällig'
+
+  return rawStatus
+}
+
 export default async function RechnungPage({
   searchParams,
 }: {
@@ -143,14 +176,18 @@ export default async function RechnungPage({
   const from = (page - 1) * PAGE_SIZE
   const to = from + PAGE_SIZE - 1
 
-  // --- Query (inkl. Summen & Rabatt) -------------------------------
+  // --- Query (inkl. Summen & Rabatt + STORNO-FELDER) ------------------------
   let query = supabase
     .from('invoices')
     .select(
       `
       id, invoice_number, date, valid_until, title, intro, tax_rate, positions, pdf_path,
       created_at, updated_at, status, status_changed_at, due_date,
+
       discount, net_subtotal, discount_amount, net_after_discount, tax_amount, gross_total,
+
+      is_cancellation, cancels_invoice_number, cancelled_by_invoice_number, cancelled_at, cancellation_reason,
+
       customers ( id, first_name, last_name, street, house_number, postal_code, city )
     `,
       { count: 'exact' }
@@ -159,7 +196,6 @@ export default async function RechnungPage({
 
   if (qRaw) {
     const like = `%${qRaw}%`
-    // Date rausgenommen, weil DATE-Typ nicht mit ILIKE funktioniert
     query = query.or(
       [
         `invoice_number.ilike.${like}`,
@@ -285,11 +321,15 @@ export default async function RechnungPage({
                     const netFinal = computeNetTotalInvoice(inv)
 
                     const rawStatus = inv.status ?? 'Erstellt'
-                    const due = inv.due_date ?? inv.valid_until
-                    const showStatus =
-                      rawStatus !== 'Bezahlt' && isPast(due)
-                        ? 'Überfällig'
-                        : rawStatus
+                    const showStatus = getDisplayStatus(inv)
+
+                    const isCancelled =
+                      showStatus === 'Storniert' ||
+                      !!inv.cancelled_by_invoice_number ||
+                      !!inv.cancelled_at ||
+                      (rawStatus ?? '').toString().toLowerCase().includes('storno')
+
+                    const isCancellation = !!inv.is_cancellation
 
                     return (
                       <tr
@@ -320,6 +360,8 @@ export default async function RechnungPage({
                           <InvoiceActionsMenu
                             invoiceNumber={inv.invoice_number}
                             currentStatus={rawStatus}
+                            isCancelled={isCancelled}
+                            isCancellation={isCancellation}
                             downloadHref={`/api/rechnung/download-invoice/${encodeURIComponent(
                               inv.invoice_number
                             )}`}
@@ -361,17 +403,21 @@ export default async function RechnungPage({
                 {rows.map((inv) => {
                   const c = inv.customers
                   const netFinal = computeNetTotalInvoice(inv)
+
                   const rawStatus = inv.status ?? 'Erstellt'
-                  const due = inv.due_date ?? inv.valid_until
-                  const showStatus =
-                    rawStatus !== 'Bezahlt' && isPast(due)
-                      ? 'Überfällig'
-                      : rawStatus
+                  const showStatus = getDisplayStatus(inv)
+
+                  const isCancelled =
+                    showStatus === 'Storniert' ||
+                    !!inv.cancelled_by_invoice_number ||
+                    !!inv.cancelled_at ||
+                    (rawStatus ?? '').toString().toLowerCase().includes('storno')
+
+                  const isCancellation = !!inv.is_cancellation
 
                   return (
                     <li key={inv.id} className="px-4 py-3 sm:px-5 sm:py-4">
                       <div className="rounded-2xl border border-white/70 bg-white/95 px-4 py-3 shadow-sm">
-                        {/* Top: Nummer + Kunde links, Status + Netto rechts */}
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="text-sm font-semibold text-slate-900">
@@ -400,7 +446,6 @@ export default async function RechnungPage({
                           </div>
                         </div>
 
-                        {/* Bottom: Meta + Aktionen */}
                         <div className="mt-3 flex items-center justify-between gap-2">
                           <div className="text-[11px] text-slate-400">
                             Rechnung:{' '}
@@ -411,6 +456,8 @@ export default async function RechnungPage({
                           <InvoiceActionsMenu
                             invoiceNumber={inv.invoice_number}
                             currentStatus={rawStatus}
+                            isCancelled={isCancelled}
+                            isCancellation={isCancellation}
                             downloadHref={`/api/rechnung/download-invoice/${encodeURIComponent(
                               inv.invoice_number
                             )}`}
@@ -486,10 +533,10 @@ export default async function RechnungPage({
       <p className="mt-3 text-left text-xs text-slate-600">
         Beträge sind <strong>netto</strong> (nach Rabatt). „Überfällig“
         erscheint automatisch, wenn das Zahlungsziel überschritten ist und die
-        Rechnung nicht als „Bezahlt“ markiert wurde.
+        Rechnung nicht als „Bezahlt“ markiert wurde. „Storniert“ hat immer
+        Vorrang.
       </p>
 
-      {/* Übersicht aller wiederkehrenden Rechnungen */}
       <AutomationOverview />
     </div>
   )

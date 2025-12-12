@@ -22,6 +22,7 @@
     "@supabase/auth-helpers-react": "^0.5.0",
     "@supabase/ssr": "^0.6.1",
     "@supabase/supabase-js": "^2.52.1",
+    "@twilio/voice-sdk": "^2.17.0",
     "chart.js": "^4.5.0",
     "framer-motion": "^12.23.9",
     "fullcalendar": "^6.1.18",
@@ -40,7 +41,8 @@
     "stripe": "^18.5.0",
     "supabase": "^2.31.8",
     "three": "^0.179.1",
-    "three-stdlib": "^2.36.0"
+    "three-stdlib": "^2.36.0",
+    "twilio": "^5.10.7"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",

@@ -15,6 +15,7 @@ type InvoiceStatus =
   | 'Erstellt'
   | 'Verschickt'
   | 'Bezahlt'
+  | 'Storniert'
   | string
   | null
   | undefined
@@ -509,9 +510,7 @@ function AutomationModal({
               </h2>
               <p className="text-xs text-slate-500">
                 Vorlage:{' '}
-                <span className="font-mono text-[11px]">
-                  {invoiceNumber}
-                </span>
+                <span className="font-mono text-[11px]">{invoiceNumber}</span>
               </p>
             </div>
             <button
@@ -664,7 +663,9 @@ function AutomationModal({
                           value={notifyEmail}
                           onChange={(e) => setNotifyEmail(e.target.value)}
                           disabled={!notifyEnabled}
-                          placeholder={customerEmail || 'E-Mail-Adresse des Kunden'}
+                          placeholder={
+                            customerEmail || 'E-Mail-Adresse des Kunden'
+                          }
                           className="w-full rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-[13px] text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200 disabled:bg-slate-100"
                         />
                         {!customerEmail && (
@@ -699,9 +700,7 @@ function AutomationModal({
                     disabled={deleting || saving}
                     className="text-xs text-rose-600 hover:text-rose-700 disabled:opacity-60"
                   >
-                    {deleting
-                      ? 'Beende Automatisierung…'
-                      : 'Autom. abbrechen'}
+                    {deleting ? 'Beende Automatisierung…' : 'Autom. abbrechen'}
                   </button>
                 )}
                 <div className="ml-auto flex gap-2">
@@ -756,12 +755,16 @@ function AutomationModal({
 export default function InvoiceActionsMenu({
   invoiceNumber,
   currentStatus,
+  isCancelled,
+  isCancellation,
   downloadHref,
   editHref,
   inlineHref,
 }: {
   invoiceNumber: string
   currentStatus?: InvoiceStatus
+  isCancelled?: boolean
+  isCancellation?: boolean
   downloadHref: string
   editHref: string
   inlineHref?: string
@@ -773,6 +776,11 @@ export default function InvoiceActionsMenu({
   const [eInvLoading, setEInvLoading] = useState(false)
 
   const [automationOpen, setAutomationOpen] = useState(false)
+
+  // NEU: Storno
+  const [cancelOpen, setCancelOpen] = useState(false)
+  const [cancelReason, setCancelReason] = useState('')
+  const [cancelLoading, setCancelLoading] = useState(false)
 
   const router = useRouter()
   const panelRef = useRef<HTMLDivElement | null>(null)
@@ -804,7 +812,29 @@ export default function InvoiceActionsMenu({
     }
   }, [open])
 
+  // ✅ Status robust normalisieren + Storno sicher erkennen
+  const sRaw = (currentStatus ?? 'Erstellt').toString().trim()
+  const s = sRaw.toLowerCase()
+
+  const statusSaysStorno =
+    s === 'storniert' || s.includes('storno') || s === 'rechnung storniert'
+
+  const isErstellt = s === 'erstellt'
+  const isVerschickt = s === 'verschickt'
+  const isBezahlt = s === 'bezahlt'
+
+  // ✅ das ist das Wichtige:
+  // wenn entweder Status storniert ist ODER Page das via Feldern signalisiert -> istStorniert TRUE
+  const isStorniert = !!isCancelled || !!isCancellation || statusSaysStorno
+
+  // ✅ Für storniert: alles sperren außer PDF ansehen/download
+  const disableMutations = isStorniert
+
   const markStatus = async (status: 'Erstellt' | 'Verschickt' | 'Bezahlt') => {
+    if (disableMutations) {
+      alert('Diese Rechnung ist storniert und kann nicht geändert werden.')
+      return
+    }
     try {
       setLoading(
         status === 'Verschickt'
@@ -832,6 +862,10 @@ export default function InvoiceActionsMenu({
 
   // NEU: E-Rechnung erzeugen + direkt herunterladen
   const handleCreateEInvoice = async () => {
+    if (disableMutations) {
+      alert('Diese Rechnung ist storniert. E-Rechnung kann nicht erzeugt werden.')
+      return
+    }
     try {
       setEInvLoading(true)
 
@@ -884,10 +918,34 @@ export default function InvoiceActionsMenu({
     }
   }
 
-  const s = (currentStatus ?? 'Erstellt').toString().toLowerCase()
-  const isErstellt = s === 'erstellt'
-  const isVerschickt = s === 'verschickt'
-  const isBezahlt = s === 'bezahlt'
+  const handleCancelInvoice = async () => {
+    if (disableMutations) {
+      alert('Diese Rechnung ist bereits storniert.')
+      return
+    }
+    try {
+      setCancelLoading(true)
+      const res = await fetch('/api/rechnung/cancel', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          invoiceNumber,
+          reason: cancelReason || null,
+        }),
+      })
+      const payload = await res.json().catch(() => ({} as any))
+      if (!res.ok) throw new Error(payload?.message || 'Storno fehlgeschlagen')
+
+      router.refresh()
+      setCancelOpen(false)
+      setCancelReason('')
+    } catch (e: any) {
+      console.error(e)
+      alert(e?.message || 'Storno fehlgeschlagen')
+    } finally {
+      setCancelLoading(false)
+    }
+  }
 
   return (
     <>
@@ -895,7 +953,7 @@ export default function InvoiceActionsMenu({
         <button
           ref={btnRef}
           onClick={() => setOpen((o) => !o)}
-          disabled={!!loading || eInvLoading}
+          disabled={!!loading || eInvLoading || cancelLoading}
           aria-haspopup="menu"
           aria-expanded={open}
           className={[
@@ -906,7 +964,7 @@ export default function InvoiceActionsMenu({
             'disabled:opacity-60 disabled:cursor-not-allowed',
           ].join(' ')}
         >
-          {loading || eInvLoading ? (
+          {loading || eInvLoading || cancelLoading ? (
             <span className="inline-flex items-center gap-2">
               <svg
                 className="h-4 w-4 animate-spin"
@@ -1019,12 +1077,31 @@ export default function InvoiceActionsMenu({
                   </a>
                 </li>
 
+                {/* ✅ Bearbeiten sperren wenn storniert/bezahlt */}
                 <li>
                   <a
                     href={editHref}
                     role="menuitem"
-                    className="flex items-center gap-2 px-3 py-2 transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
-                    onClick={() => setOpen(false)}
+                    aria-disabled={disableMutations || isBezahlt}
+                    className={[
+                      'flex items-center gap-2 px-3 py-2 transition focus:outline-none',
+                      disableMutations || isBezahlt
+                        ? 'cursor-not-allowed opacity-50'
+                        : 'hover:bg-slate-50 focus:bg-slate-50',
+                    ].join(' ')}
+                    onClick={(e) => {
+                      if (disableMutations || isBezahlt) {
+                        e.preventDefault()
+                        setOpen(false)
+                        alert(
+                          disableMutations
+                            ? 'Stornierte Rechnungen können nicht bearbeitet werden.'
+                            : 'Bezahlte Rechnungen können nicht bearbeitet werden.'
+                        )
+                        return
+                      }
+                      setOpen(false)
+                    }}
                   >
                     <svg
                       className="h-4 w-4 text-slate-500"
@@ -1048,7 +1125,7 @@ export default function InvoiceActionsMenu({
                     type="button"
                     role="menuitem"
                     onClick={handleCreateEInvoice}
-                    disabled={eInvLoading}
+                    disabled={eInvLoading || disableMutations}
                     className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none disabled:opacity-60"
                   >
                     <svg
@@ -1071,7 +1148,9 @@ export default function InvoiceActionsMenu({
                         strokeLinejoin="round"
                       />
                     </svg>
-                    {eInvLoading
+                    {disableMutations
+                      ? 'E-Rechnung gesperrt (storniert)'
+                      : eInvLoading
                       ? 'E-Rechnung wird erzeugt…'
                       : 'E-Rechnung (XML) erzeugen'}
                   </button>
@@ -1084,10 +1163,16 @@ export default function InvoiceActionsMenu({
                     type="button"
                     role="menuitem"
                     onClick={() => {
+                      if (disableMutations) {
+                        alert('Stornierte Rechnungen können nicht automatisiert werden.')
+                        setOpen(false)
+                        return
+                      }
                       setOpen(false)
                       setAutomationOpen(true)
                     }}
-                    className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none"
+                    disabled={disableMutations}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none disabled:opacity-50"
                   >
                     <svg
                       className="h-4 w-4 text-slate-500"
@@ -1102,18 +1187,50 @@ export default function InvoiceActionsMenu({
                         strokeLinejoin="round"
                       />
                     </svg>
-                    Automatisiert…
+                    {disableMutations
+                      ? 'Automatisiert… (gesperrt)'
+                      : 'Automatisiert…'}
+                  </button>
+                </li>
+
+                {/* STORNO */}
+                <li className="my-1 border-t border-slate-100" />
+                <li>
+                  <button
+                    type="button"
+                    role="menuitem"
+                    onClick={() => {
+                      setOpen(false)
+                      setCancelOpen(true)
+                    }}
+                    disabled={isStorniert}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 focus:outline-none disabled:opacity-50"
+                  >
+                    <svg
+                      className="h-4 w-4 text-rose-600"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                    >
+                      <path
+                        d="M6 6l12 12M18 6L6 18"
+                        stroke="currentColor"
+                        strokeWidth="1.8"
+                        strokeLinecap="round"
+                      />
+                    </svg>
+                    {isStorniert ? 'Bereits storniert' : 'Rechnung stornieren…'}
                   </button>
                 </li>
 
                 <li className="my-1 border-t border-slate-100" />
 
+                {/* ✅ Status-Buttons sperren wenn storniert */}
                 {isErstellt && (
                   <>
                     <li>
                       <button
                         onClick={() => markStatus('Verschickt')}
-                        disabled={!!loading}
+                        disabled={!!loading || disableMutations}
                         role="menuitem"
                         className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                       >
@@ -1136,7 +1253,7 @@ export default function InvoiceActionsMenu({
                     <li>
                       <button
                         onClick={() => markStatus('Bezahlt')}
-                        disabled={!!loading}
+                        disabled={!!loading || disableMutations}
                         role="menuitem"
                         className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                       >
@@ -1164,7 +1281,7 @@ export default function InvoiceActionsMenu({
                     <li>
                       <button
                         onClick={() => markStatus('Erstellt')}
-                        disabled={!!loading}
+                        disabled={!!loading || disableMutations}
                         role="menuitem"
                         className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                       >
@@ -1185,7 +1302,7 @@ export default function InvoiceActionsMenu({
                     <li>
                       <button
                         onClick={() => markStatus('Bezahlt')}
-                        disabled={!!loading}
+                        disabled={!!loading || disableMutations}
                         role="menuitem"
                         className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                       >
@@ -1213,7 +1330,7 @@ export default function InvoiceActionsMenu({
                     <li>
                       <button
                         onClick={() => markStatus('Verschickt')}
-                        disabled={!!loading}
+                        disabled={!!loading || disableMutations}
                         role="menuitem"
                         className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                       >
@@ -1236,7 +1353,7 @@ export default function InvoiceActionsMenu({
                     <li>
                       <button
                         onClick={() => markStatus('Erstellt')}
-                        disabled={!!loading}
+                        disabled={!!loading || disableMutations}
                         role="menuitem"
                         className="flex w-full items-center gap-2 px-3 py-2 text-left transition hover:bg-slate-50 focus:bg-slate-50 disabled:opacity-60"
                       >
@@ -1269,6 +1386,64 @@ export default function InvoiceActionsMenu({
         onClose={() => setAutomationOpen(false)}
         onChanged={() => router.refresh()}
       />
+
+      {/* STORNO Modal */}
+      {cancelOpen &&
+        createPortal(
+          <div className="fixed inset-0 z-[12000] flex items-center justify-center bg-slate-900/45 backdrop-blur-sm">
+            <div className="w-full max-w-lg rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl">
+              <div className="flex items-start justify-between gap-3">
+                <div>
+                  <h2 className="text-base font-semibold text-slate-900">
+                    Rechnung stornieren
+                  </h2>
+                  <p className="text-[11px] text-slate-500">
+                    Es wird eine neue Stornorechnung erzeugt (mit Verweis auf{' '}
+                    {invoiceNumber}).
+                  </p>
+                </div>
+                <button
+                  className="rounded-full border border-slate-200 bg-white px-2 py-1 text-xs text-slate-500 hover:bg-slate-50"
+                  onClick={() => setCancelOpen(false)}
+                  disabled={cancelLoading}
+                >
+                  ✕
+                </button>
+              </div>
+
+              <div className="mt-4">
+                <label className="mb-1 block text-xs font-medium text-slate-700">
+                  Grund (optional)
+                </label>
+                <textarea
+                  value={cancelReason}
+                  onChange={(e) => setCancelReason(e.target.value)}
+                  rows={4}
+                  className="w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-900 outline-none focus:border-slate-400 focus:ring-2 focus:ring-slate-200"
+                  placeholder="z. B. Auftrag zurückgezogen / falsche Rechnungsadresse / Tippfehler…"
+                />
+              </div>
+
+              <div className="mt-5 flex justify-end gap-2">
+                <button
+                  className="rounded-lg border border-slate-200 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 hover:bg-slate-50 disabled:opacity-60"
+                  onClick={() => setCancelOpen(false)}
+                  disabled={cancelLoading}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                  disabled={cancelLoading}
+                  onClick={handleCancelInvoice}
+                >
+                  {cancelLoading ? 'Storniere…' : 'Jetzt stornieren'}
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </>
   )
 }

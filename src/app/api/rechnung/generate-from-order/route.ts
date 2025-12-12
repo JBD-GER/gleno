@@ -52,7 +52,7 @@ type Discount = {
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 )
 
 /* ======================= Helpers ======================= */
@@ -92,12 +92,21 @@ function parseNumber(n: unknown, fallback = 0): number {
   return fallback
 }
 
+/** Heutiges Datum als YYYY-MM-DD (lokal, kein UTC-Shift) */
+function todayYYYYMMDD(): string {
+  const now = new Date()
+  const y = now.getFullYear()
+  const m = String(now.getMonth() + 1).padStart(2, '0')
+  const d = String(now.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 /** Wortumbruch nur berechnen */
 function getWrappedLines(
   text: string,
   maxWidth: number,
   font: PDFFont,
-  size: number,
+  size: number
 ): string[] {
   const words = sanitize(text).split(' ')
   const lines: string[] = []
@@ -121,7 +130,7 @@ function drawLines(
   y: number,
   lineHeight: number,
   font: PDFFont,
-  size: number,
+  size: number
 ): number {
   let cursorY = y
   for (const ln of lines) {
@@ -139,7 +148,7 @@ function drawTableHeader(
   gray: ReturnType<typeof rgb>,
   bold: PDFFont,
   priceX: number,
-  totalX: number,
+  totalX: number
 ) {
   page.drawText('Position', {
     x: M + 4,
@@ -193,8 +202,9 @@ export async function POST(req: NextRequest) {
     } = await supabase.auth.getUser()
     if (authErr || !user) throw new Error('Nicht eingeloggt')
 
-    const { orderConfirmationNumber } =
-      (await req.json()) as { orderConfirmationNumber: string }
+    const { orderConfirmationNumber } = (await req.json()) as {
+      orderConfirmationNumber: string
+    }
     if (!orderConfirmationNumber)
       throw new Error('orderConfirmationNumber fehlt')
 
@@ -209,13 +219,12 @@ export async function POST(req: NextRequest) {
           email, street, house_number, address,
           postal_code, city, customer_number
         )
-      `,
+      `
       )
       .eq('user_id', user.id)
       .eq('order_confirmation_number', orderConfirmationNumber)
       .single()
-    if (ocErr || !oc)
-      throw new Error('Auftragsbestätigung nicht gefunden')
+    if (ocErr || !oc) throw new Error('Auftragsbestätigung nicht gefunden')
 
     const rawCustomer = (oc as any).customers
     const customer: CustomerRow | null = Array.isArray(rawCustomer)
@@ -237,25 +246,20 @@ export async function POST(req: NextRequest) {
       return !!d.enabled && val > 0
     }
 
-    if (
-      !isActiveRaw(sourceDiscount) &&
-      (oc as any).from_offer_number
-    ) {
+    if (!isActiveRaw(sourceDiscount) && (oc as any).from_offer_number) {
       const { data: offer } = await supabaseAdmin
         .from('offers')
         .select('discount')
         .eq('user_id', user.id)
         .eq('offer_number', (oc as any).from_offer_number)
         .maybeSingle()
-      if (offer?.discount)
-        sourceDiscount = offer.discount as DbDiscount
+      if (offer?.discount) sourceDiscount = offer.discount as DbDiscount
     }
 
     // Normalisieren -> garantiert number
     const normalizedDiscount: Discount = {
       enabled:
-        !!sourceDiscount?.enabled &&
-        parseNumber(sourceDiscount?.value, 0) > 0,
+        !!sourceDiscount?.enabled && parseNumber(sourceDiscount?.value, 0) > 0,
       label: (sourceDiscount?.label ?? 'Rabatt').toString(),
       type: (sourceDiscount?.type as DiscountType) ?? 'percent',
       base: (sourceDiscount?.base as DiscountBase) ?? 'net',
@@ -264,10 +268,12 @@ export async function POST(req: NextRequest) {
 
     /* 2) Rechnungsnummer erzeugen (RPC mit Fallback) */
     let invoiceNumber: string
-    const { data: rpcRes, error: rpcErr } =
-      await supabaseAdmin.rpc('next_invoice_number', {
+    const { data: rpcRes, error: rpcErr } = await supabaseAdmin.rpc(
+      'next_invoice_number',
+      {
         p_user_id: user.id,
-      })
+      }
+    )
     if (
       !rpcErr &&
       Array.isArray(rpcRes) &&
@@ -275,12 +281,11 @@ export async function POST(req: NextRequest) {
     ) {
       invoiceNumber = (rpcRes as any)[0].invoice_number as string
     } else {
-      const { data: bsFallback, error: bsFallbackErr } =
-        await supabaseAdmin
-          .from('billing_settings')
-          .select('invoice_prefix, invoice_start, invoice_suffix')
-          .eq('user_id', user.id)
-          .single()
+      const { data: bsFallback, error: bsFallbackErr } = await supabaseAdmin
+        .from('billing_settings')
+        .select('invoice_prefix, invoice_start, invoice_suffix')
+        .eq('user_id', user.id)
+        .single()
       if (bsFallbackErr || !bsFallback)
         throw new Error('Billing-Settings nicht gefunden')
       const next = (bsFallback.invoice_start ?? 0) + 1
@@ -288,8 +293,7 @@ export async function POST(req: NextRequest) {
         .from('billing_settings')
         .update({ invoice_start: next })
         .eq('user_id', user.id)
-      if (updErr)
-        throw new Error('Konnte invoice_start nicht speichern')
+      if (updErr) throw new Error('Konnte invoice_start nicht speichern')
       invoiceNumber = `${bsFallback.invoice_prefix ?? ''}${next}${
         bsFallback.invoice_suffix ?? ''
       }`
@@ -298,9 +302,7 @@ export async function POST(req: NextRequest) {
     /* 3) Billing / Template */
     const { data: bs, error: bsErr } = await supabaseAdmin
       .from('billing_settings')
-      .select(
-        'template, account_holder, iban, bic, billing_phone, billing_email',
-      )
+      .select('template, account_holder, iban, bic, billing_phone, billing_email')
       .eq('user_id', user.id)
       .single()
     if (bsErr || !bs) throw new Error('Billing-Settings nicht gefunden')
@@ -309,12 +311,11 @@ export async function POST(req: NextRequest) {
     const { data: prof, error: profErr } = await supabaseAdmin
       .from('profiles')
       .select(
-        'first_name,last_name,company_name,street,house_number,postal_code,city,logo_path,website',
+        'first_name,last_name,company_name,street,house_number,postal_code,city,logo_path,website'
       )
       .eq('id', user.id)
       .single()
-    if (profErr || !prof)
-      throw new Error('Profil-Daten nicht gefunden')
+    if (profErr || !prof) throw new Error('Profil-Daten nicht gefunden')
 
     /* 5) Template laden */
     const { data: tplPub } = supabaseAdmin.storage
@@ -335,12 +336,9 @@ export async function POST(req: NextRequest) {
 
     // Layout
     const M = 32
-    const reservedLogoH = 120           // Box-Höhe bleibt – Fensterumschlag
-    const maxLogoDrawH = 80             // tatsächliche max. Logohöhe (kleiner)
-    const reservedLogoW = Math.min(
-      width - 2 * (M + 8),
-      260,
-    )                                   // Logo etwas schmaler
+    const reservedLogoH = 120 // Box-Höhe bleibt – Fensterumschlag
+    const maxLogoDrawH = 80 // tatsächliche max. Logohöhe (kleiner)
+    const reservedLogoW = Math.min(width - 2 * (M + 8), 260) // Logo etwas schmaler
     const topY = height - M
     const logoBoxBottom = topY - reservedLogoH
 
@@ -356,8 +354,7 @@ export async function POST(req: NextRequest) {
         const mime = (blob as Blob).type || ''
         try {
           if (/png/i.test(mime)) logoImage = await pdf.embedPng(arr)
-          else if (/jpe?g/i.test(mime))
-            logoImage = await pdf.embedJpg(arr)
+          else if (/jpe?g/i.test(mime)) logoImage = await pdf.embedJpg(arr)
           else {
             try {
               logoImage = await pdf.embedJpg(arr)
@@ -377,8 +374,7 @@ export async function POST(req: NextRequest) {
             height: logoImage.height * s,
           }
           imgX = (width - imgDims.width) / 2
-          const imgY =
-            logoBoxBottom + (reservedLogoH - imgDims.height) / 2
+          const imgY = logoBoxBottom + (reservedLogoH - imgDims.height) / 2
           page.drawImage(logoImage, {
             x: imgX,
             y: imgY,
@@ -411,7 +407,7 @@ export async function POST(req: NextRequest) {
       : `${prof.first_name} ${prof.last_name}`
     page.drawText(
       `${companyOrName} – ${prof.street} ${prof.house_number} – ${prof.postal_code} ${prof.city}`,
-      { x: M, y: baseY, size: 9, font },
+      { x: M, y: baseY, size: 9, font }
     )
 
     // Kunde – DisplayName & Adresse: bevorzugt Firmenname
@@ -421,9 +417,7 @@ export async function POST(req: NextRequest) {
 
     const streetLine =
       (customer.street?.trim() || customer.house_number?.trim())
-        ? `${customer.street ?? ''} ${
-            customer.house_number ?? ''
-          }`.trim()
+        ? `${customer.street ?? ''} ${customer.house_number ?? ''}`.trim()
         : (customer.address ?? '').trim()
 
     let custY = baseY - 20
@@ -442,9 +436,7 @@ export async function POST(req: NextRequest) {
         font,
       })
     }
-    const cityLine = `${customer.postal_code ?? ''} ${
-      customer.city ?? ''
-    }`.trim()
+    const cityLine = `${customer.postal_code ?? ''} ${customer.city ?? ''}`.trim()
     if (cityLine) {
       custY -= 13
       page.drawText(cityLine, {
@@ -455,9 +447,10 @@ export async function POST(req: NextRequest) {
       })
     }
 
-    // Meta (Datum = oc.date; Fällig +14 Tage)
-    const ocDateDb = oc.date as string
-    const dueDb = addDaysYYYYMMDD(ocDateDb, 14)
+    // ✅ Meta (Datum = HEUTE; Fällig +14 Tage)
+    // Vorher war: const ocDateDb = oc.date as string
+    const invoiceDateDb = todayYYYYMMDD()
+    const dueDb = addDaysYYYYMMDD(invoiceDateDb, 14)
 
     let metaY = baseY
     const metaX = width - M - 150
@@ -480,7 +473,7 @@ export async function POST(req: NextRequest) {
       size: 10,
       font: bold,
     })
-    page.drawText(toDisplay(ocDateDb), {
+    page.drawText(toDisplay(invoiceDateDb), {
       x: metaX + 80,
       y: metaY,
       size: 10,
@@ -551,9 +544,7 @@ export async function POST(req: NextRequest) {
     if (introText.trim()) {
       const introMaxW = width - 2 * M
       const introLineH = lineH
-      const paragraphs = introText
-        .split('\n')
-        .map((s) => s.trim())
+      const paragraphs = introText.split('\n').map((s) => s.trim())
 
       let cursorY = y0
       for (const p of paragraphs) {
@@ -563,15 +554,7 @@ export async function POST(req: NextRequest) {
         }
         const lines = getWrappedLines(p, introMaxW, font, 10)
         cursorY =
-          drawLines(
-            page,
-            lines,
-            M,
-            cursorY,
-            introLineH,
-            font,
-            10,
-          ) - introLineH
+          drawLines(page, lines, M, cursorY, introLineH, font, 10) - introLineH
       }
       y0 = cursorY - 6
     } else {
@@ -588,8 +571,7 @@ export async function POST(req: NextRequest) {
       const topY2 = height - M
       const logoBoxBottom2 = topY2 - reservedLogoH
       if (logoImage) {
-        const imgY2 =
-          logoBoxBottom2 + (reservedLogoH - imgDims.height) / 2
+        const imgY2 = logoBoxBottom2 + (reservedLogoH - imgDims.height) / 2
         page.drawImage(logoImage, {
           x: imgX,
           y: imgY2,
@@ -611,8 +593,7 @@ export async function POST(req: NextRequest) {
       const topY2 = height - M
       const logoBoxBottom2 = topY2 - reservedLogoH
       if (logoImage) {
-        const imgY2 =
-          logoBoxBottom2 + (reservedLogoH - imgDims.height) / 2
+        const imgY2 = logoBoxBottom2 + (reservedLogoH - imgDims.height) / 2
         page.drawImage(logoImage, {
           x: imgX,
           y: imgY2,
@@ -621,16 +602,7 @@ export async function POST(req: NextRequest) {
         })
       }
       tableY0 = logoBoxBottom2 - headerOffsetNext
-      drawTableHeader(
-        page,
-        M,
-        width,
-        tableY0,
-        gray,
-        bold,
-        priceX,
-        totalX,
-      )
+      drawTableHeader(page, M, width, tableY0, gray, bold, priceX, totalX)
       rowY = tableY0 - initialGapNext
     }
 
@@ -645,27 +617,14 @@ export async function POST(req: NextRequest) {
         lines = getWrappedLines(p.description || '', descW, font, 10)
         requiredH = Math.max(1, lines.length) * lineH + rowSpacing
       } else if (p.type === 'description') {
-        lines = getWrappedLines(
-          p.description || '',
-          width - M - descX,
-          font,
-          10,
-        )
+        lines = getWrappedLines(p.description || '', width - M - descX, font, 10)
         requiredH = Math.max(1, lines.length) * lineH + rowSpacing
       }
 
       if (rowY - requiredH < footerH + minSpaceToFooter) await newPage()
 
       if (p.type === 'item') {
-        const endY = drawLines(
-          page,
-          lines,
-          descX,
-          rowY,
-          lineH,
-          font,
-          10,
-        )
+        const endY = drawLines(page, lines, descX, rowY, lineH, font, 10)
         page.drawText((p.quantity ?? 0).toString(), {
           x: M + 260,
           y: rowY,
@@ -684,9 +643,7 @@ export async function POST(req: NextRequest) {
           size: 10,
           font,
         })
-        const tot = fmt(
-          (p.quantity ?? 0) * (p.unitPrice ?? 0),
-        )
+        const tot = fmt((p.quantity ?? 0) * (p.unitPrice ?? 0))
         const tw = font.widthOfTextAtSize(tot, 10)
         page.drawText(tot, {
           x: totalX - tw,
@@ -704,27 +661,15 @@ export async function POST(req: NextRequest) {
         })
         rowY -= lineH + rowSpacing
       } else if (p.type === 'description') {
-        const endY = drawLines(
-          page,
-          lines,
-          descX,
-          rowY,
-          lineH,
-          font,
-          10,
-        )
+        const endY = drawLines(page, lines, descX, rowY, lineH, font, 10)
         rowY = endY - lineH - rowSpacing
       } else if (p.type === 'subtotal') {
-        const sub = positions
-          .slice(0, i)
-          .reduce(
-            (s, pp) =>
-              s +
-              (pp.type === 'item'
-                ? (pp.quantity ?? 0) * (pp.unitPrice ?? 0)
-                : 0),
-            0,
-          )
+        const sub = positions.slice(0, i).reduce(
+          (s, pp) =>
+            s +
+            (pp.type === 'item' ? (pp.quantity ?? 0) * (pp.unitPrice ?? 0) : 0),
+          0
+        )
         const subStr = fmt(sub)
         page.drawText('Zwischensumme:', {
           x: descX,
@@ -757,10 +702,8 @@ export async function POST(req: NextRequest) {
     const netSubtotal = positions.reduce<number>(
       (s, p) =>
         s +
-        (p.type === 'item'
-          ? (p.quantity ?? 0) * (p.unitPrice ?? 0)
-          : 0),
-      0,
+        (p.type === 'item' ? (p.quantity ?? 0) * (p.unitPrice ?? 0) : 0),
+      0
     )
     const grossBefore = netSubtotal * taxFactor
     const clamp = (n: number) => (n < 0 ? 0 : n)
@@ -770,21 +713,15 @@ export async function POST(req: NextRequest) {
     let taxAmount = 0
     let grossTotal = 0
 
-    const hasDiscount =
-      normalizedDiscount.enabled &&
-      normalizedDiscount.value > 0
+    const hasDiscount = normalizedDiscount.enabled && normalizedDiscount.value > 0
 
     if (hasDiscount) {
       if (normalizedDiscount.base === 'net') {
         discountAmount =
           normalizedDiscount.type === 'percent'
-            ? (netSubtotal * normalizedDiscount.value) /
-              100
+            ? (netSubtotal * normalizedDiscount.value) / 100
             : normalizedDiscount.value
-        discountAmount = Math.min(
-          Math.max(0, discountAmount),
-          netSubtotal,
-        )
+        discountAmount = Math.min(Math.max(0, discountAmount), netSubtotal)
         netAfterDiscount = clamp(netSubtotal - discountAmount)
         taxAmount = netAfterDiscount * (taxFactor - 1)
         grossTotal = netAfterDiscount + taxAmount
@@ -792,13 +729,9 @@ export async function POST(req: NextRequest) {
         // base: 'gross'
         discountAmount =
           normalizedDiscount.type === 'percent'
-            ? (grossBefore * normalizedDiscount.value) /
-              100
+            ? (grossBefore * normalizedDiscount.value) / 100
             : normalizedDiscount.value
-        discountAmount = Math.min(
-          Math.max(0, discountAmount),
-          grossBefore,
-        )
+        discountAmount = Math.min(Math.max(0, discountAmount), grossBefore)
         const grossAfter = clamp(grossBefore - discountAmount)
         netAfterDiscount = grossAfter / taxFactor
         taxAmount = grossAfter - netAfterDiscount
@@ -843,20 +776,12 @@ export async function POST(req: NextRequest) {
     // Rabatt (falls aktiv)
     if (hasDiscount) {
       const label =
-        (normalizedDiscount.label ?? 'Rabatt')
-          .toString()
-          .trim() || 'Rabatt'
+        (normalizedDiscount.label ?? 'Rabatt').toString().trim() || 'Rabatt'
       const suffix =
         normalizedDiscount.type === 'percent'
-          ? ` (${String(normalizedDiscount.value).replace(
-              '.',
-              ',',
-            )}%)`
+          ? ` (${String(normalizedDiscount.value).replace('.', ',')}%)`
           : ''
-      const basis =
-        normalizedDiscount.base === 'net'
-          ? 'auf Netto'
-          : 'auf Brutto'
+      const basis = normalizedDiscount.base === 'net' ? 'auf Netto' : 'auf Brutto'
       page.drawText(`${label} – ${basis}${suffix}`, {
         x: M,
         y: sy,
@@ -906,9 +831,7 @@ export async function POST(req: NextRequest) {
 
     // USt (auf Basis nach Rabatt)
     {
-      const taxLabel = `USt (${taxRate
-        .toFixed(2)
-        .replace('.', ',')} %)`
+      const taxLabel = `USt (${taxRate.toFixed(2).replace('.', ',')} %)`
       page.drawText(taxLabel, {
         x: M,
         y: sy,
@@ -958,9 +881,7 @@ export async function POST(req: NextRequest) {
     // Hinweis bei Rabatt
     if (hasDiscount) {
       const note = `Hinweis: Es wurde ein Rabatt namens "${
-        (normalizedDiscount.label ?? 'Rabatt')
-          .toString()
-          .trim() || 'Rabatt'
+        (normalizedDiscount.label ?? 'Rabatt').toString().trim() || 'Rabatt'
       }" angewendet.`
       const noteY = Math.max(footerH + 22, sy - 22)
       page.drawText(note, {
@@ -998,7 +919,7 @@ export async function POST(req: NextRequest) {
           y: footerH - 12 - i * 11,
           size: 9,
           font,
-        }),
+        })
       )
 
       const mid = [
@@ -1016,11 +937,7 @@ export async function POST(req: NextRequest) {
         })
       })
 
-      const right = [
-        `Tel: ${bs.billing_phone}`,
-        `E-Mail: ${bs.billing_email}`,
-        prof.website ?? '',
-      ]
+      const right = [`Tel: ${bs.billing_phone}`, `E-Mail: ${bs.billing_email}`, prof.website ?? '']
       right.forEach((t, i) => {
         const w = font.widthOfTextAtSize(t, 9)
         pg.drawText(t, {
@@ -1053,12 +970,12 @@ export async function POST(req: NextRequest) {
       })
     if (upErr) throw new Error('Upload fehlgeschlagen')
 
-    /* invoices upsert — due_date = oc.date + 14; Rabatt & Summen mitpersistieren */
+    /* invoices upsert — due_date = HEUTE + 14; Rabatt & Summen mitpersistieren */
     const payload = {
       user_id: user.id,
       customer_id: customer.id,
       invoice_number: invoiceNumber,
-      date: ocDateDb,
+      date: invoiceDateDb,
       valid_until: dueDb,
       title: `Rechnung – ${displayName}`,
       intro,
@@ -1087,17 +1004,12 @@ export async function POST(req: NextRequest) {
         .upsert(payload, { onConflict: 'user_id,invoice_number' })
     ).error
 
-    if (
-      upsertErr &&
-      /column .*due_date/i.test(upsertErr.message)
-    ) {
+    if (upsertErr && /column .*due_date/i.test(upsertErr.message)) {
       const { due_date, ...withoutDue } = payload as any
       upsertErr = (
         await supabaseAdmin
           .from('invoices')
-          .upsert(withoutDue, {
-            onConflict: 'user_id,invoice_number',
-          })
+          .upsert(withoutDue, { onConflict: 'user_id,invoice_number' })
       ).error
       if (upsertErr) throw upsertErr
     } else if (upsertErr) {
@@ -1114,22 +1026,16 @@ export async function POST(req: NextRequest) {
           updated_at: new Date().toISOString(),
         })
         .eq('user_id', user.id)
-        .eq(
-          'order_confirmation_number',
-          orderConfirmationNumber,
-        )
+        .eq('order_confirmation_number', orderConfirmationNumber)
         .neq('status', 'Abgerechnet')
     } catch (e) {
-      console.warn(
-        '[generate-from-order] Status-Update Warnung:',
-        e,
-      )
+      console.warn('[generate-from-order] Status-Update Warnung:', e)
     }
 
     // Download Response
     const ab = bytes.buffer.slice(
       bytes.byteOffset,
-      bytes.byteOffset + bytes.byteLength,
+      bytes.byteOffset + bytes.byteLength
     ) as ArrayBuffer
     return new NextResponse(ab, {
       headers: {
@@ -1138,13 +1044,7 @@ export async function POST(req: NextRequest) {
       },
     })
   } catch (err: any) {
-    console.error(
-      '[rechnung/generate-from-order] ERROR:',
-      err?.message || err,
-    )
-    return NextResponse.json(
-      { message: err?.message || 'Fehler' },
-      { status: 500 },
-    )
+    console.error('[rechnung/generate-from-order] ERROR:', err?.message || err)
+    return NextResponse.json({ message: err?.message || 'Fehler' }, { status: 500 })
   }
 }

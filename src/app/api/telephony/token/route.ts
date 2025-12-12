@@ -16,12 +16,9 @@ export async function GET() {
     return NextResponse.json({ error: 'Nicht authentifiziert' }, { status: 401 })
   }
 
-  const {
-    data: settings,
-    error,
-  } = await supabase
+  const { data: settings, error } = await supabase
     .from('telephony_settings')
-    .select('twilio_voice_app_sid')
+    .select('twilio_account_sid, twilio_api_key_sid, twilio_api_key_secret, twilio_voice_app_sid')
     .eq('user_id', user.id)
     .single()
 
@@ -33,24 +30,12 @@ export async function GET() {
     )
   }
 
-  const { twilio_voice_app_sid } = settings
+  const { twilio_account_sid, twilio_api_key_sid, twilio_api_key_secret, twilio_voice_app_sid } = settings
 
-  if (!twilio_voice_app_sid) {
+  if (!twilio_account_sid || !twilio_api_key_sid || !twilio_api_key_secret || !twilio_voice_app_sid) {
     return NextResponse.json(
-      { error: 'Keine TwiML App SID hinterlegt.' },
+      { error: 'Twilio-Daten unvollständig. Bitte Account SID, API Key SID/Secret und TwiML App SID hinterlegen.' },
       { status: 400 },
-    )
-  }
-
-  const accountSid = process.env.TWILIO_ACCOUNT_SID
-  const apiKeySid = process.env.TWILIO_API_KEY_SID
-  const apiKeySecret = process.env.TWILIO_API_KEY_SECRET
-
-  if (!accountSid || !apiKeySid || !apiKeySecret) {
-    console.error('[telephony/token] Twilio env missing')
-    return NextResponse.json(
-      { error: 'Twilio-Konfiguration auf Server-Seite unvollständig.' },
-      { status: 500 },
     )
   }
 
@@ -59,19 +44,16 @@ export async function GET() {
   const AccessToken = twilio.jwt.AccessToken
   const VoiceGrant = AccessToken.VoiceGrant
 
-  const token = new AccessToken(accountSid, apiKeySid, apiKeySecret, {
+  const token = new AccessToken(twilio_account_sid, twilio_api_key_sid, twilio_api_key_secret, {
     identity,
   })
 
-  const voiceGrant = new VoiceGrant({
-    outgoingApplicationSid: twilio_voice_app_sid,
-    incomingAllow: true,
-  })
+  token.addGrant(
+    new VoiceGrant({
+      outgoingApplicationSid: twilio_voice_app_sid,
+      incomingAllow: true,
+    }),
+  )
 
-  token.addGrant(voiceGrant)
-
-  return NextResponse.json({
-    token: token.toJwt(),
-    identity,
-  })
+  return NextResponse.json({ token: token.toJwt(), identity })
 }

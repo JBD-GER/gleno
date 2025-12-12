@@ -6,8 +6,18 @@ export const runtime = 'nodejs'
 
 type ConnectionStatus = 'ok' | 'error' | 'not_configured'
 
-/* ------------------- GET: Einstellungen laden ------------------- */
+function mask(value: string | null | undefined) {
+  if (!value) return null
+  const v = String(value)
+  if (v.length <= 6) return '••••'
+  return `${v.slice(0, 2)}••••${v.slice(-2)}`
+}
 
+function isE164(n: string) {
+  return /^\+\d{6,15}$/.test(n.trim())
+}
+
+/* ------------------- GET: Einstellungen laden (ohne Secrets) ------------------- */
 export async function GET() {
   const supabase = await supabaseServer()
   const {
@@ -25,7 +35,8 @@ export async function GET() {
       `
       twilio_account_sid,
       twilio_voice_app_sid,
-      twilio_caller_id
+      twilio_caller_id,
+      twilio_api_key_sid
     `,
     )
     .eq('user_id', user.id)
@@ -39,6 +50,7 @@ export async function GET() {
       accountSid: null,
       voiceAppSid: null,
       callerId: null,
+      apiKeySid: null,
     })
   }
 
@@ -53,20 +65,28 @@ export async function GET() {
     )
   }
 
+  const configured =
+    !!data?.twilio_account_sid &&
+    !!data?.twilio_voice_app_sid &&
+    !!data?.twilio_caller_id &&
+    !!data?.twilio_api_key_sid
+
   return NextResponse.json({
-    status: 'ok' as ConnectionStatus,
-    statusMessage: null,
+    status: configured ? ('ok' as ConnectionStatus) : ('not_configured' as ConnectionStatus),
+    statusMessage: configured ? null : 'Bitte Twilio-Daten vollständig hinterlegen.',
     accountSid: data?.twilio_account_sid ?? null,
     voiceAppSid: data?.twilio_voice_app_sid ?? null,
     callerId: data?.twilio_caller_id ?? null,
+    apiKeySidMasked: mask(data?.twilio_api_key_sid ?? null),
   })
 }
 
-/* ------------------- POST: Einstellungen speichern ------------------- */
-
+/* ------------------- POST: Einstellungen speichern (mit Secrets) ------------------- */
 type Body = {
   accountSid: string
-  authToken?: string
+  authToken: string
+  apiKeySid: string
+  apiKeySecret: string
   voiceAppSid: string
   callerId: string
 }
@@ -89,25 +109,30 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid JSON body' }, { status: 400 })
   }
 
-  const { accountSid, authToken, voiceAppSid, callerId } = body
+  const { accountSid, authToken, apiKeySid, apiKeySecret, voiceAppSid, callerId } = body
 
-  // Pflichtfelder: wir verlangen hier bewusst das Auth Token jedes Mal
-  if (!accountSid || !authToken || !voiceAppSid || !callerId) {
+  if (!accountSid || !authToken || !apiKeySid || !apiKeySecret || !voiceAppSid || !callerId) {
     return NextResponse.json(
-      {
-        error:
-          'Account SID, Auth Token, TwiML App SID und Caller ID sind Pflichtfelder.',
-      },
+      { error: 'Account SID, Auth Token, API Key SID, API Key Secret, TwiML App SID und Caller ID sind Pflichtfelder.' },
+      { status: 400 },
+    )
+  }
+
+  if (!isE164(callerId)) {
+    return NextResponse.json(
+      { error: 'Caller ID muss im E.164 Format sein, z.B. +495111234567.' },
       { status: 400 },
     )
   }
 
   const payload = {
     user_id: user.id,
-    twilio_account_sid: accountSid,
-    twilio_auth_token: authToken,
-    twilio_voice_app_sid: voiceAppSid,
-    twilio_caller_id: callerId,
+    twilio_account_sid: accountSid.trim(),
+    twilio_auth_token: authToken.trim(),
+    twilio_api_key_sid: apiKeySid.trim(),
+    twilio_api_key_secret: apiKeySecret.trim(),
+    twilio_voice_app_sid: voiceAppSid.trim(),
+    twilio_caller_id: callerId.trim(),
   }
 
   const { error } = await supabase
@@ -125,11 +150,13 @@ export async function POST(req: Request) {
     )
   }
 
+  // niemals Secrets zurückgeben
   return NextResponse.json({
     status: 'ok' as ConnectionStatus,
     statusMessage: 'Verbindung erfolgreich gespeichert.',
-    accountSid,
-    voiceAppSid,
-    callerId,
+    accountSid: accountSid.trim(),
+    voiceAppSid: voiceAppSid.trim(),
+    callerId: callerId.trim(),
+    apiKeySidMasked: mask(apiKeySid.trim()),
   })
 }

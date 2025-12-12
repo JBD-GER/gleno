@@ -13,6 +13,7 @@ import {
   ExclamationTriangleIcon,
   ClockIcon,
 } from '@heroicons/react/24/outline'
+import { getTwilioDevice } from '@/lib/telephony/twilio-device'
 
 type Profile = {
   id: string
@@ -96,6 +97,11 @@ function formatDuration(sec: number) {
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
 
+function normalizePhone(input: string) {
+  // entfernt Leerzeichen/Klammern/-
+  return (input || '').trim().replace(/[^\d+]/g, '')
+}
+
 export default function AcquisitionProfileCallConsolePage() {
   const params = useParams<{ id: string }>()
   const profileId = params?.id
@@ -119,8 +125,7 @@ export default function AcquisitionProfileCallConsolePage() {
   const [callAnsweredAt, setCallAnsweredAt] = useState<number | null>(null)
   const [callRow, setCallRow] = useState<CallRow | null>(null)
 
-  // Twilio device/conn
-  const deviceRef = useRef<any>(null)
+  // Twilio conn
   const connRef = useRef<any>(null)
 
   // Live coach (Stage wird automatisch bestimmt – keine UI-Schalter mehr)
@@ -147,6 +152,21 @@ export default function AcquisitionProfileCallConsolePage() {
   const [postBusy, setPostBusy] = useState(false)
   const [postAI, setPostAI] = useState<any>(null)
   const [postErr, setPostErr] = useState<string | null>(null)
+
+  // Cleanup: Verbindung sauber trennen
+  useEffect(() => {
+    return () => {
+      try {
+        connRef.current?.disconnect?.()
+      } catch {}
+      connRef.current = null
+
+      try {
+        srRef.current?.stop?.()
+      } catch {}
+      srRef.current = null
+    }
+  }, [])
 
   // Call timer
   const [tick, setTick] = useState(0)
@@ -306,7 +326,7 @@ export default function AcquisitionProfileCallConsolePage() {
       return
     }
 
-    // Einfaches Heuristik-Upgrade: nach kurzer Zeit von Intro -> Need
+    // nach kurzer Zeit von Intro -> Need
     if (callDurationSec >= 45 && stage === 'intro') {
       setStage('need')
       return
@@ -384,43 +404,17 @@ export default function AcquisitionProfileCallConsolePage() {
     }
   }, [throttledSnippet, stage, callState, profileId, profile?.language])
 
-  /* ----------------------------- Twilio: init + call ----------------------------- */
-
-  async function ensureTwilioDevice() {
-    if (deviceRef.current) return deviceRef.current
-
-    const t = await fetch('/api/telephony/token', { method: 'GET' })
-    const tj = await t.json()
-    if (!t.ok) throw new Error(tj?.error || 'Twilio Token konnte nicht geladen werden.')
-
-    const mod = await import('@twilio/voice-sdk')
-    const Device = (mod as any).Device
-
-    const d = new Device(tj.token, {
-      logLevel: 'error',
-      codecPreferences: ['opus', 'pcmu'],
-    })
-
-    d.on('registered', () => {})
-    d.on('error', (err: any) => {
-      console.error('[twilio-device] error', err)
-      setTelephonyMsg(err?.message || 'Twilio Device Fehler')
-      setCallState('idle')
-    })
-
-    try {
-      await d.register()
-    } catch {}
-
-    deviceRef.current = d
-    return d
-  }
+  /* ----------------------------- Twilio: call ----------------------------- */
 
   async function startCall() {
     if (!profileId) return
-    if (!phone.trim()) return
+    if (callState !== 'idle') return
+
+    const raw = phone.trim()
+    if (!raw) return
 
     try {
+      setTelephonyMsg(null)
       setCallState('starting')
       setLive(null)
       setLiveErr(null)
@@ -439,13 +433,17 @@ export default function AcquisitionProfileCallConsolePage() {
       setCallAnsweredAt(null)
       setStage('intro')
 
+      const normalizedTo = normalizePhone(raw)
+      if (!normalizedTo) throw new Error('Bitte eine gültige Telefonnummer eingeben (z.B. +49…).')
+
+      // 1) Call in DB anlegen
       const c = await fetch('/api/telephony/calls', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           profileId,
           direction: 'outbound',
-          remoteNumber: phone.trim(),
+          remoteNumber: normalizedTo,
           startedAt: new Date(startedAt).toISOString(),
           result: 'started',
         }),
@@ -458,12 +456,16 @@ export default function AcquisitionProfileCallConsolePage() {
 
       setCallRow({ id: createdCallId })
 
-      const device = await ensureTwilioDevice()
+      // 2) Device holen (Singleton + Mic permission + Token refresh)
+      const device = await getTwilioDevice()
+
       setCallState('ringing')
+
+      console.log('[twilio] connecting', { To: normalizedTo, profileId, callId: createdCallId })
 
       const conn = await device.connect({
         params: {
-          To: phone.trim(),
+          To: normalizedTo,
           profileId,
           callId: createdCallId,
           direction: 'outbound',
@@ -473,6 +475,7 @@ export default function AcquisitionProfileCallConsolePage() {
       connRef.current = conn
 
       conn.on('accept', async () => {
+        console.log('[twilio] accept')
         const answeredAt = Date.now()
         setCallAnsweredAt(answeredAt)
         setCallState('in_call')
@@ -489,17 +492,27 @@ export default function AcquisitionProfileCallConsolePage() {
       })
 
       conn.on('disconnect', async () => {
+        console.log('[twilio] disconnect')
         await endCallInternal('remote_disconnected')
       })
 
       conn.on('cancel', async () => {
+        console.log('[twilio] cancel')
         await endCallInternal('cancelled')
       })
 
-      conn.on('error', async () => {
+      conn.on('reject', async () => {
+        console.log('[twilio] reject')
+        await endCallInternal('rejected')
+      })
+
+      conn.on('error', async (err: any) => {
+        console.error('[twilio] connection error', err)
+        setTelephonyMsg(err?.message || 'Twilio Verbindungsfehler')
         await endCallInternal('error')
       })
     } catch (e: any) {
+      console.error('[call] start error', e)
       setCallState('idle')
       setLiveErr(e?.message || 'Call Start fehlgeschlagen.')
     }
@@ -535,7 +548,7 @@ export default function AcquisitionProfileCallConsolePage() {
           }),
         })
       }
-    } catch (e) {
+    } catch {
       // ignore
     } finally {
       setCallState('idle')
@@ -641,8 +654,7 @@ export default function AcquisitionProfileCallConsolePage() {
   const glassInner =
     'rounded-2xl border border-white/60 bg-white/70 backdrop-blur-xl shadow-[0_10px_24px_rgba(15,23,42,0.08)]'
 
-  const label =
-    'text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500'
+  const label = 'text-[11px] font-semibold uppercase tracking-[0.22em] text-slate-500'
   const title = 'text-base sm:text-lg font-medium text-slate-900'
   const sub = 'text-xs sm:text-sm text-slate-600 leading-relaxed'
 
@@ -967,9 +979,7 @@ export default function AcquisitionProfileCallConsolePage() {
 
                 <span className={clsx(chip, 'hidden sm:inline-flex')}>
                   Einwand:{' '}
-                  <span className="font-semibold text-slate-900">
-                    {live?.objectionLabel || '—'}
-                  </span>
+                  <span className="font-semibold text-slate-900">{live?.objectionLabel || '—'}</span>
                 </span>
 
                 <span className={clsx(chip, 'hidden sm:inline-flex')}>
@@ -996,7 +1006,9 @@ export default function AcquisitionProfileCallConsolePage() {
 
                   <span className={clsx(chip, 'hidden md:inline-flex')}>
                     Snippet:{' '}
-                    <span className="font-semibold text-slate-900">{Math.min(900, computedSnippet.length)}</span>
+                    <span className="font-semibold text-slate-900">
+                      {Math.min(900, computedSnippet.length)}
+                    </span>
                     /900
                   </span>
                 </div>
@@ -1073,7 +1085,7 @@ export default function AcquisitionProfileCallConsolePage() {
             </div>
           </div>
 
-          {/* Snippet input (ein Block statt 2) */}
+          {/* Snippet input */}
           <div className="mt-6">
             <div className={clsx(glassCardSoft, 'p-5')}>
               <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
@@ -1127,10 +1139,7 @@ export default function AcquisitionProfileCallConsolePage() {
                 <button
                   onClick={addSnippet}
                   disabled={callState === 'idle' || !snippetText.trim()}
-                  className={clsx(
-                    btn,
-                    'sm:w-[160px] disabled:opacity-50 disabled:cursor-not-allowed'
-                  )}
+                  className={clsx(btn, 'sm:w-[160px] disabled:opacity-50 disabled:cursor-not-allowed')}
                 >
                   Hinzufügen
                 </button>
@@ -1258,7 +1267,8 @@ export default function AcquisitionProfileCallConsolePage() {
                         className="h-4 w-4 rounded border-white/60"
                       />
                       <label htmlFor="improveIntro" className="text-sm text-slate-700">
-                        Intro verbessern (Learning wird unter <span className="font-semibold text-slate-900">Intro</span> gespeichert)
+                        Intro verbessern (Learning wird unter{' '}
+                        <span className="font-semibold text-slate-900">Intro</span> gespeichert)
                       </label>
                     </div>
                   </div>

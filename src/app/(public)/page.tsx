@@ -272,8 +272,6 @@ export default function HomePage() {
             <p className="mt-2 flex items-center justify-center text-[11px] text-slate-300">
               <span>Kostenlos &amp; unverbindlich</span>
               <span className="mx-2">·</span>
-              <span>Keine Kreditkarte</span>
-              <span className="mx-2">·</span>
               <span className="inline-flex items-center gap-2">
                 <span>Made in Germany</span>
                 <span

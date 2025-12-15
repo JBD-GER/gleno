@@ -99,6 +99,28 @@ async function removeAllUnderPrefix(bucket: string, prefix: string) {
   return { bucket, prefix: clean, visited, removedCount: removed.length }
 }
 
+/* ✅ NEU: Helper für FK-Blocker Deletes (mit Report) */
+async function safeDeleteByUser(
+  table: string,
+  col: string,
+  uid: string,
+  ctx: { deleted: any[]; errors: any[] }
+) {
+  const { error } = await admin.from(table).delete().eq(col, uid)
+  if (error) {
+    ctx.errors.push({
+      table,
+      col,
+      code: (error as any).code,
+      message: error.message,
+      details: (error as any).details,
+      hint: (error as any).hint,
+    })
+  } else {
+    ctx.deleted.push({ table, col })
+  }
+}
+
 /* ---------- Core Handler ---------- */
 async function handleDelete(req: NextRequest) {
   /* -------- Auth / User -------- */
@@ -921,6 +943,16 @@ async function handleDelete(req: NextRequest) {
     }
   } catch {}
 
+  /* ✅ NEU: FK-Blocker explizit löschen (created_by / actor_user_id etc.) */
+  const deletionReport: { deleted: any[]; errors: any[] } = { deleted: [], errors: [] }
+
+  try { await safeDeleteByUser('appointment_notes', 'created_by', uid, deletionReport) } catch {}
+  try { await safeDeleteByUser('activity_log', 'actor_user_id', uid, deletionReport) } catch {}
+  try { await safeDeleteByUser('project_todos', 'created_by', uid, deletionReport) } catch {}
+  try { await safeDeleteByUser('project_rooms', 'user_id', uid, deletionReport) } catch {}
+  try { await safeDeleteByUser('social_pages', 'user_id', uid, deletionReport) } catch {}
+  try { await safeDeleteByUser('telephony_calls', 'created_by', uid, deletionReport) } catch {}
+
   /* -------- Profil löschen -------- */
   try {
     await admin.from('profiles').delete().eq('id', uid)
@@ -929,13 +961,21 @@ async function handleDelete(req: NextRequest) {
   /* -------- Auth-User löschen -------- */
   try {
     const { error } = await admin.auth.admin.deleteUser(uid)
-    if (error) throw error
-  } catch {
+    if (error) {
+      return NextResponse.json(
+        { error: 'Auth deletion failed', deletionReport, authError: error },
+        { status: 500 }
+      )
+    }
+  } catch (e: any) {
     // Wenn das schiefgeht, melden – Account ist dann nicht sauber entfernt
-    return NextResponse.json({ error: 'Auth deletion failed' }, { status: 500 })
+    return NextResponse.json(
+      { error: 'Auth deletion failed', deletionReport, exception: String(e?.message ?? e) },
+      { status: 500 }
+    )
   }
 
-  return NextResponse.json({ ok: true })
+  return NextResponse.json({ ok: true, deletionReport })
 }
 
 /* --- POST/DELETE Handler --- */

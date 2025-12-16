@@ -17,13 +17,7 @@ const stripe = new Stripe(STRIPE_KEY)
 const admin = createClient(SUPABASE_URL, SERVICE_ROLE)
 
 /* Bekannte Buckets erweitern (je nach Projekt anpassbar) */
-const KNOWN_BUCKETS = [
-  'dokumente',
-  'logo',
-  'angebote',
-  'website',
-  'markt',
-] as const
+const KNOWN_BUCKETS = ['dokumente', 'logo', 'angebote', 'website', 'markt'] as const
 
 /* ---------- Helpers ---------- */
 const uniq = <T,>(arr: T[]) => Array.from(new Set(arr))
@@ -31,6 +25,38 @@ const chunk = <T,>(arr: T[], size = 100) => {
   const out: T[][] = []
   for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size))
   return out
+}
+
+/**
+ * CSRF/Same-Origin Schutz:
+ * Blockt Cross-Site Requests, die Cookies mitsenden könnten.
+ */
+function assertSameOrigin(req: NextRequest) {
+  const origin = req.headers.get('origin')
+  if (!origin) return // z.B. server-to-server / tools ohne origin
+
+  const host = req.headers.get('host') || ''
+  const originHost = new URL(origin).host
+
+  // erlaube gleiche Hostnames
+  if (originHost === host) return
+
+  // zusätzlich erlaubte Hosts aus ENV (z.B. https://www.gleno.de)
+  const allowed = new Set<string>()
+  const addFromUrl = (u?: string) => {
+    if (!u) return
+    try {
+      allowed.add(new URL(u).host)
+    } catch {
+      // ignore
+    }
+  }
+  addFromUrl(process.env.NEXT_PUBLIC_SITE_URL)
+  addFromUrl(process.env.NEXT_PUBLIC_APP_URL)
+
+  if (allowed.has(originHost)) return
+
+  throw new Error(`CSRF blocked: origin=${originHost} host=${host}`)
 }
 
 function parseStorageRef(
@@ -99,7 +125,7 @@ async function removeAllUnderPrefix(bucket: string, prefix: string) {
   return { bucket, prefix: clean, visited, removedCount: removed.length }
 }
 
-/* ✅ NEU: Helper für FK-Blocker Deletes (mit Report) */
+/* ✅ Helper für FK-Blocker Deletes (mit Report) */
 async function safeDeleteByUser(
   table: string,
   col: string,
@@ -121,24 +147,37 @@ async function safeDeleteByUser(
   }
 }
 
+function buildOr(parts: string[]) {
+  return parts.filter(Boolean).join(',')
+}
+
 /* ---------- Core Handler ---------- */
 async function handleDelete(req: NextRequest) {
+  // ✅ CSRF Schutz
+  try {
+    assertSameOrigin(req)
+  } catch (e: any) {
+    return NextResponse.json({ error: e?.message ?? 'Forbidden' }, { status: 403 })
+  }
+
   /* -------- Auth / User -------- */
   const supa = await supabaseServer()
   const {
     data: { user },
   } = await supa.auth.getUser()
+
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   const uid = user.id
+
+  /* ✅ Report (für Debug/Support) */
+  const deletionReport: { deleted: any[]; errors: any[] } = { deleted: [], errors: [] }
 
   /* -------- Profil laden (Stripe, Logo etc.) -------- */
   let profile: any = null
   try {
     const { data, error } = await admin
       .from('profiles')
-      .select(
-        'id, stripe_customer_id, stripe_subscription_id, logo_path'
-      )
+      .select('id, stripe_customer_id, stripe_subscription_id, logo_path')
       .eq('id', uid)
       .single()
     if (error) throw error
@@ -163,24 +202,18 @@ async function handleDelete(req: NextRequest) {
   let employeeAuthIds: string[] = []
 
   try {
-    const { data: employees } = await admin
-      .from('employees')
-      .select('id, auth_user_id')
-      .eq('user_id', uid)
+    const { data: employees } = await admin.from('employees').select('id, auth_user_id').eq('user_id', uid)
 
-    employeeIds = (employees ?? []).map((e) => e.id)
+    employeeIds = (employees ?? []).map((e: any) => e.id)
     employeeAuthIds = (employees ?? [])
-      .map((e) => e.auth_user_id)
-      .filter((x): x is string => !!x)
+      .map((e: any) => e.auth_user_id)
+      .filter((x: any): x is string => !!x)
 
     if (employeeIds.length) {
       for (const ref of employeeRefTables) {
         if (ref.action === 'update-null') {
           try {
-            await admin
-              .from(ref.table)
-              .update({ [ref.col]: null })
-              .in(ref.col, employeeIds)
+            await admin.from(ref.table).update({ [ref.col]: null }).in(ref.col, employeeIds)
           } catch {}
         } else {
           try {
@@ -212,39 +245,26 @@ async function handleDelete(req: NextRequest) {
   let materialIds: string[] = []
 
   try {
-    const { data: appointments } = await admin
-      .from('appointments')
-      .select('id')
-      .eq('user_id', uid)
-    appointmentIds = (appointments ?? []).map((r) => r.id)
+    const { data: appointments } = await admin.from('appointments').select('id').eq('user_id', uid)
+    appointmentIds = (appointments ?? []).map((r: any) => r.id)
   } catch {}
 
   try {
-    const { data: projects } = await admin
-      .from('projects')
-      .select('id')
-      .eq('user_id', uid)
-    projectIds = (projects ?? []).map((r) => r.id)
+    const { data: projects } = await admin.from('projects').select('id').eq('user_id', uid)
+    projectIds = (projects ?? []).map((r: any) => r.id)
 
     if (projectIds.length) {
-      const { data: rooms } = await admin
-        .from('project_rooms')
-        .select('id')
-        .in('project_id', projectIds)
-      projectRoomIds = (rooms ?? []).map((r) => r.id)
+      const { data: rooms } = await admin.from('project_rooms').select('id').in('project_id', projectIds)
+      projectRoomIds = (rooms ?? []).map((r: any) => r.id)
     }
   } catch {}
 
   try {
-    const { data: materials } = await admin
-      .from('materials')
-      .select('id')
-      .eq('user_id', uid)
-    materialIds = (materials ?? []).map((m) => m.id)
+    const { data: materials } = await admin.from('materials').select('id').eq('user_id', uid)
+    materialIds = (materials ?? []).map((m: any) => m.id)
   } catch {}
 
   /* -------- Markt / Partner IDs sammeln -------- */
-
   let partnerIds: string[] = []
   let marketRequestIds: string[] = []
   let marketConversationIds: string[] = []
@@ -253,88 +273,63 @@ async function handleDelete(req: NextRequest) {
   let marketOrderIds: string[] = []
   let marketInquiryIds: string[] = []
 
+  // Partner, die diesem Account gehören
   try {
-    // Partner, die diesem Account gehören
-    const { data: partners } = await admin
-      .from('partners')
-      .select('id')
-      .eq('owner_user_id', uid)
-    partnerIds = (partners ?? []).map((p) => p.id)
+    const { data: partners } = await admin.from('partners').select('id').eq('owner_user_id', uid)
+    partnerIds = (partners ?? []).map((p: any) => p.id)
   } catch {}
 
+  // Requests des Users (als Konsument)
   try {
-    // Requests des Users (als Konsument)
-    const { data: reqs } = await admin
-      .from('market_requests')
-      .select('id')
-      .eq('user_id', uid)
-    marketRequestIds = (reqs ?? []).map((r) => r.id)
+    const { data: reqs } = await admin.from('market_requests').select('id').eq('user_id', uid)
+    marketRequestIds = (reqs ?? []).map((r: any) => r.id)
   } catch {}
 
+  // Inquiries des Users
   try {
-    // Inquiries des Users
-    const { data: inquiries } = await admin
-      .from('market_inquiries')
-      .select('id')
-      .eq('created_by', uid)
-    marketInquiryIds = (inquiries ?? []).map((i) => i.id)
+    const { data: inquiries } = await admin.from('market_inquiries').select('id').eq('created_by', uid)
+    marketInquiryIds = (inquiries ?? []).map((i: any) => i.id)
   } catch {}
 
+  // ✅ Conversations serverseitig filtern (statt ganze Tabelle ziehen)
   try {
-    // Conversations (als Consumer oder Partner oder zu eigenen Requests)
-    const { data: convs } = await admin
-      .from('market_conversations')
-      .select('id, request_id, partner_id, consumer_user_id')
-    marketConversationIds = (convs ?? [])
-      .filter(
-        (c) =>
-          c.consumer_user_id === uid ||
-          (marketRequestIds.length && marketRequestIds.includes(c.request_id)) ||
-          (partnerIds.length && partnerIds.includes(c.partner_id))
-      )
-      .map((c) => c.id)
+    const ors: string[] = [`consumer_user_id.eq.${uid}`]
+    if (marketRequestIds.length) ors.push(`request_id.in.(${marketRequestIds.join(',')})`)
+    if (partnerIds.length) ors.push(`partner_id.in.(${partnerIds.join(',')})`)
+
+    const { data: convs } = await admin.from('market_conversations').select('id').or(buildOr(ors))
+    marketConversationIds = (convs ?? []).map((c: any) => c.id)
   } catch {}
 
+  // ✅ Applications serverseitig filtern
   try {
-    // Applications
-    const { data: apps } = await admin
-      .from('market_applications')
-      .select('id, request_id, partner_id')
-    marketApplicationIds = (apps ?? [])
-      .filter(
-        (a) =>
-          (marketRequestIds.length && marketRequestIds.includes(a.request_id)) ||
-          (partnerIds.length && partnerIds.includes(a.partner_id))
-      )
-      .map((a) => a.id)
+    const ors: string[] = []
+    if (marketRequestIds.length) ors.push(`request_id.in.(${marketRequestIds.join(',')})`)
+    if (partnerIds.length) ors.push(`partner_id.in.(${partnerIds.join(',')})`)
+
+    if (ors.length) {
+      const { data: apps } = await admin.from('market_applications').select('id').or(buildOr(ors))
+      marketApplicationIds = (apps ?? []).map((a: any) => a.id)
+    }
   } catch {}
 
+  // Offers (ok: selektiert nur notwendige Spalten, aber trotzdem besser filtern)
   try {
-    // Offers
-    const { data: offers } = await admin
-      .from('market_offers')
-      .select('id, request_id, created_by_user_id')
-    marketOfferIds = (offers ?? [])
-      .filter(
-        (o) =>
-          o.created_by_user_id === uid ||
-          (marketRequestIds.length && marketRequestIds.includes(o.request_id))
-      )
-      .map((o) => o.id)
+    const ors: string[] = [`created_by_user_id.eq.${uid}`]
+    if (marketRequestIds.length) ors.push(`request_id.in.(${marketRequestIds.join(',')})`)
+    const { data: offers } = await admin.from('market_offers').select('id').or(buildOr(ors))
+    marketOfferIds = (offers ?? []).map((o: any) => o.id)
   } catch {}
 
+  // ✅ Orders serverseitig filtern (request_id / offer_id)
   try {
-    // Orders
-    const { data: orders } = await admin
-      .from('market_orders')
-      .select('id, request_id, offer_id')
-    marketOrderIds = (orders ?? [])
-      .filter(
-        (o) =>
-          (marketRequestIds.length && marketRequestIds.includes(o.request_id)) ||
-          (marketOfferIds.length && marketOfferIds.includes(o.offer_id))
-      )
-      .map((o) => o.id)
+    const ors: string[] = []
+    if (marketRequestIds.length) ors.push(`request_id.in.(${marketRequestIds.join(',')})`)
+    if (marketOfferIds.length) ors.push(`offer_id.in.(${marketOfferIds.join(',')})`)
+    if (ors.length) {
+      const { data: orders } = await admin.from('market_orders').select('id').or(buildOr(ors))
+      marketOrderIds = (orders ?? []).map((o: any) => o.id)
+    }
   } catch {}
 
   /* -------- Storage-Refs sammeln -------- */
@@ -358,35 +353,25 @@ async function handleDelete(req: NextRequest) {
 
   // Websites (Logo / Favicon)
   try {
-    const { data: websites } = await admin
-      .from('websites')
-      .select('logo_url, favicon_url')
-      .eq('user_id', uid)
+    const { data: websites } = await admin.from('websites').select('logo_url, favicon_url').eq('user_id', uid)
     for (const w of websites ?? []) {
-      addRef(w.logo_url || undefined, 'website')
-      addRef(w.favicon_url || undefined, 'website')
+      addRef((w as any).logo_url || undefined, 'website')
+      addRef((w as any).favicon_url || undefined, 'website')
     }
   } catch {}
 
   // Partner-Logos
   try {
     if (partnerIds.length) {
-      const { data: pData } = await admin
-        .from('partners')
-        .select('logo_path')
-        .in('id', partnerIds)
+      const { data: pData } = await admin.from('partners').select('logo_path').in('id', partnerIds)
       for (const p of pData ?? []) {
-        if (p.logo_path) addRef(p.logo_path, 'logo')
+        if ((p as any).logo_path) addRef((p as any).logo_path, 'logo')
       }
     }
   } catch {}
 
   // Helper: Spalte mit user_id = uid einsammeln
-  const collectColEqUser = async (
-    table: string,
-    col: string,
-    defaultBucket: string
-  ) => {
+  const collectColEqUser = async (table: string, col: string, defaultBucket: string) => {
     const { data } = await admin.from(table).select(col).eq('user_id', uid)
     for (const r of data ?? []) addRef((r as any)[col], defaultBucket)
   }
@@ -420,96 +405,43 @@ async function handleDelete(req: NextRequest) {
 
   // Termine / Projekte Doks
   try {
-    await collectColIn(
-      'appointment_documents',
-      'path',
-      appointmentIds,
-      'appointment_id',
-      'dokumente'
-    )
+    await collectColIn('appointment_documents', 'path', appointmentIds, 'appointment_id', 'dokumente')
   } catch {}
   try {
-    await collectColIn(
-      'project_documents',
-      'path',
-      projectIds,
-      'project_id',
-      'dokumente'
-    )
+    await collectColIn('project_documents', 'path', projectIds, 'project_id', 'dokumente')
   } catch {}
   try {
-    await collectColIn(
-      'project_before_images',
-      'path',
-      projectIds,
-      'project_id',
-      'dokumente'
-    )
+    await collectColIn('project_before_images', 'path', projectIds, 'project_id', 'dokumente')
   } catch {}
   try {
-    await collectColIn(
-      'project_after_images',
-      'path',
-      projectIds,
-      'project_id',
-      'dokumente'
-    )
+    await collectColIn('project_after_images', 'path', projectIds, 'project_id', 'dokumente')
   } catch {}
 
   // Markt Dateien
   try {
-    await collectColIn(
-      'market_application_files',
-      'path',
-      marketApplicationIds,
-      'application_id',
-      'markt'
-    )
+    await collectColIn('market_application_files', 'path', marketApplicationIds, 'application_id', 'markt')
   } catch {}
   try {
-    await collectColIn(
-      'market_offer_files',
-      'path',
-      marketOfferIds,
-      'offer_id',
-      'markt'
-    )
+    await collectColIn('market_offer_files', 'path', marketOfferIds, 'offer_id', 'markt')
   } catch {}
   try {
-    await collectColIn(
-      'market_order_files',
-      'path',
-      marketOrderIds,
-      'order_id',
-      'markt'
-    )
+    await collectColIn('market_order_files', 'path', marketOrderIds, 'order_id', 'markt')
   } catch {}
   try {
-    await collectColIn(
-      'market_documents',
-      'path',
-      marketConversationIds,
-      'conversation_id',
-      'markt'
-    )
+    await collectColIn('market_documents', 'path', marketConversationIds, 'conversation_id', 'markt')
   } catch {}
   try {
-    // market_documents auch direkt über request_id
-    await collectColIn(
-      'market_documents',
-      'path',
-      marketRequestIds,
-      'request_id',
-      'markt'
-    )
+    await collectColIn('market_documents', 'path', marketRequestIds, 'request_id', 'markt')
   } catch {}
   try {
-    const { data: msgFiles } = await admin
-      .from('market_messages')
-      .select('file_path, conversation_id')
-      .in('conversation_id', marketConversationIds)
-    for (const m of msgFiles ?? []) {
-      if (m.file_path) addRef(m.file_path, 'markt')
+    if (marketConversationIds.length) {
+      const { data: msgFiles } = await admin
+        .from('market_messages')
+        .select('file_path, conversation_id')
+        .in('conversation_id', marketConversationIds)
+      for (const m of msgFiles ?? []) {
+        if ((m as any).file_path) addRef((m as any).file_path, 'markt')
+      }
     }
   } catch {}
 
@@ -535,6 +467,7 @@ async function handleDelete(req: NextRequest) {
       ...(KNOWN_BUCKETS as unknown as string[]),
       ...Object.keys(byBucket),
     ])
+
     const prefixes = new Set<string>()
     prefixes.add(`${uid}/`)
     for (const pid of projectIds) prefixes.add(`projects/${pid}/`)
@@ -543,8 +476,7 @@ async function handleDelete(req: NextRequest) {
     for (const { key } of refs) {
       const parts = key.split('/').filter(Boolean)
       if (parts.length >= 1) prefixes.add(parts[0] + '/')
-      if (parts.length >= 2)
-        prefixes.add(parts.slice(0, 2).join('/') + '/')
+      if (parts.length >= 2) prefixes.add(parts.slice(0, 2).join('/') + '/')
     }
 
     for (const bucket of sweepBuckets) {
@@ -559,56 +491,34 @@ async function handleDelete(req: NextRequest) {
   }
 
   /* -------- Detail-Löschungen: Termine / Projekte / Räume -------- */
-
-  // Termin-Notizen & -Dokumente
   try {
     if (appointmentIds.length) {
       try {
-        await admin
-          .from('appointment_documents')
-          .delete()
-          .in('appointment_id', appointmentIds)
+        await admin.from('appointment_documents').delete().in('appointment_id', appointmentIds)
       } catch {}
       try {
-        await admin
-          .from('appointment_notes')
-          .delete()
-          .in('appointment_id', appointmentIds)
+        await admin.from('appointment_notes').delete().in('appointment_id', appointmentIds)
       } catch {}
       try {
-        await admin
-          .from('appointments')
-          .delete()
-          .in('id', appointmentIds)
+        await admin.from('appointments').delete().in('id', appointmentIds)
       } catch {}
     }
   } catch {}
 
-  // Projekt-Räume & abhängige Tabellen
   try {
     if (projectRoomIds.length) {
       try {
-        await admin
-          .from('project_room_materials')
-          .delete()
-          .in('room_id', projectRoomIds)
+        await admin.from('project_room_materials').delete().in('room_id', projectRoomIds)
       } catch {}
       try {
-        await admin
-          .from('project_room_tasks')
-          .delete()
-          .in('room_id', projectRoomIds)
+        await admin.from('project_room_tasks').delete().in('room_id', projectRoomIds)
       } catch {}
       try {
-        await admin
-          .from('project_rooms')
-          .delete()
-          .in('id', projectRoomIds)
+        await admin.from('project_rooms').delete().in('id', projectRoomIds)
       } catch {}
     }
   } catch {}
 
-  // Projekt-bezogene Mappings / Pläne / Dateien
   try {
     if (projectIds.length) {
       const projectTables = [
@@ -640,10 +550,7 @@ async function handleDelete(req: NextRequest) {
   try {
     if (materialIds.length) {
       try {
-        await admin
-          .from('project_room_materials')
-          .delete()
-          .in('material_id', materialIds)
+        await admin.from('project_room_materials').delete().in('material_id', materialIds)
       } catch {}
       try {
         await admin.from('materials').delete().in('id', materialIds)
@@ -656,222 +563,121 @@ async function handleDelete(req: NextRequest) {
     // Files & Messages & Docs
     try {
       if (marketApplicationIds.length) {
-        await admin
-          .from('market_application_files')
-          .delete()
-          .in('application_id', marketApplicationIds)
+        await admin.from('market_application_files').delete().in('application_id', marketApplicationIds)
       }
     } catch {}
     try {
       if (marketOfferIds.length) {
-        await admin
-          .from('market_offer_files')
-          .delete()
-          .in('offer_id', marketOfferIds)
+        await admin.from('market_offer_files').delete().in('offer_id', marketOfferIds)
       }
     } catch {}
     try {
       if (marketOrderIds.length) {
-        await admin
-          .from('market_order_files')
-          .delete()
-          .in('order_id', marketOrderIds)
+        await admin.from('market_order_files').delete().in('order_id', marketOrderIds)
       }
     } catch {}
     try {
       if (marketConversationIds.length) {
-        await admin
-          .from('market_messages')
-          .delete()
-          .in('conversation_id', marketConversationIds)
+        await admin.from('market_messages').delete().in('conversation_id', marketConversationIds)
       }
     } catch {}
     try {
       if (marketConversationIds.length) {
-        await admin
-          .from('market_documents')
-          .delete()
-          .in('conversation_id', marketConversationIds)
+        await admin.from('market_documents').delete().in('conversation_id', marketConversationIds)
       }
     } catch {}
     try {
       if (marketRequestIds.length) {
-        await admin
-          .from('market_documents')
-          .delete()
-          .in('request_id', marketRequestIds)
+        await admin.from('market_documents').delete().in('request_id', marketRequestIds)
       }
     } catch {}
 
     // Ratings / Termine / Issues / Personal Data / Inquiry History
     try {
-      if (partnerIds.length || marketRequestIds.length) {
-        await admin
-          .from('market_partner_ratings')
-          .delete()
-          .or(
-            [
-              partnerIds.length
-                ? `partner_id.in.(${partnerIds.join(',')})`
-                : '',
-              marketRequestIds.length
-                ? `request_id.in.(${marketRequestIds.join(',')})`
-                : '',
-              `consumer_user_id.eq.${uid}`,
-              `created_by.eq.${uid}`,
-            ]
-              .filter(Boolean)
-              .join(',')
-          )
-      } else {
-        await admin
-          .from('market_partner_ratings')
-          .delete()
-          .or(`consumer_user_id.eq.${uid},created_by.eq.${uid}`)
-      }
+      const ors: string[] = [`consumer_user_id.eq.${uid}`, `created_by.eq.${uid}`]
+      if (partnerIds.length) ors.push(`partner_id.in.(${partnerIds.join(',')})`)
+      if (marketRequestIds.length) ors.push(`request_id.in.(${marketRequestIds.join(',')})`)
+      await admin.from('market_partner_ratings').delete().or(buildOr(ors))
     } catch {}
 
     try {
       if (marketRequestIds.length) {
-        await admin
-          .from('market_appointments')
-          .delete()
-          .in('request_id', marketRequestIds)
+        await admin.from('market_appointments').delete().in('request_id', marketRequestIds)
       }
-      await admin
-        .from('market_appointments')
-        .delete()
-        .eq('created_by_user_id', uid)
+      await admin.from('market_appointments').delete().eq('created_by_user_id', uid)
     } catch {}
 
     try {
       if (marketRequestIds.length) {
-        await admin
-          .from('market_request_issues')
-          .delete()
-          .in('request_id', marketRequestIds)
+        await admin.from('market_request_issues').delete().in('request_id', marketRequestIds)
       }
-      await admin
-        .from('market_request_issues')
-        .delete()
-        .eq('user_id', uid)
+      await admin.from('market_request_issues').delete().eq('user_id', uid)
     } catch {}
 
     try {
       if (marketRequestIds.length) {
-        await admin
-          .from('market_request_personal_data')
-          .delete()
-          .in('request_id', marketRequestIds)
+        await admin.from('market_request_personal_data').delete().in('request_id', marketRequestIds)
       }
-      await admin
-        .from('market_request_personal_data')
-        .delete()
-        .eq('user_id', uid)
+      await admin.from('market_request_personal_data').delete().eq('user_id', uid)
     } catch {}
 
     try {
       if (marketInquiryIds.length) {
-        await admin
-          .from('market_inquiry_status_history')
-          .delete()
-          .in('inquiry_id', marketInquiryIds)
+        await admin.from('market_inquiry_status_history').delete().in('inquiry_id', marketInquiryIds)
       }
-      await admin
-        .from('market_inquiry_status_history')
-        .delete()
-        .eq('changed_by', uid)
+      await admin.from('market_inquiry_status_history').delete().eq('changed_by', uid)
     } catch {}
 
     try {
       if (marketInquiryIds.length) {
-        await admin
-          .from('market_inquiries')
-          .delete()
-          .in('id', marketInquiryIds)
+        await admin.from('market_inquiries').delete().in('id', marketInquiryIds)
       }
-      await admin
-        .from('market_inquiries')
-        .delete()
-        .eq('created_by', uid)
+      await admin.from('market_inquiries').delete().eq('created_by', uid)
     } catch {}
 
     // Applications / Offers / Orders / Conversations / Requests
     try {
       if (marketApplicationIds.length) {
-        await admin
-          .from('market_applications')
-          .delete()
-          .in('id', marketApplicationIds)
+        await admin.from('market_applications').delete().in('id', marketApplicationIds)
       }
       if (partnerIds.length) {
-        await admin
-          .from('market_applications')
-          .delete()
-          .in('partner_id', partnerIds)
+        await admin.from('market_applications').delete().in('partner_id', partnerIds)
       }
       if (marketRequestIds.length) {
-        await admin
-          .from('market_applications')
-          .delete()
-          .in('request_id', marketRequestIds)
+        await admin.from('market_applications').delete().in('request_id', marketRequestIds)
       }
     } catch {}
 
     try {
       if (marketOfferIds.length) {
-        await admin
-          .from('market_offers')
-          .delete()
-          .in('id', marketOfferIds)
+        await admin.from('market_offers').delete().in('id', marketOfferIds)
       }
       if (marketRequestIds.length) {
-        await admin
-          .from('market_offers')
-          .delete()
-          .in('request_id', marketRequestIds)
+        await admin.from('market_offers').delete().in('request_id', marketRequestIds)
       }
-      await admin
-        .from('market_offers')
-        .delete()
-        .eq('created_by_user_id', uid)
+      await admin.from('market_offers').delete().eq('created_by_user_id', uid)
     } catch {}
 
     try {
       if (marketOrderIds.length) {
-        await admin
-          .from('market_orders')
-          .delete()
-          .in('id', marketOrderIds)
+        await admin.from('market_orders').delete().in('id', marketOrderIds)
       }
       if (marketRequestIds.length) {
-        await admin
-          .from('market_orders')
-          .delete()
-          .in('request_id', marketRequestIds)
+        await admin.from('market_orders').delete().in('request_id', marketRequestIds)
       }
     } catch {}
 
     try {
       if (marketConversationIds.length) {
-        await admin
-          .from('market_conversations')
-          .delete()
-          .in('id', marketConversationIds)
+        await admin.from('market_conversations').delete().in('id', marketConversationIds)
       }
     } catch {}
 
     try {
       if (marketRequestIds.length) {
-        await admin
-          .from('market_requests')
-          .delete()
-          .in('id', marketRequestIds)
+        await admin.from('market_requests').delete().in('id', marketRequestIds)
       }
-      await admin
-        .from('market_requests')
-        .delete()
-        .eq('user_id', uid)
+      await admin.from('market_requests').delete().eq('user_id', uid)
     } catch {}
 
     // Partner Sub-Tabellen & Partner selbst
@@ -899,9 +705,8 @@ async function handleDelete(req: NextRequest) {
   }
 
   /* -------- Tabellen mit user_id = uid (generisch) -------- */
-
   const tablesByUserId = [
-    'appointments', // falls oben was übrig
+    'appointments',
     'projects',
     'offers',
     'order_confirmations',
@@ -920,7 +725,6 @@ async function handleDelete(req: NextRequest) {
     'project_schedule_items',
     'cookie_consents',
     'websites',
-    // market_request_personal_data, market_requests etc. sind oben behandelt
   ]
 
   for (const t of tablesByUserId) {
@@ -943,19 +747,41 @@ async function handleDelete(req: NextRequest) {
     }
   } catch {}
 
-  /* ✅ NEU: FK-Blocker explizit löschen (created_by / actor_user_id etc.) */
-  const deletionReport: { deleted: any[]; errors: any[] } = { deleted: [], errors: [] }
-
-  try { await safeDeleteByUser('appointment_notes', 'created_by', uid, deletionReport) } catch {}
-  try { await safeDeleteByUser('activity_log', 'actor_user_id', uid, deletionReport) } catch {}
-  try { await safeDeleteByUser('project_todos', 'created_by', uid, deletionReport) } catch {}
-  try { await safeDeleteByUser('project_rooms', 'user_id', uid, deletionReport) } catch {}
-  try { await safeDeleteByUser('social_pages', 'user_id', uid, deletionReport) } catch {}
-  try { await safeDeleteByUser('telephony_calls', 'created_by', uid, deletionReport) } catch {}
+  /* ✅ FK-Blocker explizit löschen (created_by / actor_user_id etc.) */
+  try {
+    await safeDeleteByUser('appointment_notes', 'created_by', uid, deletionReport)
+  } catch {}
+  try {
+    await safeDeleteByUser('activity_log', 'actor_user_id', uid, deletionReport)
+  } catch {}
+  try {
+    await safeDeleteByUser('project_todos', 'created_by', uid, deletionReport)
+  } catch {}
+  try {
+    await safeDeleteByUser('project_rooms', 'user_id', uid, deletionReport)
+  } catch {}
+  try {
+    await safeDeleteByUser('social_pages', 'user_id', uid, deletionReport)
+  } catch {}
+  try {
+    await safeDeleteByUser('telephony_calls', 'created_by', uid, deletionReport)
+  } catch {}
 
   /* -------- Profil löschen -------- */
   try {
-    await admin.from('profiles').delete().eq('id', uid)
+    const { error } = await admin.from('profiles').delete().eq('id', uid)
+    if (error) {
+      deletionReport.errors.push({
+        table: 'profiles',
+        col: 'id',
+        code: (error as any).code,
+        message: error.message,
+        details: (error as any).details,
+        hint: (error as any).hint,
+      })
+    } else {
+      deletionReport.deleted.push({ table: 'profiles', col: 'id' })
+    }
   } catch {}
 
   /* -------- Auth-User löschen -------- */
@@ -968,7 +794,6 @@ async function handleDelete(req: NextRequest) {
       )
     }
   } catch (e: any) {
-    // Wenn das schiefgeht, melden – Account ist dann nicht sauber entfernt
     return NextResponse.json(
       { error: 'Auth deletion failed', deletionReport, exception: String(e?.message ?? e) },
       { status: 500 }

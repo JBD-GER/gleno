@@ -29,7 +29,7 @@
     "html2canvas": "^1.4.1",
     "jspdf": "^3.0.1",
     "martinez-polygon-clipping": "^0.7.4",
-    "next": "^15.4.8",
+    "next": "15.4.10",
     "nodemailer": "^7.0.9",
     "papaparse": "^5.5.3",
     "pdf-lib": "^1.17.1",
